@@ -1,0 +1,443 @@
+/* =========================
+   EGONARMARKET - DESIGN
+   ========================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f7f7f7;
+    color: #222;
+}
+
+/* NAVIGATION */
+
+header {
+    background: #111827;
+    color: white;
+}
+
+.navbar {
+    max-width: 1200px;
+    margin: auto;
+    padding: 18px 25px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.logo span {
+    color: #f59e0b;
+}
+
+.nav-links {
+    display: flex;
+    gap: 25px;
+    list-style: none;
+}
+
+.nav-links a {
+    color: white;
+    text-decoration: none;
+    font-size: 15px;
+}
+
+.nav-links a:hover {
+    color: #f59e0b;
+}
+
+.cart {
+    background: #f59e0b;
+    color: #111827;
+    padding: 10px 15px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+/* HERO */
+
+.hero {
+    background: linear-gradient(135deg, #111827, #374151);
+    color: white;
+    padding: 90px 25px;
+}
+
+.hero-content {
+    max-width: 1200px;
+    margin: auto;
+}
+
+.hero h1 {
+    font-size: 50px;
+    max-width: 650px;
+    margin-bottom: 20px;
+}
+
+.hero p {
+    font-size: 20px;
+    max-width: 600px;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.btn {
+    display: inline-block;
+    background: #f59e0b;
+    color: #111827;
+    padding: 14px 25px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+/* SECTIONS */
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+    padding: 60px 25px;
+}
+
+.section-title {
+    text-align: center;
+    font-size: 32px;
+    margin-bottom: 40px;
+}
+
+/* CATEGORIES */
+
+.categories {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.category {
+    background: white;
+    padding: 30px 20px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.category-icon {
+    font-size: 40px;
+    margin-bottom: 15px;
+}
+
+.category h3 {
+    margin-bottom: 8px;
+}
+
+/* PRODUITS */
+
+.products {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 25px;
+}
+
+.product {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.product-image {
+    height: 220px;
+    background: #e5e7eb;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 60px;
+}
+
+.product-info {
+    padding: 20px;
+}
+
+.product-info h3 {
+    margin-bottom: 10px;
+}
+
+.price {
+    color: #f59e0b;
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.buy-btn {
+    display: block;
+    text-align: center;
+    background: #111827;
+    color: white;
+    padding: 11px;
+    border-radius: 7px;
+    text-decoration: none;
+}
+
+.buy-btn:hover {
+    background: #f59e0b;
+    color: #111827;
+}
+
+/* FOOTER */
+
+footer {
+    background: #111827;
+    color: white;
+    text-align: center;
+    padding: 30px 20px;
+    margin-top: 40px;
+}
+
+/* MOBILE */
+
+@media (max-width: 900px) {
+
+    .categories,
+    .products {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .nav-links {
+        display: none;
+    }
+
+    .hero h1 {
+        font-size: 38px;
+    }
+}
+
+@media (max-width: 600px) {
+
+    .categories,
+    .products {
+        grid-template-columns: 1fr;
+    }
+
+    .hero {
+        padding: 60px 20px;
+    }
+
+    .hero h1 {
+        font-size: 32px;
+    }
+}/* =========================
+   PAGE COMMANDE
+   ========================= */
+
+.checkout-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+    align-items: start;
+}
+
+.checkout-form,
+.order-summary {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.checkout-form h2,
+.order-summary h2 {
+    margin-bottom: 25px;
+}
+
+.checkout-form label {
+    display: block;
+    margin-top: 18px;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.checkout-form input,
+.checkout-form textarea,
+.checkout-form select {
+    width: 100%;
+    padding: 13px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 15px;
+}
+
+.checkout-form textarea {
+    min-height: 110px;
+    resize: vertical;
+}
+
+.checkout-form input:focus,
+.checkout-form textarea:focus,
+.checkout-form select:focus {
+    outline: none;
+    border-color: #f59e0b;
+}
+
+.checkout-form .checkout-btn {
+    margin-top: 25px;
+    width: 100%;
+}
+
+.order-product {
+    padding: 15px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.order-product h3 {
+    margin-bottom: 7px;
+}
+
+.order-product p {
+    margin-bottom: 5px;
+}
+
+#order-total {
+    margin-top: 20px;
+    font-size: 22px;
+}
+
+.order-success {
+    background: white;
+    padding: 40px;
+    margin-top: 30px;
+    text-align: center;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.order-success h2 {
+    margin-bottom: 15px;
+}
+
+.order-success p {
+    margin-bottom: 15px;
+}
+
+
+/* MOBILE */
+
+@media (max-width: 800px) {
+
+    .checkout-layout {
+        grid-template-columns: 1fr;
+    }
+
+}/* =========================
+   ADMINISTRATION
+   ========================= */
+
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+    margin-bottom: 45px;
+}
+
+.admin-card {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.admin-card p {
+    font-size: 30px;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.admin-title {
+    margin-bottom: 25px;
+}
+
+.admin-order {
+    background: white;
+    padding: 25px;
+    margin-bottom: 20px;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.admin-order h3 {
+    margin-bottom: 10px;
+}
+
+.admin-order p {
+    margin: 7px 0;
+}
+
+.order-status {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 7px 12px;
+
+    border-radius: 20px;
+
+    background: #f59e0b;
+    color: #111827;
+
+    font-weight: bold;
+}
+
+@media (max-width: 600px) {
+
+    .admin-stats {
+        grid-template-columns: 1fr;
+    }
+
+}/* =========================
+   STATUT DES COMMANDES
+   ========================= */
+
+.status-box {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e5e7eb;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.status-box select {
+    padding: 10px 14px;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 8px;
+
+    background: white;
+
+    font-size: 15px;
+
+    cursor: pointer;
+}
+
+.status-box select:focus {
+    outline: none;
+
+    border-color: #f59e0b;
+}

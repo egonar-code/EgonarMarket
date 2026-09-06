@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Passer la commande - EgonarMarket</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+    <header>
+
+        <nav class="navbar">
+
+            <div class="logo">
+                Egonar<span>Market</span>
+            </div>
+
+            <a href="panier.html" class="cart">
+                ← Retour au panier
+            </a>
+
+        </nav>
+
+    </header>
+
+
+    <main class="container">
+
+        <h1 class="section-title">
+            Finaliser ma commande
+        </h1>
+
+
+        <div class="checkout-layout">
+
+
+            <!-- FORMULAIRE -->
+
+            <div class="checkout-form">
+
+                <h2>Informations client</h2>
+
+                <form id="order-form">
+
+                    <label for="nom">
+                        Nom complet
+                    </label>
+
+                    <input
+                        type="text"
+                        id="nom"
+                        name="nom"
+                        placeholder="Ex : Mame Moussa Gaye"
+                        required
+                    >
+
+
+                    <label for="telephone">
+                        Numéro de téléphone
+                    </label>
+
+                    <input
+                        type="tel"
+                        id="telephone"
+                        name="telephone"
+                        placeholder="Ex : 77 000 00 00"
+                        required
+                    >
+
+
+                    <label for="ville">
+                        Ville
+                    </label>
+
+                    <input
+                        type="text"
+                        id="ville"
+                        name="ville"
+                        placeholder="Ex : Dakar"
+                        required
+                    >
+
+
+                    <label for="adresse">
+                        Adresse de livraison
+                    </label>
+
+                    <textarea
+                        id="adresse"
+                        name="adresse"
+                        placeholder="Quartier, rue, repère..."
+                        required
+                    ></textarea>
+
+
+                    <label for="livraison">
+                        Mode de livraison
+                    </label>
+
+                    <select id="livraison" name="livraison" required>
+
+                        <option value="">
+                            Choisir
+                        </option>
+
+                        <option value="standard">
+                            Livraison standard
+                        </option>
+
+                        <option value="express">
+                            Livraison express
+                        </option>
+
+                    </select>
+
+
+                    <label for="paiement">
+                        Mode de paiement
+                    </label>
+
+                    <select id="paiement" name="paiement" required>
+
+                        <option value="">
+                            Choisir
+                        </option>
+
+                        <option value="livraison">
+                            Paiement à la livraison
+                        </option>
+
+                        <option value="wave">
+                            Wave
+                        </option>
+
+                        <option value="orange-money">
+                            Orange Money
+                        </option>
+
+                    </select>
+
+
+                    <button
+                        type="submit"
+                        class="checkout-btn"
+                    >
+                        Confirmer la commande
+                    </button>
+
+                </form>
+
+            </div>
+
+
+            <!-- RÉCAPITULATIF -->
+
+            <div class="order-summary">
+
+                <h2>
+                    Votre commande
+                </h2>
+
+                <div id="order-items">
+                </div>
+
+                <hr>
+
+                <h3 id="order-total">
+                    Total : 0 FCFA
+                </h3>
+
+            </div>
+
+        </div>
+
+
+        <!-- MESSAGE DE CONFIRMATION -->
+
+        <div
+            id="order-success"
+            class="order-success"
+            style="display: none;"
+        >
+
+            <h2>
+                ✅ Commande enregistrée !
+            </h2>
+
+            <p>
+                Merci pour votre commande chez EgonarMarket.
+            </p>
+
+            <p id="order-message">
+            </p>
+
+            <a
+                href="index.html"
+                class="btn"
+            >
+                Retour à la boutique
+            </a>
+
+        </div>
+
+    </main>
+
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>
