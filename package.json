@@ -1,0 +1,21 @@
+{
+  "name": "egonarmarket",
+  "private": true,
+  "version": "2.0.0",
+  "description": "EgonarMarket — plateforme e-commerce Sénégal",
+  "scripts": {
+    "dev": "node --watch apps/api/src/server.js",
+    "start": "node apps/api/src/server.js",
+    "db:init": "node apps/api/src/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.16.3"
+  }
+}
