@@ -1,8 +1,10 @@
 const { Pool } = require("pg");
 require("dotenv").config();
 
+const databaseUrl = process.env.DATABASE_URL || "postgresql://egonar:egonar_password@localhost:5432/egonarmarket";
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
   max: 10,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 5_000
