@@ -7,9 +7,38 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-egonarmarket}
       POSTGRES_USER: ${POSTGRES_USER:-egonar}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-egonar_password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
     ports:
       - "5432:5432"
     volumes:
       - egonar_pgdata:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: egonarmarket-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://egonar:egonar_password@postgres:5432/egonarmarket
+      JWT_SECRET: egonarmarket-local-dev-secret
+      ADMIN_EMAIL: admin@egonarmarket.sn
+      ADMIN_PASSWORD: EgonarDev2026!
+      POSTGRES_DB: egonarmarket
+      POSTGRES_USER: egonar
+      POSTGRES_PASSWORD: egonar_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    command: ["sh", "-c", "npm run db:init && npm run start"]
+
 volumes:
   egonar_pgdata:
