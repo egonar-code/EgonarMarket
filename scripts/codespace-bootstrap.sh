@@ -3,42 +3,25 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-export NODE_ENV="${NODE_ENV:-development}"
-export PORT="${PORT:-3000}"
-export DATABASE_URL="${DATABASE_URL:-postgresql://egonar:egonar_password@127.0.0.1:5432/egonarmarket}"
-export JWT_SECRET="${JWT_SECRET:-egonarmarket-local-dev-secret}"
-export ADMIN_EMAIL="${ADMIN_EMAIL:-admin@egonarmarket.sn}"
-export ADMIN_PASSWORD="${ADMIN_PASSWORD:-EgonarDev2026!}"
+# The app and PostgreSQL run in the same Compose network. This avoids
+# localhost/container networking problems inside GitHub Codespaces.
 export POSTGRES_DB="${POSTGRES_DB:-egonarmarket}"
 export POSTGRES_USER="${POSTGRES_USER:-egonar}"
 export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-egonar_password}"
 
-# Reuse an existing local PostgreSQL container when present.
-if docker ps --format '{{.Names}}' | grep -qx 'egonarmarket-db'; then
-  :
-elif docker ps -a --format '{{.Names}}' | grep -qx 'egonarmarket-db'; then
-  docker start egonarmarket-db >/dev/null
-else
-  docker compose up -d postgres >/dev/null
-fi
+# Reconcile the complete local stack. Existing containers are reused/recreated
+# safely from the current Compose definition; PostgreSQL data stays in volume.
+docker compose up -d --build postgres app
 
-# Wait until PostgreSQL accepts connections.
+# Wait for the web service to answer before declaring the preview ready.
 for i in $(seq 1 30); do
-  if docker exec egonarmarket-db pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null 2>&1; then
-    break
+  if curl -fsS "http://127.0.0.1:3000/api/health" >/dev/null 2>&1; then
+    echo "EgonarMarket prêt : http://localhost:3000"
+    exit 0
   fi
   sleep 1
 done
 
-docker exec egonarmarket-db pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null
-
-# Initialize/update schema and development admin/products.
-npm run db:init
-
-# Do not duplicate the server if it is already healthy.
-if curl -fsS "http://127.0.0.1:${PORT}/api/health" >/dev/null 2>&1; then
-  exit 0
-fi
-
-nohup node apps/api/src/server.js >/tmp/egonarmarket.log 2>&1 &
-echo "EgonarMarket démarré sur http://localhost:${PORT}"
+echo "EgonarMarket : les conteneurs sont démarrés mais l'API n'est pas encore prête."
+docker compose ps
+exit 1
