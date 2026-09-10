@@ -4,9 +4,9 @@
   "version": "2.0.0",
   "description": "EgonarMarket — plateforme e-commerce Sénégal",
   "scripts": {
-    "dev": "node --watch apps/api/src/server.js",
+    "dev": "DATABASE_URL=postgresql://egonar:egonar_password@localhost:5432/egonarmarket JWT_SECRET=egonarmarket-local-dev-secret ADMIN_EMAIL=admin@egonarmarket.sn ADMIN_PASSWORD=EgonarDev2026! NODE_ENV=development node --watch apps/api/src/server.js",
     "start": "node apps/api/src/server.js",
-    "db:init": "node apps/api/src/seed.js"
+    "db:init": "DATABASE_URL=postgresql://egonar:egonar_password@localhost:5432/egonarmarket JWT_SECRET=egonarmarket-local-dev-secret ADMIN_EMAIL=admin@egonarmarket.sn ADMIN_PASSWORD=EgonarDev2026! NODE_ENV=development node apps/api/src/seed.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
