@@ -8,49 +8,12 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="header">
-  <div class="nav wrap">
-    <a class="logo" href="index.html">Egonar<span>Market</span></a>
-    <form class="search" id="search-form">
-      <input id="search" type="search" placeholder="Rechercher un produit…" autocomplete="off">
-      <button type="submit">Rechercher</button>
-    </form>
-    <nav>
-      <a href="#categories">Catégories</a>
-      <a href="suivi.html">Suivre</a>
-      <a class="cart-link" href="panier.html">🛒 Panier <b id="cart-count">0</b></a>
-    </nav>
-  </div>
-</header>
-<main>
-<section class="hero wrap">
-  <div>
-    <p class="eyebrow">EGONARMARKET • SÉNÉGAL</p>
-    <h1>Le shopping en ligne,<br><em>simplement.</em></h1>
-    <p class="lead">Des produits utiles, des prix en FCFA, une commande rapide et un suivi clair.</p>
-    <a class="btn primary" href="#produits">Découvrir la boutique</a>
-  </div>
-  <div class="hero-card"><span>✨</span><strong>Recherche intelligente</strong><p>Décrivez simplement ce que vous cherchez.</p></div>
-</section>
-<section class="smart wrap">
-  <div><strong>🔎 Trouver le produit idéal</strong><small>Ex. « cadeau femme à moins de 15 000 FCFA »</small></div>
-  <form id="smart-form"><input id="smart-search" placeholder="Que recherchez-vous ?"><button>Rechercher</button></form>
-</section>
-<section id="categories" class="wrap section">
-  <div class="section-head"><div><p class="eyebrow">EXPLORER</p><h2>Catégories</h2></div></div>
-  <div class="chips" id="category-chips">
-    <button class="chip active" data-category="">Tout</button><button class="chip" data-category="Mode">Mode</button><button class="chip" data-category="Accessoires">Accessoires</button><button class="chip" data-category="Maison">Maison</button><button class="chip" data-category="Beauté">Beauté</button><button class="chip" data-category="Tech">Tech</button>
-  </div>
-</section>
-<section id="produits" class="wrap section">
-  <div class="section-head"><div><p class="eyebrow">SÉLECTION</p><h2>Nos produits</h2><p id="result-count" class="muted"></p></div><select id="sort"><option value="new">Nouveautés</option><option value="priceAsc">Prix croissant</option><option value="priceDesc">Prix décroissant</option></select></div>
-  <div id="products-list" class="products"></div>
-</section>
-<section class="trust wrap">
-  <div>🚚 <strong>Livraison locale</strong><span>Adaptée au Sénégal</span></div><div>💳 <strong>Paiement flexible</strong><span>Prévu pour les moyens locaux</span></div><div>📦 <strong>Suivi de commande</strong><span>Du départ à la livraison</span></div><div>💬 <strong>WhatsApp</strong><span>Assistance rapide</span></div>
-</section>
-</main>
+<header class="header"><div class="nav wrap"><a class="logo" href="index.html">Egonar<span>Market</span></a><form class="search" id="search-form"><input id="search" type="search" placeholder="Rechercher un produit…" autocomplete="off"><button>Rechercher</button></form><nav><a href="#categories">Catégories</a><a href="suivi.html">Suivre</a><a class="cart-link" href="panier.html">🛒 Panier <b id="cart-count">0</b></a></nav></div></header>
+<main><section class="hero wrap"><div><p class="eyebrow">EGONARMARKET • SÉNÉGAL</p><h1>Le shopping en ligne,<br><em>simplement.</em></h1><p class="lead">Des produits utiles, des prix en FCFA, une commande rapide et un suivi clair.</p><a class="btn primary" href="#produits">Découvrir la boutique</a></div><div class="hero-card"><span>✨</span><strong>Recherche intelligente</strong><p>Décrivez simplement ce que vous cherchez.</p></div></section>
+<section class="smart wrap"><div><strong>🔎 Trouver le produit idéal</strong><small>Ex. « cadeau femme à moins de 15 000 FCFA »</small></div><form id="smart-form"><input id="smart-search" placeholder="Que recherchez-vous ?"><button>Rechercher</button></form></section>
+<section id="categories" class="wrap section"><div class="section-head"><div><p class="eyebrow">EXPLORER</p><h2>Catégories</h2></div></div><div class="chips"><button class="chip active" data-category="">Tout</button><button class="chip" data-category="Mode">Mode</button><button class="chip" data-category="Accessoires">Accessoires</button><button class="chip" data-category="Maison">Maison</button><button class="chip" data-category="Beauté">Beauté</button><button class="chip" data-category="Tech">Tech</button></div></section>
+<section id="produits" class="wrap section"><div class="section-head"><div><p class="eyebrow">SÉLECTION</p><h2>Nos produits</h2><p id="result-count" class="muted"></p></div><select id="sort"><option value="new">Nouveautés</option><option value="priceAsc">Prix croissant</option><option value="priceDesc">Prix décroissant</option></select></div><div id="products-list" class="products"></div></section>
+<section class="trust wrap"><div>🚚 <strong>Livraison locale</strong><span>Adaptée au Sénégal</span></div><div>💳 <strong>Paiement flexible</strong><span>Prévu pour les moyens locaux</span></div><div>📦 <strong>Suivi de commande</strong><span>Du départ à la livraison</span></div><div>💬 <strong>WhatsApp</strong><span>Assistance rapide</span></div></section></main>
 <footer><div class="wrap footer-grid"><div><a class="logo" href="index.html">Egonar<span>Market</span></a><p>Une expérience e-commerce pensée pour le Sénégal.</p></div><div><strong>Service</strong><a href="panier.html">Panier</a><a href="suivi.html">Suivre ma commande</a></div><div><strong>Administration</strong><a href="admin.html">Espace admin</a></div></div><p class="copyright">© 2026 EgonarMarket · Tous droits réservés.</p></footer>
-<script src="script.js"></script>
-</body>
-</html>
+<script src="market.js"></script>
+</body></html>
