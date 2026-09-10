@@ -1,8 +1,12 @@
 const { Pool } = require("pg");
-const dotenv = require("dotenv");
-dotenv.config();
+require("dotenv").config();
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 10,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 5_000
+});
 
 module.exports = {
   query: (text, params) => pool.query(text, params),
