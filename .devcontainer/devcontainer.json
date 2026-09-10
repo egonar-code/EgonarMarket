@@ -1,0 +1,4 @@
+{
+  "name": "EgonarMarket",
+  "postStartCommand": "bash scripts/codespace-bootstrap.sh"
+}
