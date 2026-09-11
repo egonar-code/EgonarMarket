@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fournisseurs — EgonarMarket</title><link rel="stylesheet" href="style.css"></head>
+<body><header class="header"><div class="nav wrap"><a class="logo" href="index.html">Egonar<span>Market</span></a><nav><a href="admin.html">Administration</a><a href="index.html">Boutique</a></nav></div></header>
+<main class="wrap section"><div class="section-head"><div><p class="eyebrow">ADMINISTRATION</p><h1>Fournisseurs & validation</h1><p class="muted">Validez les vendeurs et leurs produits avant publication.</p></div></div>
+<section><h2>Fournisseurs</h2><div id="suppliers"></div></section>
+<section><h2>Produits à valider</h2><div id="supplier-products"></div></section>
+</main>
+<script>
+const API = ""; const $=id=>document.getElementById(id); const call=(p,o={})=>fetch(API+p,{credentials:"include",...o}).then(async r=>({ok:r.ok,data:await r.json().catch(()=>({}))}));
+const labels={PENDING:"En attente",APPROVED:"Approuvé",REJECTED:"Refusé",SUSPENDED:"Suspendu"};
+async function boot(){const me=await call("/api/admin/me");if(!me.ok){location.href="admin.html";return}await refresh()}
+async function refresh(){const [s,p]=await Promise.all([call("/api/supplier/admin/suppliers"),call("/api/supplier/admin/products?status=PENDING")]);if(!s.ok||!p.ok)return alert(s.data.error||p.data.error||"Accès refusé");$("suppliers").innerHTML=(s.data||[]).map(x=>`<div class="admin-row"><span><b>${esc(x.business_name)}</b><small>${esc(x.contact_name)} · ${esc(x.email)} · ${esc(x.phone)} · commission ${x.commission_percent}%</small></span><select onchange="setSupplier('${x.id}',this.value)">${Object.keys(labels).map(k=>`<option value="${k}" ${x.status===k?"selected":""}>${labels[k]}</option>`).join("")}</select></div>`).join("")||'<p class="muted">Aucun fournisseur.</p>';
+$("supplier-products").innerHTML=(p.data||[]).map(x=>`<div class="admin-row"><span><b>${esc(x.name)}</b><small>${esc(x.business_name||"Sans fournisseur")} · ${x.price_fcfa} FCFA · stock ${x.stock}</small></span><span><button onclick="approve('${x.id}','APPROVED')">Approuver</button><button onclick="approve('${x.id}','REJECTED')">Refuser</button></span></div>`).join("")||'<p class="muted">Aucun produit en attente.</p>';}
+async function setSupplier(id,status){const r=await call('/api/supplier/admin/suppliers/'+id+'/status',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});if(!r.ok)alert(r.data.error||'Erreur');refresh()}
+async function approve(id,status){const r=await call('/api/supplier/admin/products/'+id+'/approval',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({approval_status:status})});if(!r.ok)alert(r.data.error||'Erreur');refresh()}
+function esc(s){return String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}boot();
+</script></body></html>
