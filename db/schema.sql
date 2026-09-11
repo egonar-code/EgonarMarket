@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS products (
   sku TEXT UNIQUE,
   image_url TEXT NOT NULL DEFAULT '',
   active BOOLEAN NOT NULL DEFAULT TRUE,
+  approval_status TEXT NOT NULL DEFAULT 'APPROVED',
+  supplier_id UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -58,9 +60,30 @@ CREATE TABLE IF NOT EXISTS admins (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS suppliers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id UUID UNIQUE REFERENCES admins(id) ON DELETE CASCADE,
+  business_name TEXT NOT NULL,
+  contact_name TEXT NOT NULL DEFAULT '',
+  phone TEXT NOT NULL DEFAULT '',
+  email TEXT UNIQUE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  commission_percent NUMERIC(5,2) NOT NULL DEFAULT 10 CHECK (commission_percent >= 0 AND commission_percent <= 100),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE products ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'APPROVED';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_id UUID;
+ALTER TABLE products DROP CONSTRAINT IF EXISTS products_supplier_id_fkey;
+ALTER TABLE products ADD CONSTRAINT products_supplier_id_fkey FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL;
+
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_active ON products(active);
 CREATE INDEX IF NOT EXISTS idx_products_stock ON products(stock);
+CREATE INDEX IF NOT EXISTS idx_products_approval_status ON products(approval_status);
+CREATE INDEX IF NOT EXISTS idx_products_supplier ON products(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_number ON orders(order_number);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_suppliers_status ON suppliers(status);
