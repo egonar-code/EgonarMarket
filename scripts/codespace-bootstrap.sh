@@ -13,9 +13,15 @@ export POSTGRES_DB="${POSTGRES_DB:-egonarmarket}"
 export POSTGRES_USER="${POSTGRES_USER:-egonar}"
 export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-egonar_password}"
 
+# Keep the local source tree clean: dependencies are regenerated when absent
+# and are ignored by Git via .gitignore.
+if [ ! -d node_modules/express ]; then
+  npm install --no-audit --no-fund >/tmp/egonarmarket-npm-install.log 2>&1 || true
+fi
+
 # Always expose the storefront preview, even if PostgreSQL/API startup fails.
 if ! curl -fsS "http://127.0.0.1:${PREVIEW_PORT}/" >/dev/null 2>&1; then
-  nohup python3 -m http.server "${PREVIEW_PORT}" --directory apps/web >/tmp/egonarmarket-preview.log 2>&1 &
+  nohup node scripts/preview-server.js >/tmp/egonarmarket-preview.log 2>&1 &
 fi
 
 # Reuse an existing local PostgreSQL container when present.
