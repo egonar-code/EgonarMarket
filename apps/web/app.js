@@ -28,6 +28,49 @@ async function api(path, options = {}) {
   return data;
 }
 
+function siteEnhancements() {
+  const nav = document.querySelector("header nav");
+  if (nav) {
+    const links = [
+      ["food.html", "🍽️ Food"],
+      ["travel.html", "✈️ Travel"]
+    ];
+    links.forEach(([href, label]) => {
+      if (!nav.querySelector(`a[href="${href}"]`)) {
+        const a = document.createElement("a");
+        a.href = href;
+        a.textContent = label;
+        nav.insertBefore(a, nav.querySelector("a[href=\"suivi.html\"]") || nav.firstChild);
+      }
+    });
+  }
+  const chips = document.querySelector(".chips");
+  if (chips) {
+    const extra = [
+      ["Charcuterie", "Charcuterie"],
+      ["Poissonnerie", "Poissonnerie"],
+      ["Bébés & Enfants", "Bébés & Enfants"]
+    ];
+    extra.forEach(([value, label]) => {
+      if (!chips.querySelector(`[data-category="${CSS.escape(value)}"]`)) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "chip";
+        b.dataset.category = value;
+        b.textContent = label;
+        b.addEventListener("click", () => {
+          chips.querySelectorAll("[data-category]").forEach(x => x.classList.remove("active"));
+          b.classList.add("active");
+          category = value;
+          searchMode = "classic";
+          load();
+        });
+        chips.appendChild(b);
+      }
+    });
+  }
+}
+
 async function load() {
   const box = document.getElementById("products-list") || document.getElementById("products");
   if (box) box.innerHTML = '<div class="empty-state"><h3>Chargement…</h3><p>Nous préparons votre sélection.</p></div>';
@@ -133,6 +176,7 @@ function voiceSearch() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  siteEnhancements();
   document.getElementById("search-form")?.addEventListener("submit", e => { e.preventDefault(); const text = document.getElementById("search")?.value || ""; runClassicSearch(text); });
   document.getElementById("smart-form")?.addEventListener("submit", e => { e.preventDefault(); smartSearch(document.getElementById("smart-search")?.value || ""); document.getElementById("produits")?.scrollIntoView({ behavior: "smooth" }); });
   document.getElementById("sort")?.addEventListener("change", render);
