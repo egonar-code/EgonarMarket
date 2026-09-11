@@ -1,13 +1,20 @@
 {
   "name": "EgonarMarket",
-  "forwardPorts": [3000],
+  "forwardPorts": [3000, 8080],
   "portsAttributes": {
     "3000": {
-      "label": "EgonarMarket",
+      "label": "EgonarMarket API + boutique",
+      "protocol": "http",
+      "onAutoForward": "openBrowser",
+      "visibility": "private"
+    },
+    "8080": {
+      "label": "EgonarMarket aperçu",
       "protocol": "http",
       "onAutoForward": "openBrowser",
       "visibility": "private"
     }
   },
-  "postStartCommand": "bash scripts/codespace-bootstrap.sh"
+  "postStartCommand": "bash scripts/codespace-bootstrap.sh",
+  "postAttachCommand": "bash scripts/codespace-bootstrap.sh"
 }
