@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="EgonarMarket — espace fournisseur"><title>Espace fournisseur — EgonarMarket</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header class="header"><div class="nav wrap"><a class="logo" href="index.html">Egonar<span>Market</span></a><nav><a href="index.html">Boutique</a><a href="food.html">Food</a><a href="travel.html">Travel</a></nav></div></header>
+<main class="wrap section">
+  <div class="section-head"><div><p class="eyebrow">MARKETPLACE</p><h1>Espace fournisseur</h1><p class="muted">Publiez vos produits, gérez votre stock et suivez vos soumissions.</p></div><button id="logout" class="btn secondary" hidden>Déconnexion</button></div>
+  <section id="auth" class="admin-grid">
+    <div><h2>Créer un compte</h2><form id="register" class="form"><input name="business_name" placeholder="Nom de l'entreprise" required><input name="contact_name" placeholder="Nom du contact" required><input name="phone" placeholder="Téléphone"><input name="email" type="email" placeholder="Email professionnel" required><input name="password" type="password" minlength="8" placeholder="Mot de passe (8 caractères min.)" required><button class="btn primary">Demander l'accès</button></form><div id="register-msg"></div></div>
+    <div><h2>Connexion</h2><form id="login" class="form"><input name="email" type="email" placeholder="Email" required><input name="password" type="password" placeholder="Mot de passe" required><button class="btn primary">Se connecter</button></form><div id="login-msg"></div></div>
+  </section>
+  <section id="panel" hidden>
+    <div class="admin-stats"><div><span>Produits actifs</span><strong id="active-count">0</strong></div><div><span>En validation</span><strong id="pending-count">0</strong></div><div><span>Stock total</span><strong id="stock-count">0</strong></div></div>
+    <div class="admin-grid"><section><h2>Soumettre un produit</h2><form id="product-form" class="form"><input name="name" placeholder="Nom du produit" required><input name="category" placeholder="Catégorie" required><input name="subcategory" placeholder="Sous-catégorie"><input name="price_fcfa" type="number" min="0" placeholder="Prix FCFA" required><input name="old_price_fcfa" type="number" min="0" placeholder="Ancien prix (facultatif)"><input name="stock" type="number" min="0" placeholder="Stock" required><input name="sku" placeholder="SKU (facultatif)"><input name="image_url" placeholder="URL de l'image"><textarea name="description" placeholder="Description"></textarea><button class="btn primary">Soumettre pour validation</button></form><div id="product-msg"></div></section><section><h2>Mes produits</h2><div id="products"></div></section></div>
+  </section>
+</main>
+<script src="supplier-app.js"></script>
+</body></html>
