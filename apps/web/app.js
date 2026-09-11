@@ -3,6 +3,12 @@ let products = [];
 let category = "";
 let searchMode = "classic";
 
+const DEMO_PRODUCTS = [
+  { id: "demo-tee", name: "T-shirt qualité premium", category: "Mode", description: "T-shirt confortable et élégant.", price_fcfa: 10000, stock: 20, image_url: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80" },
+  { id: "demo-satchel", name: "Sac Élégance", category: "Accessoires", description: "Sac moderne et élégant pour le quotidien.", price_fcfa: 18000, stock: 12, image_url: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=900&q=80" },
+  { id: "demo-watch", name: "Montre classique", category: "Mode", description: "Montre au design intemporel.", price_fcfa: 25000, stock: 8, image_url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80" }
+];
+
 const money = n => new Intl.NumberFormat("fr-FR").format(Number(n) || 0) + " FCFA";
 const cart = () => {
   try { return JSON.parse(localStorage.getItem("egonarCart") || "[]"); }
@@ -31,8 +37,9 @@ async function load() {
     products = Array.isArray(data) ? data : (data.products || []);
     render();
   } catch (e) {
-    if (box) box.innerHTML = `<div class="empty-state"><h3>Catalogue temporairement indisponible</h3><p>${esc(e.message)}</p><button class="btn primary" type="button" id="retry">Réessayer</button></div>`;
-    document.getElementById("retry")?.addEventListener("click", load);
+    products = DEMO_PRODUCTS.slice();
+    render();
+    showToast("Mode aperçu activé : le catalogue réel sera chargé dès que l’API est disponible.");
   }
   updateCount();
 }
@@ -52,11 +59,11 @@ async function smartSearch(message) {
     products = Array.isArray(data.products) ? data.products : [];
     render();
   } catch (e) {
+    products = DEMO_PRODUCTS.slice();
     searchMode = "classic";
     const input = document.getElementById("search");
     if (input) input.value = text;
     render();
-    if (box && !products.length) box.innerHTML = `<div class="empty-state"><h3>Recherche indisponible</h3><p>${esc(e.message)}</p></div>`;
   }
 }
 
@@ -71,13 +78,7 @@ function add(id) {
     if (row.quantity >= stock) return alert(`Stock maximum atteint : ${stock} unité(s).`);
     row.quantity += 1;
   } else {
-    c.push({
-      product_id: p.id,
-      name: p.name,
-      price_fcfa: Number(p.price_fcfa || 0),
-      image_url: p.image_url || "",
-      quantity: 1
-    });
+    c.push({ product_id: p.id, name: p.name, price_fcfa: Number(p.price_fcfa || 0), image_url: p.image_url || "", quantity: 1 });
   }
   saveCart(c);
   showToast(`${p.name} a été ajouté au panier.`);
@@ -89,7 +90,7 @@ function showToast(text) {
   t.textContent = text;
   t.classList.add("show");
   window.clearTimeout(t._timer);
-  t._timer = window.setTimeout(() => t.classList.remove("show"), 1800);
+  t._timer = window.setTimeout(() => t.classList.remove("show"), 2600);
 }
 
 function render() {
