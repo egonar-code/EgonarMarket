@@ -5,6 +5,7 @@ const foodOffers = [
   { title: "Menu déjeuner sénégalais", type: "Restaurant", city: "Dakar", tags: "restaurant déjeuner thieb yassa mafé plat local", price: 5000, note: "Service midi" },
   { title: "Panier courses essentielles", type: "Courses", city: "Dakar", tags: "courses épicerie alimentation huile riz lait", price: 12000, note: "Commande rapide" }
 ];
+window.foodOffers = foodOffers;
 
 function foodMoney(value) {
   return new Intl.NumberFormat("fr-FR").format(value) + " FCFA";
@@ -37,4 +38,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const input = form?.querySelector("input");
   form?.addEventListener("submit", e => { e.preventDefault(); foodSearch(input?.value || ""); });
   form?.querySelector("button")?.addEventListener("click", () => foodSearch(input?.value || ""));
+  if (!document.getElementById("egonar-voice-assistant")) {
+    const script = document.createElement("script");
+    script.src = "assistant-voice.js";
+    document.body.appendChild(script);
+  }
 });
