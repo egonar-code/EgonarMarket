@@ -24,11 +24,11 @@ async function main() {
   const count = await db.query("SELECT COUNT(*)::int AS n FROM products");
   if (count.rows[0].n === 0) {
     await db.query(
-      `INSERT INTO products(name,slug,category,description,price_fcfa,stock,image_url)
+      `INSERT INTO products(name,slug,category,description,price_fcfa,stock,image_url,verified_level,verification_score,rating_average,rating_count,delivery_min_minutes,delivery_max_minutes,delivery_city,verified_at)
        VALUES
-       ('T-shirt Premium','t-shirt-premium','MODE','T-shirt qualité premium.',10000,20,'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80'),
-       ('Sac Élégance','sac-elegance','ACCESSOIRES','Sac moderne et élégant.',18000,12,'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=900&q=80'),
-       ('Montre Classique','montre-classique','MODE','Montre au design intemporel.',25000,8,'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80')`
+       ('T-shirt Premium','t-shirt-premium','MODE','T-shirt qualité premium.',10000,20,'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80','VERIFIED',92,4.8,37,45,90,'Dakar',NOW()),
+       ('Sac Élégance','sac-elegance','ACCESSOIRES','Sac moderne et élégant.',18000,12,'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=900&q=80','PREMIUM',97,4.9,61,30,75,'Dakar',NOW()),
+       ('Montre Classique','montre-classique','MODE','Montre au design intemporel.',25000,8,'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80','VERIFIED',89,4.7,24,60,120,'Dakar',NOW())`
     );
   }
 
