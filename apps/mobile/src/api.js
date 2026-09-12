@@ -13,13 +13,7 @@ export async function api(path, options = {}) {
     ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
     ...(options.headers || {})
   };
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-    credentials: "include"
-  });
-
+  const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, credentials: "include" });
   const type = response.headers.get("content-type") || "";
   const data = type.includes("application/json") ? await response.json() : await response.text();
   if (!response.ok) {
@@ -36,6 +30,9 @@ export const supplierApi = {
   me: () => api("/api/supplier/me"),
   stats: () => api("/api/supplier/stats"),
   products: () => api("/api/supplier/products"),
+  createProduct: product => api("/api/supplier/products", { method: "POST", body: JSON.stringify(product) }),
+  updateProduct: (id, patch) => api(`/api/supplier/products/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+  deactivateProduct: id => api(`/api/supplier/products/${id}`, { method: "DELETE" }),
   logout: () => api("/api/supplier/logout", { method: "POST" })
 };
 
