@@ -26,7 +26,7 @@ function siteEnhancements() {
     links.forEach(([href,label]) => { if (!nav.querySelector(`a[href="${href}"]`)) { const a=document.createElement("a"); a.href=href; a.textContent=label; nav.insertBefore(a,nav.querySelector("a[href=\"suivi.html\"]")||nav.firstChild); } });
   }
   const chips=document.querySelector(".chips");
-  if(chips){const extra=[["Charcuterie","Charcuterie"],["Poissonnerie","Poissonnerie"],["Bébés & Enfants","Bébés & Enfants"]];extra.forEach(([value,label])=>{if(!chips.querySelector(`[data-category="${CSS.escape(value)}"]`)){const b=document.createElement("button");b.type="button";b.className="chip";b.dataset.category=value;b.textContent=label;b.addEventListener("click",()=>{chips.querySelectorAll("[data-category]").forEach(x=>x.classList.remove("active"));b.classList.add("active");category=value;searchMode="classic";load();});chips.appendChild(b);}});}
+  if(chips){const extra=[["Bébés & Enfants","Bébés & Enfants"]];extra.forEach(([value,label])=>{if(!chips.querySelector(`[data-category="${CSS.escape(value)}"]`)){const b=document.createElement("button");b.type="button";b.className="chip";b.dataset.category=value;b.textContent=label;b.addEventListener("click",()=>{chips.querySelectorAll("[data-category]").forEach(x=>x.classList.remove("active"));b.classList.add("active");category=value;searchMode="classic";load();});chips.appendChild(b);}});}
 }
 
 function injectAiReasonStyles(){
