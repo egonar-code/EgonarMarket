@@ -32,6 +32,13 @@ async function main() {
     );
   }
 
+  await db.query(
+    `UPDATE products SET verified_level='VERIFIED', verification_score=92, rating_average=4.8, rating_count=37, delivery_min_minutes=45, delivery_max_minutes=90, delivery_city='Dakar', verified_at=COALESCE(verified_at,NOW()) WHERE slug='t-shirt-premium'`);
+  await db.query(
+    `UPDATE products SET verified_level='PREMIUM', verification_score=97, rating_average=4.9, rating_count=61, delivery_min_minutes=30, delivery_max_minutes=75, delivery_city='Dakar', verified_at=COALESCE(verified_at,NOW()) WHERE slug='sac-elegance'`);
+  await db.query(
+    `UPDATE products SET verified_level='VERIFIED', verification_score=89, rating_average=4.7, rating_count=24, delivery_min_minutes=60, delivery_max_minutes=120, delivery_city='Dakar', verified_at=COALESCE(verified_at,NOW()) WHERE slug='montre-classique'`);
+
   console.log("Base EgonarMarket initialisée.");
   await db.pool.end();
 }
