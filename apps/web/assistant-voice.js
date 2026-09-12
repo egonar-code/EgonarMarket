@@ -66,6 +66,12 @@
     const s = document.createElement('style'); s.id='egonar-voice-style'; s.textContent = `.voice-assistant{max-width:1180px;margin:12px auto 45px;padding:22px;border-radius:24px;background:#111;color:#fff;box-shadow:0 18px 50px rgba(0,0,0,.12)}.voice-food{background:#2c2219}.voice-travel{background:#092338}.voice-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}.voice-head strong{display:block;font-size:19px}.voice-head small{display:block;color:#aaa;margin-top:7px;line-height:1.5}.voice-language-row{display:flex;align-items:center;gap:8px;margin-top:15px;flex-wrap:wrap}.voice-lang-btn{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;border-radius:10px;min-width:44px;padding:8px 10px;font-size:20px;line-height:1;cursor:pointer}.voice-lang-btn.active{background:#fff;color:#111}.voice-form{display:grid;grid-template-columns:1fr auto auto;gap:10px;margin-top:16px}.voice-form input{border:0;border-radius:12px;padding:15px 16px;min-width:0}.voice-form button{border:0;border-radius:12px;padding:0 16px;font-weight:800;cursor:pointer}.voice-form #egonar-mic{background:#fff;color:#111}.voice-form #egonar-voice-send{background:#f59e0b;color:#111}.voice-close{border:0;background:transparent;color:#fff;font-size:26px;cursor:pointer}.voice-answer{margin-top:14px;min-height:26px;color:#f5f5f5;line-height:1.5}@media(max-width:600px){.voice-form{grid-template-columns:1fr auto}.voice-form #egonar-voice-send{grid-column:1/-1;padding:13px}.voice-form #egonar-mic{padding:0 14px}}`;
     document.head.appendChild(s);
   }
-  const boot = () => { injectStyles(); mount(); };
+  const connectHeaderMic = () => {
+    const button = document.querySelector('#search-form button');
+    if (!button || button.dataset.voiceBound === '1') return;
+    button.dataset.voiceBound = '1';
+    button.addEventListener('click', e => { e.preventDefault(); listen(); });
+  };
+  const boot = () => { injectStyles(); mount(); connectHeaderMic(); };
   document.addEventListener('DOMContentLoaded',boot); if (document.readyState !== 'loading') boot();
 })();
