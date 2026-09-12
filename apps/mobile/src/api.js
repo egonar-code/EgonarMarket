@@ -40,9 +40,11 @@ export const supplierApi = {
 };
 
 export const adminApi = {
+  login: (email, password) => api("/api/admin/login", { method: "POST", body: JSON.stringify({ email, password }) }),
   me: () => api("/api/admin/me"),
   suppliers: () => api("/api/supplier/admin/suppliers"),
   pendingProducts: () => api("/api/supplier/admin/products?status=PENDING"),
   updateSupplierStatus: (id, status) => api(`/api/supplier/admin/suppliers/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
-  approveProduct: (id, approval_status) => api(`/api/supplier/admin/products/${id}/approval`, { method: "PATCH", body: JSON.stringify({ approval_status }) })
+  approveProduct: (id, approval_status) => api(`/api/supplier/admin/products/${id}/approval`, { method: "PATCH", body: JSON.stringify({ approval_status }) }),
+  logout: () => api("/api/admin/logout", { method: "POST" })
 };
