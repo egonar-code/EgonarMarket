@@ -4,183 +4,23 @@
   const STORAGE_SEARCHES = 'egonarRecentSearches';
   let catalog = [];
   let lastSignature = '';
-
   const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const tokens = value => normalize(value).split(/[^a-z0-9]+/).filter(word => word.length > 2);
   const money = value => `${new Intl.NumberFormat('fr-FR').format(Number(value) || 0)} FCFA`;
   const esc = value => String(value ?? '').replace(/[&<>\"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[char]));
-
-  function readJson(key, fallback) {
-    try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch { return fallback; }
-  }
-
-  function writeJson(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-  }
-
-  function remember(key, value, max = 8) {
-    const current = readJson(key, []);
-    const next = [value, ...current.filter(item => JSON.stringify(item) !== JSON.stringify(value))].slice(0, max);
-    writeJson(key, next);
-  }
-
-  function injectStyles() {
-    if (document.getElementById('egonar-recommendations-style')) return;
-    const style = document.createElement('style');
-    style.id = 'egonar-recommendations-style';
-    style.textContent = `
-      .egonar-reco-wrap{margin:34px 0 8px;padding:22px;border:1px solid rgba(15,75,110,.10);border-radius:22px;background:linear-gradient(135deg,#fbfdff,#f5f9fc);box-shadow:0 12px 34px rgba(12,42,61,.06)}
-      .egonar-reco-head{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:15px}.egonar-reco-title{margin:0;font-size:19px;color:#12364d}.egonar-reco-sub{margin:4px 0 0;font-size:12px;color:#6c7e89}.egonar-reco-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.egonar-reco-card{display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid rgba(11,58,87,.09);border-radius:16px;overflow:hidden;transition:transform .18s,box-shadow .18s}.egonar-reco-card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(13,50,72,.10)}.egonar-reco-card img,.egonar-reco-placeholder{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eef4f7}.egonar-reco-placeholder{display:grid;place-items:center;font-size:12px;color:#758893}.egonar-reco-body{padding:11px}.egonar-reco-body small{display:block;color:#68808d;font-size:10px;margin-bottom:4px}.egonar-reco-body strong{display:block;color:#1b3343;font-size:13px;line-height:1.3}.egonar-reco-price{margin-top:6px;color:#0a5d91;font-size:13px;font-weight:800}.egonar-reco-action{display:inline-flex;margin-top:8px;padding:7px 10px;border-radius:999px;background:#0a5d91;color:#fff;text-decoration:none;font-size:11px;font-weight:800;justify-content:center}.egonar-reco-empty{padding:12px;color:#6f818c;font-size:12px}.egonar-reco-section+.egonar-reco-section{margin-top:24px}@media(max-width:900px){.egonar-reco-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.egonar-reco-wrap{padding:15px}.egonar-reco-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.egonar-reco-head{display:block}}
-    `;
-    document.head.appendChild(style);
-  }
-
-  async function loadCatalog() {
-    try {
-      const response = await fetch(`${API}/products`);
-      const data = await response.json();
-      if (!response.ok) throw new Error('catalogue indisponible');
-      catalog = Array.isArray(data) ? data : (data.products || []);
-    } catch {
-      catalog = [];
-    }
-  }
-
-  function currentQuery() {
-    return String(document.getElementById('smart-search')?.value || document.getElementById('search')?.value || '').trim();
-  }
-
-  function scoreProduct(product, queryTokens, recentIds, selectedCategories) {
-    const hay = normalize(`${product.name} ${product.description} ${product.category} ${product.subcategory || ''}`);
-    let score = 0;
-    for (const token of queryTokens) if (hay.includes(token)) score += 18;
-    if (selectedCategories.has(normalize(product.category))) score += 16;
-    if (recentIds.has(String(product.id))) score += 10;
-    score += Math.min(12, Number(product.verification_score || 0) / 10);
-    score += Math.min(8, Number(product.rating_average || 0) * 1.6);
-    if (Number(product.stock || 0) > 0) score += 8;
-    return score;
-  }
-
-  function complementaryScore(product, sourceProducts) {
-    const categories = new Set(sourceProducts.map(item => normalize(item.category)));
-    const map = {
-      mode: ['accessoires', 'beaute', 'maison'],
-      accessoires: ['mode', 'beaute', 'tech'],
-      maison: ['tech', 'beaute', 'accessoires'],
-      beaute: ['mode', 'accessoires', 'maison'],
-      tech: ['accessoires', 'maison'],
-      charcuterie: ['poissonnerie'],
-      poissonnerie: ['charcuterie'],
-      'bebes & enfants': ['mode', 'maison']
-    };
-    const cat = normalize(product.category);
-    let score = 0;
-    for (const source of categories) if ((map[source] || []).includes(cat)) score += 24;
-    score += Math.min(10, Number(product.verification_score || 0) / 10);
-    score += Math.min(8, Number(product.rating_average || 0) * 1.6);
-    if (Number(product.stock || 0) > 0) score += 8;
-    return score;
-  }
-
-  function card(product) {
-    const image = product.image_url
-      ? `<img src="${esc(product.image_url)}" alt="${esc(product.name)}" loading="lazy" onerror="this.style.display='none'">`
-      : `<div class="egonar-reco-placeholder">EgonarMarket</div>`;
-    return `<article class="egonar-reco-card"><a href="produit.html?id=${encodeURIComponent(product.id)}">${image}</a><div class="egonar-reco-body"><small>${esc(product.category || 'Sélection')}</small><strong>${esc(product.name)}</strong><div class="egonar-reco-price">${money(product.price_fcfa)}</div><a class="egonar-reco-action" href="produit.html?id=${encodeURIComponent(product.id)}">Voir le produit</a></div></article>`;
-  }
-
-  function renderRecommendations() {
-    const box = document.getElementById('products-list');
-    if (!box || !catalog.length) return;
-    const visibleCards = [...box.querySelectorAll('.product-card')];
-    if (!visibleCards.length) return;
-
-    const query = currentQuery();
-    const queryTokens = tokens(query);
-    const recent = readJson(STORAGE_RECENT, []);
-    const recentIds = new Set(recent.map(item => String(item.id || item)));
-    const selectedCategories = new Set([...document.querySelectorAll('[data-category].active')].map(item => normalize(item.dataset.category || '')).filter(Boolean));
-    const visibleIds = new Set(visibleCards.map(cardElement => {
-      const link = cardElement.querySelector('a[href*="produit.html?id="]');
-      return link ? decodeURIComponent((link.getAttribute('href').split('id=')[1] || '').split('&')[0]) : '';
-    }));
-
-    const candidates = catalog.filter(product => !visibleIds.has(String(product.id)) && Number(product.stock || 0) > 0);
-    const personalized = [...candidates]
-      .map(product => ({ product, score: scoreProduct(product, queryTokens, recentIds, selectedCategories) }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 4)
-      .map(item => item.product);
-
-    const sourceProducts = catalog.filter(product => recentIds.has(String(product.id))).slice(0, 6);
-    const together = [...candidates]
-      .map(product => ({ product, score: complementaryScore(product, sourceProducts.length ? sourceProducts : personalized) }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 4)
-      .map(item => item.product)
-      .filter(product => !personalized.some(other => String(other.id) === String(product.id)));
-
-    const signature = `${query}|${[...selectedCategories].join(',')}|${recent.map(item => item.id || item).join(',')}|${visibleCards.length}`;
-    if (signature === lastSignature) return;
-    lastSignature = signature;
-    document.getElementById('egonar-recommendations')?.remove();
-
-    const wrap = document.createElement('section');
-    wrap.id = 'egonar-recommendations';
-    wrap.className = 'egonar-reco-wrap';
-    const parts = [];
-    if (personalized.length) {
-      parts.push(`<div class="egonar-reco-section"><div class="egonar-reco-head"><div><h3 class="egonar-reco-title">✦ Pour vous</h3><p class="egonar-reco-sub">Sélection adaptée à votre recherche et à vos habitudes sur Egonar.</p></div></div><div class="egonar-reco-grid">${personalized.map(card).join('')}</div></div>`);
-    }
-    if (together.length) {
-      parts.push(`<div class="egonar-reco-section"><div class="egonar-reco-head"><div><h3 class="egonar-reco-title">🛍️ Souvent acheté avec</h3><p class="egonar-reco-sub">Des produits complémentaires qui peuvent aller ensemble.</p></div></div><div class="egonar-reco-grid">${together.map(card).join('')}</div></div>`);
-    }
-    if (!parts.length) return;
-    wrap.innerHTML = parts.join('');
-    box.insertAdjacentElement('afterend', wrap);
-  }
-
-  function trackProductClicks() {
-    const box = document.getElementById('products-list');
-    if (!box || box.dataset.recoTracking === '1') return;
-    box.dataset.recoTracking = '1';
-    box.addEventListener('click', event => {
-      const link = event.target.closest('a[href*="produit.html?id="]');
-      if (!link) return;
-      const id = (link.getAttribute('href').split('id=')[1] || '').split('&')[0];
-      const product = catalog.find(item => String(item.id) === decodeURIComponent(id));
-      if (product) remember(STORAGE_RECENT, { id: product.id, category: product.category }, 10);
-    });
-  }
-
-  function trackSearches() {
-    const forms = [document.getElementById('smart-form'), document.getElementById('search-form')].filter(Boolean);
-    forms.forEach(form => {
-      if (form.dataset.recoSearchTracking === '1') return;
-      form.dataset.recoSearchTracking = '1';
-      form.addEventListener('submit', () => {
-        const input = form.querySelector('input');
-        const value = String(input?.value || '').trim();
-        if (value) remember(STORAGE_SEARCHES, value, 10);
-        window.setTimeout(renderRecommendations, 250);
-      });
-    });
-  }
-
-  function boot() {
-    injectStyles();
-    const box = document.getElementById('products-list');
-    if (!box) return;
-    loadCatalog().then(() => {
-      trackProductClicks();
-      trackSearches();
-      renderRecommendations();
-      const observer = new MutationObserver(() => window.setTimeout(renderRecommendations, 180));
-      observer.observe(box, { childList: true, subtree: true });
-    });
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
-  else boot();
+  function readJson(key, fallback) { try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch { return fallback; } }
+  function writeJson(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
+  function remember(key, value, max = 8) { const current = readJson(key, []); writeJson(key, [value, ...current.filter(item => JSON.stringify(item) !== JSON.stringify(value))].slice(0, max)); }
+  function injectStyles() { if (document.getElementById('egonar-recommendations-style')) return; const style = document.createElement('style'); style.id = 'egonar-recommendations-style'; style.textContent = `.egonar-reco-wrap{margin:34px 0 8px;padding:22px;border:1px solid rgba(15,75,110,.10);border-radius:22px;background:linear-gradient(135deg,#fbfdff,#f5f9fc);box-shadow:0 12px 34px rgba(12,42,61,.06)}.egonar-reco-head{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:15px}.egonar-reco-title{margin:0;font-size:19px;color:#12364d}.egonar-reco-sub{margin:4px 0 0;font-size:12px;color:#6c7e89}.egonar-reco-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.egonar-reco-card{display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid rgba(11,58,87,.09);border-radius:16px;overflow:hidden;transition:transform .18s,box-shadow .18s}.egonar-reco-card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(13,50,72,.10)}.egonar-reco-card img,.egonar-reco-placeholder{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eef4f7}.egonar-reco-placeholder{display:grid;place-items:center;font-size:12px;color:#758893}.egonar-reco-body{padding:11px}.egonar-reco-body small{display:block;color:#68808d;font-size:10px;margin-bottom:4px}.egonar-reco-body strong{display:block;color:#1b3343;font-size:13px;line-height:1.3}.egonar-reco-price{margin-top:6px;color:#0a5d91;font-size:13px;font-weight:800}.egonar-reco-action{display:inline-flex;margin-top:8px;padding:7px 10px;border-radius:999px;background:#0a5d91;color:#fff;text-decoration:none;font-size:11px;font-weight:800;justify-content:center}.egonar-reco-section+.egonar-reco-section{margin-top:24px}@media(max-width:900px){.egonar-reco-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.egonar-reco-wrap{padding:15px}.egonar-reco-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.egonar-reco-head{display:block}}`; document.head.appendChild(style); }
+  async function loadCatalog(){try{const response=await fetch(`${API}/products`);const data=await response.json();if(!response.ok)throw new Error();catalog=Array.isArray(data)?data:(data.products||[])}catch{catalog=[]}}
+  function currentQuery(){return String(document.getElementById('smart-search')?.value||document.getElementById('search')?.value||'').trim()}
+  function scoreProduct(product, queryTokens, recentIds, selectedCategories){const hay=normalize(`${product.name} ${product.description} ${product.category} ${product.subcategory||''}`);let score=0;for(const token of queryTokens)if(hay.includes(token))score+=18;if(selectedCategories.has(normalize(product.category)))score+=16;if(recentIds.has(String(product.id)))score+=10;score+=Math.min(12,Number(product.verification_score||0)/10);score+=Math.min(8,Number(product.rating_average||0)*1.6);if(Number(product.stock||0)>0)score+=8;return score}
+  function complementaryScore(product,sourceProducts){const categories=new Set(sourceProducts.map(item=>normalize(item.category)));const map={mode:['accessoires','beaute','maison'],accessoires:['mode','beaute','tech'],maison:['tech','beaute','accessoires'],beaute:['mode','accessoires','maison'],tech:['accessoires','maison'],'bebes & enfants':['mode','maison']};const cat=normalize(product.category);let score=0;for(const source of categories)if((map[source]||[]).includes(cat))score+=24;score+=Math.min(10,Number(product.verification_score||0)/10);score+=Math.min(8,Number(product.rating_average||0)*1.6);if(Number(product.stock||0)>0)score+=8;return score}
+  function card(product){const image=product.image_url?`<img src="${esc(product.image_url)}" alt="${esc(product.name)}" loading="lazy" onerror="this.style.display='none'">`:`<div class="egonar-reco-placeholder">EgonarMarket</div>`;return `<article class="egonar-reco-card"><a href="produit.html?id=${encodeURIComponent(product.id)}">${image}</a><div class="egonar-reco-body"><small>${esc(product.category||'Sélection')}</small><strong>${esc(product.name)}</strong><div class="egonar-reco-price">${money(product.price_fcfa)}</div><a class="egonar-reco-action" href="produit.html?id=${encodeURIComponent(product.id)}">Voir le produit</a></div></article>`}
+  function renderRecommendations(){const box=document.getElementById('products-list');if(!box||!catalog.length)return;const visibleCards=[...box.querySelectorAll('.product-card')];if(!visibleCards.length)return;const query=currentQuery();const queryTokens=tokens(query);const recent=readJson(STORAGE_RECENT,[]);const recentIds=new Set(recent.map(item=>String(item.id||item)));const selectedCategories=new Set([...document.querySelectorAll('[data-category].active')].map(item=>normalize(item.dataset.category||'')).filter(Boolean));const visibleIds=new Set(visibleCards.map(cardElement=>{const link=cardElement.querySelector('a[href*="produit.html?id="]');return link?decodeURIComponent((link.getAttribute('href').split('id=')[1]||'').split('&')[0]):''}));const candidates=catalog.filter(product=>!visibleIds.has(String(product.id))&&Number(product.stock||0)>0);const personalized=[...candidates].map(product=>({product,score:scoreProduct(product,queryTokens,recentIds,selectedCategories)})).sort((a,b)=>b.score-a.score).slice(0,4).map(item=>item.product);const sourceProducts=catalog.filter(product=>recentIds.has(String(product.id))).slice(0,6);const together=[...candidates].map(product=>({product,score:complementaryScore(product,sourceProducts.length?sourceProducts:personalized)})).sort((a,b)=>b.score-a.score).slice(0,4).map(item=>item.product).filter(product=>!personalized.some(other=>String(other.id)===String(product.id)));const signature=`${query}|${[...selectedCategories].join(',')}|${recent.map(item=>item.id||item).join(',')}|${visibleCards.length}`;if(signature===lastSignature)return;lastSignature=signature;document.getElementById('egonar-recommendations')?.remove();const wrap=document.createElement('section');wrap.id='egonar-recommendations';wrap.className='egonar-reco-wrap';const parts=[];if(personalized.length)parts.push(`<div class="egonar-reco-section"><div class="egonar-reco-head"><div><h3 class="egonar-reco-title">✦ Pour vous</h3><p class="egonar-reco-sub">Sélection adaptée à votre recherche et à vos habitudes sur Egonar.</p></div></div><div class="egonar-reco-grid">${personalized.map(card).join('')}</div></div>`);if(together.length)parts.push(`<div class="egonar-reco-section"><div class="egonar-reco-head"><div><h3 class="egonar-reco-title">🛍️ Souvent acheté avec</h3><p class="egonar-reco-sub">Des produits complémentaires qui peuvent aller ensemble.</p></div></div><div class="egonar-reco-grid">${together.map(card).join('')}</div></div>`);if(!parts.length)return;wrap.innerHTML=parts.join('');box.insertAdjacentElement('afterend',wrap)}
+  function trackProductClicks(){const box=document.getElementById('products-list');if(!box||box.dataset.recoTracking==='1')return;box.dataset.recoTracking='1';box.addEventListener('click',event=>{const link=event.target.closest('a[href*="produit.html?id="]');if(!link)return;const id=(link.getAttribute('href').split('id=')[1]||'').split('&')[0];const product=catalog.find(item=>String(item.id)===decodeURIComponent(id));if(product)remember(STORAGE_RECENT,{id:product.id,category:product.category},10)})}
+  function trackSearches(){[document.getElementById('smart-form'),document.getElementById('search-form')].filter(Boolean).forEach(form=>{if(form.dataset.recoSearchTracking==='1')return;form.dataset.recoSearchTracking='1';form.addEventListener('submit',()=>{const value=String(form.querySelector('input')?.value||'').trim();if(value)remember(STORAGE_SEARCHES,value,10);setTimeout(renderRecommendations,250)})})}
+  function boot(){injectStyles();const box=document.getElementById('products-list');if(!box)return;loadCatalog().then(()=>{trackProductClicks();trackSearches();renderRecommendations();const observer=new MutationObserver(()=>setTimeout(renderRecommendations,180));observer.observe(box,{childList:true,subtree:true})})}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+  const launch=()=>{if(document.querySelector('script[data-ai-launcher]'))return;const s=document.createElement('script');s.src='ai-launcher.js';s.dataset.aiLauncher='1';document.body.appendChild(s)};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',launch,{once:true});else launch();
 })();
