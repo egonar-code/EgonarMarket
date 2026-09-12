@@ -1,9 +1,9 @@
 const foodOffers = [
-  { title: "Poisson frais du jour", type: "Poissonnerie", city: "Dakar", tags: "poisson frais fruits de mer poissonnerie", price: 9000, note: "Disponible aujourd'hui" },
-  { title: "Plateau de grillades", type: "Restaurant", city: "Dakar", tags: "restaurant grillade poulet viande repas", price: 7500, note: "Livraison possible" },
-  { title: "Pack charcuterie familiale", type: "Charcuterie", city: "Dakar", tags: "charcuterie saucisse jambon viande apéritif", price: 15000, note: "Pack partenaire" },
-  { title: "Menu déjeuner sénégalais", type: "Restaurant", city: "Dakar", tags: "restaurant déjeuner thieb yassa mafé plat local", price: 5000, note: "Service midi" },
-  { title: "Panier courses essentielles", type: "Courses", city: "Dakar", tags: "courses épicerie alimentation huile riz lait", price: 12000, note: "Commande rapide" }
+  { title: "Thiéboudienne traditionnelle", type: "Plat", city: "Dakar", tags: "thieb thieboudienne ceebu jen riz poisson plat senegalais", price: 3500, note: "Plat national · livraison Dakar", image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85" },
+  { title: "Yassa poulet", type: "Plat", city: "Dakar", tags: "yassa poulet oignon citron riz restaurant repas", price: 3000, note: "Préparé à la commande", image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=900&q=85" },
+  { title: "Poisson grillé & accompagnement", type: "Poissonnerie", city: "Dakar", tags: "poisson frais fruits de mer poissonnerie grillade poisson", price: 4500, note: "Poisson frais · sélection du jour", image: "https://images.unsplash.com/photo-1544943910-4c1dc44aab44?auto=format&fit=crop&w=900&q=85" },
+  { title: "Mafé bœuf", type: "Plat", city: "Dakar", tags: "mafe boeuf arachide riz sauce repas senegalais", price: 2500, note: "Sauce arachide · portion généreuse", image: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85" },
+  { title: "Pack famille sénégalais", type: "Menu", city: "Dakar", tags: "famille menu repas thieb yassa mafe partage", price: 12000, note: "Idéal pour 4 personnes", image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=85" }
 ];
 window.foodOffers = foodOffers;
 
@@ -29,7 +29,7 @@ function renderFoodResults(results, query, budget) {
   const box = document.getElementById("food-smart-results");
   if (!box) return;
   const budgetText = budget ? ` · budget ${foodMoney(budget)}` : "";
-  box.innerHTML = `<div class="food-result-head"><strong>Résultats pour « ${query} »${budgetText}</strong><span>${results.length} suggestion${results.length > 1 ? "s" : ""}</span></div><div class="menu-grid">${results.map(item => `<article class="menu-card"><div class="menu-body"><span class="badge">${item.type}</span><h3>${item.title}</h3><p>${item.city} · ${item.note}</p><div class="product-bottom"><strong>${foodMoney(item.price)}</strong><a class="btn primary" href="index.html#categories">Voir l'offre</a></div></div></article>`).join("")}</div>`;
+  box.innerHTML = `<div class="food-result-head"><strong>Résultats pour « ${query} »${budgetText}</strong><span>${results.length} suggestion${results.length > 1 ? "s" : ""}</span></div><div class="menu-grid">${results.map(item => `<article class="menu-card"><img src="${item.image}" alt="${item.title}" loading="lazy" style="width:100%;height:210px;object-fit:cover;display:block;border-radius:16px 16px 0 0"><div class="menu-body"><span class="badge">${item.type}</span><h3>${item.title}</h3><p>${item.city} · ${item.note}</p><div class="product-bottom"><strong>${foodMoney(item.price)}</strong><a class="btn primary" href="#explorer">Voir l'offre</a></div></div></article>`).join("")}</div>`;
   box.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
