@@ -5,6 +5,7 @@ const travelOffers = [
   { title: "Transfert aéroport Dakar", type: "Transfert", destination: "Dakar", tags: "transfert aeroport taxi voiture dakar", price: 12000, note: "Prise en charge" },
   { title: "Circuit Sénégal", type: "Séjour", destination: "Sénégal", tags: "circuit senegal découverte voyage vacances", price: 150000, note: "Itinéraire découverte" }
 ];
+window.travelOffers = travelOffers;
 
 function travelMoney(value) {
   return new Intl.NumberFormat("fr-FR").format(value) + " FCFA";
@@ -40,4 +41,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const dates = form?.querySelector("input[type='text']");
   form?.addEventListener("submit", e => { e.preventDefault(); travelSearch(input?.value || "", type?.value || "", dates?.value || ""); });
   form?.querySelector("button")?.addEventListener("click", () => travelSearch(input?.value || "", type?.value || "", dates?.value || ""));
+  if (!document.getElementById("egonar-voice-assistant")) {
+    const script = document.createElement("script");
+    script.src = "assistant-voice.js";
+    document.body.appendChild(script);
+  }
 });
