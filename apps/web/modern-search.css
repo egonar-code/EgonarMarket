@@ -1,4 +1,4 @@
-/* Egonar — barre de recherche inspirée du modèle fourni */
+/* Egonar — barre de recherche moderne + robot IA */
 .header .search{position:relative;width:min(720px,100%);max-width:720px;display:grid;grid-template-columns:1fr 76px;align-items:stretch;gap:0;padding:0;overflow:hidden;background:#fff;border:0;border-radius:999px;box-shadow:0 18px 42px rgba(0,0,0,.12);transition:box-shadow .2s,transform .2s}
 .header .search:focus-within{box-shadow:0 22px 50px rgba(0,0,0,.17),0 0 0 4px rgba(245,158,11,.12);transform:translateY(-1px)}
 .header .search input{width:100%;min-width:0;height:64px;border:0!important;border-radius:999px 0 0 999px!important;padding:0 24px 0 28px!important;background:#fff!important;color:#1a1a1a;outline:0;font-size:18px;font-weight:500}
@@ -9,16 +9,26 @@
 .header .search button span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .smart{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:linear-gradient(135deg,#0d0d0d 0%,#1b1b1b 60%,#17120a 100%);box-shadow:0 18px 55px rgba(17,17,17,.16)}
 .smart:before{content:"";position:absolute;inset:-40%;background:radial-gradient(circle at 80% 20%,rgba(245,158,11,.18),transparent 32%);pointer-events:none}
-.smart>div,.smart form{position:relative;z-index:1}
-.smart>div strong{font-size:20px;letter-spacing:-.02em}.smart small{font-size:13px}
+.smart>div,.smart form{position:relative;z-index:1}.smart>div strong{font-size:20px;letter-spacing:-.02em}.smart small{font-size:13px}
 .smart form{background:rgba(255,255,255,.08);padding:6px;border:1px solid rgba(255,255,255,.12);border-radius:17px;backdrop-filter:blur(8px)}
 .smart input{background:transparent!important;color:#fff;border-radius:12px!important;padding:16px 18px!important;font-size:16px!important}.smart input::placeholder{color:#b9b9b9}
 .smart button{border-radius:12px!important;min-height:48px;background:linear-gradient(135deg,#f59e0b,#ffb52e)!important;color:#111!important;padding:0 22px!important;box-shadow:0 8px 20px rgba(245,158,11,.2)}
 #egonar-voice-assistant{border:1px solid rgba(255,255,255,.08);box-shadow:0 22px 65px rgba(0,0,0,.16);background:linear-gradient(135deg,#0c0c0c,#191919)}
-#egonar-voice-assistant .voice-form{background:rgba(255,255,255,.07);padding:6px;border:1px solid rgba(255,255,255,.12);border-radius:17px}
-#egonar-voice-assistant .voice-form input{background:transparent;color:#fff;border-radius:12px!important;padding:16px 18px!important;font-size:16px}#egonar-voice-assistant .voice-form input::placeholder{color:#aaa}
-#egonar-voice-assistant .voice-form #egonar-mic{min-width:50px;border-radius:12px;background:#fff;color:#111}
-#egonar-voice-assistant .voice-form #egonar-voice-send{min-width:120px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#ffb52e);color:#111;box-shadow:0 8px 18px rgba(245,158,11,.18)}
+#egonar-voice-assistant .voice-form{background:rgba(255,255,255,.07);padding:6px 6px 6px 90px;border:1px solid rgba(125,218,255,.78);border-radius:999px;position:relative;overflow:visible;box-shadow:0 0 0 1px rgba(255,255,255,.06),0 0 28px rgba(41,180,255,.15),inset 0 0 20px rgba(41,180,255,.045)}
+#egonar-voice-assistant .voice-form::before{content:"";position:absolute;left:-20px;top:50%;width:94px;height:94px;transform:translateY(-50%);background:url("egonar-robot.svg") center/contain no-repeat;z-index:5;pointer-events:none;filter:drop-shadow(0 8px 22px rgba(52,205,255,.28));animation:egonarRobotFloat 3.6s ease-in-out infinite}
+#egonar-voice-assistant .voice-form::after{content:"";position:absolute;left:-15%;top:0;width:18%;height:100%;border-radius:999px;background:linear-gradient(90deg,transparent,rgba(90,220,255,.72),transparent);filter:blur(2px);pointer-events:none;animation:egonarScan 4.2s linear infinite}
+#egonar-voice-assistant .voice-form input{background:transparent;color:#fff;border-radius:999px!important;padding:16px 12px!important;font-size:16px;position:relative;z-index:2}#egonar-voice-assistant .voice-form input::placeholder{color:#aab7c3}
+#egonar-voice-assistant .voice-form #egonar-mic{min-width:50px;border-radius:999px;background:rgba(255,255,255,.1);color:#fff;position:relative;z-index:3}
+#egonar-voice-assistant .voice-form #egonar-voice-send{min-width:52px;border-radius:999px;background:#0a5d91;color:#fff;box-shadow:0 0 18px rgba(20,158,255,.22);position:relative;z-index:3}
+#egonar-voice-assistant .voice-form .ai-search-icon{display:none}
 #egonar-voice-assistant .voice-lang-btn{border-radius:12px;padding:9px 12px;transition:.2s}#egonar-voice-assistant .voice-lang-btn:hover{transform:translateY(-1px)}
+#egonar-voice-assistant.is-listening .voice-form::before{animation:egonarRobotListen .8s ease-in-out infinite alternate;filter:drop-shadow(0 8px 30px rgba(100,232,255,.55))}
+#egonar-voice-assistant.is-listening .voice-form{box-shadow:0 0 0 1px rgba(117,229,255,.55),0 0 42px rgba(41,196,255,.28),inset 0 0 24px rgba(41,180,255,.09)}
+#egonar-voice-assistant.is-thinking .voice-form::before{animation:egonarRobotThink .55s ease-in-out infinite alternate}
+@keyframes egonarRobotFloat{0%,100%{transform:translateY(-50%) translateY(0) rotate(-1deg)}50%{transform:translateY(-50%) translateY(-5px) rotate(1deg)}}
+@keyframes egonarRobotListen{from{transform:translateY(-50%) scale(1)}to{transform:translateY(-50%) scale(1.07)}}
+@keyframes egonarRobotThink{from{transform:translateY(-50%) translateX(-2px)}to{transform:translateY(-50%) translateX(2px)}}
+@keyframes egonarScan{from{left:-18%}to{left:110%}}
 @media(max-width:900px){.header .search{width:min(100%,560px)}}
-@media(max-width:600px){.header .search{grid-template-columns:1fr 64px;border-radius:999px}.header .search input{height:56px;padding:0 18px 0 20px!important;font-size:16px}.header .search button{width:64px;min-width:64px;height:56px}.header .search button svg{width:27px;height:27px}.smart{padding:18px}.smart form{padding:5px}.smart button{padding:0 16px!important}.smart input{padding:14px!important}.voice-form{padding:5px!important}}
+@media(max-width:600px){.header .search{grid-template-columns:1fr 64px;border-radius:999px}.header .search input{height:56px;padding:0 18px 0 20px!important;font-size:16px}.header .search button{width:64px;min-width:64px;height:56px}.header .search button svg{width:27px;height:27px}.smart{padding:18px}.smart form{padding:5px}.smart button{padding:0 16px!important}.smart input{padding:14px!important}#egonar-voice-assistant .voice-form{padding-left:58px}#egonar-voice-assistant .voice-form::before{left:-10px;width:72px;height:72px}}
+@media(prefers-reduced-motion:reduce){#egonar-voice-assistant .voice-form::before,#egonar-voice-assistant .voice-form::after{animation:none!important}}
