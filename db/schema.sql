@@ -60,6 +60,18 @@ CREATE TABLE IF NOT EXISTS order_items (
   quantity INTEGER NOT NULL CHECK (quantity > 0)
 );
 
+CREATE TABLE IF NOT EXISTS product_reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment TEXT NOT NULL DEFAULT '',
+  verified_purchase BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(order_id, product_id)
+);
+
 CREATE TABLE IF NOT EXISTS admins (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT UNIQUE NOT NULL,
@@ -120,3 +132,6 @@ CREATE INDEX IF NOT EXISTS idx_orders_number ON orders(order_number);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_suppliers_status ON suppliers(status);
 CREATE INDEX IF NOT EXISTS idx_suppliers_verification_level ON suppliers(verification_level);
+CREATE INDEX IF NOT EXISTS idx_reviews_product ON product_reviews(product_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reviews_customer ON product_reviews(customer_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reviews_order ON product_reviews(order_id);
