@@ -1,39 +1,102 @@
 (() => {
-  // Ce fichier ne remplace pas speechSynthesis.speak().
-  // Il ajoute uniquement une animation de bouche synchronisée avec la parole native.
-  const install = () => {
+  // Le navigateur garde son propre moteur vocal : on ne surcharge jamais speechSynthesis.speak().
+  // Ce script gère uniquement l'intégration visuelle du robot et la bouche pendant la parole.
+
+  const STYLE_ID = 'egonar-robot-inline-style';
+
+  function injectStyle() {
+    if (document.getElementById(STYLE_ID)) return;
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = `
+      #egonar-voice-assistant .egonar-inline-robot{
+        position:absolute;
+        left:-22px;
+        top:50%;
+        width:92px;
+        height:92px;
+        transform:translate(-1px,-50%);
+        z-index:5;
+        pointer-events:none;
+        filter:drop-shadow(0 8px 20px rgba(52,205,255,.22));
+      }
+      #egonar-voice-assistant .egonar-inline-robot svg{
+        width:100%;height:100%;display:block;overflow:visible;
+      }
+      #egonar-voice-assistant .egonar-inline-robot .egonar-mouth{
+        transform-box:fill-box;
+        transform-origin:center;
+        transition:transform .12s ease, opacity .12s ease;
+      }
+      #egonar-voice-assistant .egonar-inline-robot .mouth-frame{
+        stroke-opacity:.42;
+        fill:#06141f;
+      }
+      #egonar-voice-assistant .egonar-inline-robot .mouth-line{stroke-opacity:.46}
+      #egonar-voice-assistant .egonar-inline-robot .mouth-line-2{stroke-opacity:.12}
+      #egonar-voice-assistant.is-speaking .egonar-inline-robot .egonar-mouth{
+        animation:egonarNaturalMouth .17s ease-in-out infinite alternate;
+      }
+      #egonar-voice-assistant.is-speaking .egonar-inline-robot .mouth-frame{stroke-opacity:.62}
+      #egonar-voice-assistant.is-speaking .egonar-inline-robot .mouth-line{stroke-opacity:.72}
+      #egonar-voice-assistant.is-speaking .egonar-inline-robot .mouth-line-2{stroke-opacity:.22}
+      #egonar-voice-assistant.is-speaking .voice-form::before,
+      #egonar-voice-assistant.is-speaking .voice-form::after{animation:none!important;opacity:0!important}
+      @keyframes egonarNaturalMouth{
+        0%{transform:scaleY(.82)}
+        28%{transform:scaleY(1.02)}
+        56%{transform:scaleY(.72)}
+        78%{transform:scaleY(1.12)}
+        100%{transform:scaleY(.88)}
+      }
+      @media(max-width:600px){
+        #egonar-voice-assistant .egonar-inline-robot{left:-12px;width:72px;height:72px}
+      }
+      @media(prefers-reduced-motion:reduce){
+        #egonar-voice-assistant .egonar-inline-robot .egonar-mouth{animation:none!important}
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  async function mountRobot() {
     const section = document.getElementById('egonar-voice-assistant');
-    if (!section) return;
-
-    if (!document.getElementById('egonar-lipsync-style')) {
-      const style = document.createElement('style');
-      style.id = 'egonar-lipsync-style';
-      style.textContent = `
-        #egonar-voice-assistant .egonar-robot-mouth{position:absolute;left:27px;top:50%;width:24px;height:5px;transform:translate(-50%,8px);border-radius:999px;background:#06141f;border:2px solid #66e9ff;box-shadow:0 0 8px rgba(102,233,255,.75);z-index:9;pointer-events:none;opacity:.75}
-        #egonar-voice-assistant.is-speaking .egonar-robot-mouth{opacity:1;animation:egonarMouthTalk .13s ease-in-out infinite alternate}
-        #egonar-voice-assistant.is-speaking .voice-form::before{animation:none!important}
-        #egonar-voice-assistant.is-speaking .voice-form::after{animation:none!important;opacity:0!important}
-        @keyframes egonarMouthTalk{0%{height:3px;width:16px;transform:translate(-50%,8px) scaleY(.65)}25%{height:7px;width:24px;transform:translate(-50%,8px) scaleY(1)}50%{height:11px;width:29px;transform:translate(-50%,8px) scaleY(1)}75%{height:5px;width:20px;transform:translate(-50%,8px) scaleY(.75)}100%{height:8px;width:26px;transform:translate(-50%,8px) scaleY(.95)}}
-        @media(max-width:600px){#egonar-voice-assistant .egonar-robot-mouth{left:26px;width:21px}}
-      `;
-      document.head.appendChild(style);
-    }
-
+    if (!section || section.dataset.robotInlineReady === '1') return;
     const form = section.querySelector('.voice-form');
-    if (!form || form.querySelector('.egonar-robot-mouth')) return;
-    const mouth = document.createElement('span');
-    mouth.className = 'egonar-robot-mouth';
-    mouth.setAttribute('aria-hidden', 'true');
-    form.appendChild(mouth);
-  };
+    if (!form) return;
 
-  const sync = () => {
-    install();
+    injectStyle();
+
+    try {
+      const response = await fetch('egonar-robot.svg', { cache: 'no-store' });
+      if (!response.ok) return;
+      const svgText = await response.text();
+      if (!svgText.includes('egonar-mouth')) return;
+
+      const holder = document.createElement('span');
+      holder.className = 'egonar-inline-robot';
+      holder.setAttribute('aria-hidden', 'true');
+      holder.innerHTML = svgText;
+      form.appendChild(holder);
+      section.dataset.robotInlineReady = '1';
+
+      // On masque le robot de fond de la barre afin de n'avoir qu'un seul robot visible.
+      form.classList.add('has-inline-robot');
+    } catch (_) {}
+  }
+
+  function syncSpeaking() {
     const section = document.getElementById('egonar-voice-assistant');
-    if (!section || !window.speechSynthesis) return;
-    section.classList.toggle('is-speaking', !!speechSynthesis.speaking);
-  };
+    if (!section || !('speechSynthesis' in window)) return;
+    section.classList.toggle('is-speaking', !!window.speechSynthesis.speaking);
+    mountRobot();
+  }
 
-  document.addEventListener('DOMContentLoaded', install);
-  window.setInterval(sync, 80);
+  function boot() {
+    mountRobot();
+    window.setInterval(syncSpeaking, 80);
+  }
+
+  document.addEventListener('DOMContentLoaded', boot);
+  if (document.readyState !== 'loading') boot();
 })();
