@@ -42,6 +42,39 @@ function rateLimit({ windowMs, max, key = req => req.ip }) {
 }
 const authLimiter = rateLimit({ windowMs: 60_000, max: 10, key: req => `auth:${req.ip}` });
 const orderLimiter = rateLimit({ windowMs: 60_000, max: 20, key: req => `order:${req.ip}` });
+const reviewLimiter = rateLimit({ windowMs: 60_000, max: 8, key: req => `review:${req.ip}` });
+
+const normalize = value => String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const tokenize = value => normalize(value).split(/[^a-z0-9]+/).filter(Boolean);
+const STOP_WORDS = new Set(["pour","avec","moins","plus","dans","une","des","les","the","que","cherche","recherche","donne","moi","je","veux","mon","ma","mes","un","une","a","au","aux","en","et","de","du","la","le","les","sur","avec","this","that","find","show","looking","want","need","under","than","for","with","from","in","to","of"]);
+
+function extractAiIntent(message) {
+  const text = normalize(message);
+  const budgetMatch = text.match(/(?:moins de|a moins de|budget|maximum|max|under|less than)\s*([0-9\s]+)/i) || text.match(/([0-9]{3,})\s*(?:fcfa|f|francs?)/i);
+  const budget = budgetMatch ? Number(budgetMatch[1].replace(/\s/g, "")) : null;
+  const allWords = tokenize(text);
+  const words = [...new Set(allWords.filter(w => w.length > 2 && !STOP_WORDS.has(w)))].slice(0, 16);
+  const categories = ["mode","accessoires","maison","beaute","tech","charcuterie","poissonnerie","bebes","enfants"];
+  const category = categories.find(c => words.some(w => w === c || w.startsWith(c)));
+  return { text, budget, words, category };
+}
+
+function computeVerification({ approval_status, supplier_status, supplier_level, rating_average, rating_count, delivery_max_minutes }) {
+  let score = 0;
+  if (approval_status === "APPROVED") score += 35;
+  if (supplier_status === "APPROVED") score += 25;
+  if (["VERIFIED", "PREMIUM"].includes(String(supplier_level || "").toUpperCase())) score += 10;
+  if (Number(rating_average) >= 4.5) score += 15;
+  else if (Number(rating_average) >= 4) score += 10;
+  else if (Number(rating_average) >= 3.5) score += 5;
+  if (Number(rating_count) >= 10) score += 10;
+  else if (Number(rating_count) >= 5) score += 6;
+  else if (Number(rating_count) >= 2) score += 3;
+  if (Number(delivery_max_minutes) > 0) score += 5;
+  score = Math.min(100, score);
+  const level = score >= 88 ? "PREMIUM" : score >= 68 ? "VERIFIED" : "STANDARD";
+  return { score, level };
+}
 
 app.get("/api/health", async (_req, res) => {
   try {
@@ -52,14 +85,12 @@ app.get("/api/health", async (_req, res) => {
   }
 });
 
-app.get("/api/config", (_req, res) => {
-  res.json({
-    site_name: "EgonarMarket",
-    currency: "FCFA",
-    whatsapp_number: process.env.WHATSAPP_NUMBER || "",
-    delivery: { dakar_fcfa: DELIVERY_DAKAR, other_fcfa: DELIVERY_OTHER }
-  });
-});
+app.get("/api/config", (_req, res) => res.json({
+  site_name: "EgonarMarket",
+  currency: "FCFA",
+  whatsapp_number: process.env.WHATSAPP_NUMBER || "",
+  delivery: { dakar_fcfa: DELIVERY_DAKAR, other_fcfa: DELIVERY_OTHER }
+}));
 
 app.get("/api/categories", async (_req, res) => {
   try {
@@ -75,19 +106,22 @@ app.get("/api/products", async (req, res) => {
     const q = String(req.query.q || "").trim();
     const category = String(req.query.category || "").trim();
     const params = [];
-    const where = ["active = TRUE"];
+    const where = ["p.active = TRUE"];
     if (q) {
       params.push(`%${q}%`);
       const n = params.length;
-      where.push(`(name ILIKE $${n} OR description ILIKE $${n} OR category ILIKE $${n} OR sku ILIKE $${n})`);
+      where.push(`(p.name ILIKE $${n} OR p.description ILIKE $${n} OR p.category ILIKE $${n} OR p.sku ILIKE $${n})`);
     }
     if (category) {
       params.push(category);
-      where.push(`category = $${params.length}`);
+      where.push(`p.category = $${params.length}`);
     }
     const result = await db.query(
-      `SELECT id,name,slug,category,subcategory,description,price_fcfa,old_price_fcfa,stock,sku,image_url
-       FROM products WHERE ${where.join(" AND ")} ORDER BY stock > 0 DESC, created_at DESC`,
+      `SELECT p.id,p.name,p.slug,p.category,p.subcategory,p.description,p.price_fcfa,p.old_price_fcfa,p.stock,p.sku,p.image_url,
+              p.verified_level,p.verification_score,p.rating_average,p.rating_count,p.delivery_min_minutes,p.delivery_max_minutes,p.delivery_city,
+              COALESCE(s.business_name,'') AS supplier_name
+       FROM products p LEFT JOIN suppliers s ON s.id=p.supplier_id
+       WHERE ${where.join(" AND ")} ORDER BY p.stock > 0 DESC, p.verification_score DESC, p.created_at DESC`,
       params
     );
     res.json(result.rows);
@@ -99,11 +133,30 @@ app.get("/api/products", async (req, res) => {
 
 app.get("/api/products/:id", async (req, res) => {
   try {
-    const result = await db.query("SELECT * FROM products WHERE id=$1 AND active=TRUE", [req.params.id]);
+    const result = await db.query(
+      `SELECT p.*,COALESCE(s.business_name,'') AS supplier_name,s.status AS supplier_status,
+              s.verification_level AS supplier_verification_level
+       FROM products p LEFT JOIN suppliers s ON s.id=p.supplier_id
+       WHERE p.id=$1 AND p.active=TRUE`, [req.params.id]
+    );
     if (!result.rows[0]) return res.status(404).json({ error: "Produit introuvable." });
     res.json(result.rows[0]);
   } catch {
     res.status(500).json({ error: "Impossible de charger le produit." });
+  }
+});
+
+app.get("/api/products/:id/reviews", async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT r.id,r.rating,r.comment,r.verified_purchase,r.created_at,c.name AS customer_name
+       FROM product_reviews r JOIN customers c ON c.id=r.customer_id
+       WHERE r.product_id=$1 ORDER BY r.created_at DESC LIMIT 30`, [req.params.id]
+    );
+    const stats = await db.query("SELECT ROUND(AVG(rating)::numeric,2) AS average, COUNT(*)::int AS count FROM product_reviews WHERE product_id=$1", [req.params.id]);
+    res.json({ reviews: result.rows, average: Number(stats.rows[0]?.average || 0), count: Number(stats.rows[0]?.count || 0) });
+  } catch {
+    res.status(500).json({ error: "Impossible de charger les avis." });
   }
 });
 
@@ -113,16 +166,9 @@ app.post("/api/admin/login", authLimiter, async (req, res) => {
     if (!email || !password) return res.status(400).json({ error: "Email et mot de passe requis." });
     const result = await db.query("SELECT * FROM admins WHERE email=$1", [String(email).trim().toLowerCase()]);
     const admin = result.rows[0];
-    if (!admin || !(await bcrypt.compare(String(password), admin.password_hash))) {
-      return res.status(401).json({ error: "Identifiants incorrects." });
-    }
+    if (!admin || !(await bcrypt.compare(String(password), admin.password_hash))) return res.status(401).json({ error: "Identifiants incorrects." });
     const token = signAdmin(admin);
-    res.cookie("egonar_admin", token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 8 * 60 * 60 * 1000
-    });
+    res.cookie("egonar_admin", token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 8 * 60 * 60 * 1000 });
     res.json({ ok: true });
   } catch (e) {
     console.error(e);
@@ -130,162 +176,145 @@ app.post("/api/admin/login", authLimiter, async (req, res) => {
   }
 });
 
-app.post("/api/admin/logout", requireAdmin, (_req, res) => {
-  res.clearCookie("egonar_admin", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
-  res.json({ ok: true });
-});
-
+app.post("/api/admin/logout", requireAdmin, (_req, res) => { res.clearCookie("egonar_admin", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" }); res.json({ ok: true }); });
 app.get("/api/admin/me", requireAdmin, (req, res) => res.json({ email: req.admin.email, role: req.admin.role }));
-
-app.get("/api/admin/products", requireAdmin, async (_req, res) => {
-  const result = await db.query("SELECT * FROM products ORDER BY created_at DESC");
-  res.json(result.rows);
-});
+app.get("/api/admin/products", requireAdmin, async (_req, res) => res.json((await db.query("SELECT * FROM products ORDER BY created_at DESC")).rows));
 
 app.post("/api/admin/products", requireAdmin, async (req, res) => {
   try {
     const { name, category, subcategory = "", description = "", price_fcfa, old_price_fcfa = null, stock = 0, sku = null, image_url = "" } = req.body || {};
-    if (!String(name || "").trim() || !String(category || "").trim() || !Number.isInteger(Number(price_fcfa)) || Number(price_fcfa) < 0) {
-      return res.status(400).json({ error: "Nom, catégorie et prix valides sont obligatoires." });
-    }
+    if (!String(name || "").trim() || !String(category || "").trim() || !Number.isInteger(Number(price_fcfa)) || Number(price_fcfa) < 0) return res.status(400).json({ error: "Nom, catégorie et prix valides sont obligatoires." });
     const price = Number(price_fcfa);
     const oldPrice = old_price_fcfa === null || old_price_fcfa === "" ? null : Number(old_price_fcfa);
     if (oldPrice !== null && (!Number.isInteger(oldPrice) || oldPrice < price)) return res.status(400).json({ error: "L'ancien prix doit être supérieur ou égal au prix actuel." });
     const slug = `${String(name).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${Date.now()}`;
-    const result = await db.query(
-      `INSERT INTO products(name,slug,category,subcategory,description,price_fcfa,old_price_fcfa,stock,sku,image_url)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-      [String(name).trim(), slug, String(category).trim().toUpperCase(), String(subcategory).trim(), String(description), price, oldPrice, Math.max(0, Number(stock) || 0), sku ? String(sku).trim() : null, String(image_url || "").trim()]
-    );
+    const result = await db.query(`INSERT INTO products(name,slug,category,subcategory,description,price_fcfa,old_price_fcfa,stock,sku,image_url) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`, [String(name).trim(), slug, String(category).trim(), String(subcategory).trim(), String(description), price, oldPrice, Math.max(0, Number(stock) || 0), sku ? String(sku).trim() : null, String(image_url || "").trim()]);
     res.status(201).json(result.rows[0]);
-  } catch (e) {
-    console.error(e);
-    res.status(400).json({ error: "Impossible de créer le produit." });
-  }
+  } catch (e) { console.error(e); res.status(400).json({ error: "Impossible de créer le produit." }); }
 });
 
 app.patch("/api/admin/products/:id", requireAdmin, async (req, res) => {
   try {
-    const allowed = ["name", "category", "subcategory", "description", "price_fcfa", "old_price_fcfa", "stock", "sku", "image_url", "active"];
+    const allowed = ["name","category","subcategory","description","price_fcfa","old_price_fcfa","stock","sku","image_url","active"];
     const keys = Object.keys(req.body || {}).filter(k => allowed.includes(k));
     if (!keys.length) return res.status(400).json({ error: "Aucune modification." });
     if (keys.includes("price_fcfa")) req.body.price_fcfa = Number(req.body.price_fcfa);
     if (keys.includes("stock")) req.body.stock = Math.max(0, Number(req.body.stock) || 0);
     if (keys.includes("old_price_fcfa") && req.body.old_price_fcfa !== null && req.body.old_price_fcfa !== "") req.body.old_price_fcfa = Number(req.body.old_price_fcfa);
     const values = keys.map(k => req.body[k]);
-    const set = keys.map((k, i) => `${k}=$${i + 1}`).join(",");
+    const set = keys.map((k,i) => `${k}=$${i+1}`).join(",");
     values.push(req.params.id);
-    const result = await db.query(`UPDATE products SET ${set}, updated_at=NOW() WHERE id=$${values.length} RETURNING *`, values);
+    const result = await db.query(`UPDATE products SET ${set},updated_at=NOW() WHERE id=$${values.length} RETURNING *`, values);
     if (!result.rows[0]) return res.status(404).json({ error: "Produit introuvable." });
     res.json(result.rows[0]);
-  } catch (e) {
-    res.status(400).json({ error: e.message || "Modification impossible." });
-  }
+  } catch (e) { res.status(400).json({ error: e.message || "Modification impossible." }); }
 });
 
 app.delete("/api/admin/products/:id", requireAdmin, async (req, res) => {
-  const result = await db.query("UPDATE products SET active=FALSE, updated_at=NOW() WHERE id=$1 RETURNING id", [req.params.id]);
+  const result = await db.query("UPDATE products SET active=FALSE,updated_at=NOW() WHERE id=$1 RETURNING id", [req.params.id]);
   if (!result.rows[0]) return res.status(404).json({ error: "Produit introuvable." });
   res.json({ ok: true });
 });
 
-app.get("/api/admin/orders", requireAdmin, async (_req, res) => {
-  const result = await db.query(
-    `SELECT o.*, c.name AS customer_name, c.phone, c.address, c.city
-     FROM orders o JOIN customers c ON c.id=o.customer_id ORDER BY o.created_at DESC`
-  );
-  res.json(result.rows);
-});
-
-app.patch("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
-  const allowed = ["EN_ATTENTE_PAIEMENT", "CONFIRMEE", "PREPARATION", "EXPEDIEE", "EN_LIVRAISON", "LIVREE", "ANNULEE"];
-  if (!allowed.includes(req.body?.status)) return res.status(400).json({ error: "Statut invalide." });
-  const result = await db.query("UPDATE orders SET status=$1, updated_at=NOW() WHERE id=$2 RETURNING *", [req.body.status, req.params.id]);
-  if (!result.rows[0]) return res.status(404).json({ error: "Commande introuvable." });
+app.get("/api/admin/orders", requireAdmin, async (_req, res) => res.json((await db.query(`SELECT o.*,c.name AS customer_name,c.phone,c.address,c.city FROM orders o JOIN customers c ON c.id=o.customer_id ORDER BY o.created_at DESC`)).rows));
+app.patch("/api/admin/orders/:id/status", requireAdmin, async (req,res) => {
+  const allowed=["EN_ATTENTE_PAIEMENT","CONFIRMEE","PREPARATION","EXPEDIEE","EN_LIVRAISON","LIVREE","ANNULEE"];
+  if (!allowed.includes(req.body?.status)) return res.status(400).json({error:"Statut invalide."});
+  const result=await db.query("UPDATE orders SET status=$1,updated_at=NOW() WHERE id=$2 RETURNING *",[req.body.status,req.params.id]);
+  if(!result.rows[0]) return res.status(404).json({error:"Commande introuvable."});
   res.json(result.rows[0]);
 });
 
-app.post("/api/orders", orderLimiter, async (req, res) => {
-  const { customer, items, payment_method = "A_PAYER", delivery_fcfa = 0 } = req.body || {};
-  if (!customer?.name || !customer?.phone || !customer?.address || !Array.isArray(items) || !items.length) {
-    return res.status(400).json({ error: "Informations client ou panier incomplets." });
-  }
+app.post("/api/orders", orderLimiter, async (req,res) => {
+  const {customer,items,payment_method="A_PAYER",delivery_fcfa=0}=req.body||{};
+  if(!customer?.name||!customer?.phone||!customer?.address||!Array.isArray(items)||!items.length) return res.status(400).json({error:"Informations client ou panier incomplets."});
+  const client=await db.pool.connect();
+  try{
+    await client.query("BEGIN");
+    const ids=[...new Set(items.map(x=>x.product_id))];
+    const products=await client.query("SELECT id,name,price_fcfa,stock FROM products WHERE id=ANY($1::uuid[]) AND active=TRUE FOR UPDATE",[ids]);
+    const byId=new Map(products.rows.map(p=>[p.id,p]));
+    const totals=new Map();
+    for(const item of items){const p=byId.get(item.product_id);const qty=Number(item.quantity);if(!p||!Number.isInteger(qty)||qty<1)throw new Error("Produit ou quantité invalide.");totals.set(p.id,(totals.get(p.id)||0)+qty);}
+    let subtotal=0;
+    for(const[id,qty]of totals){const p=byId.get(id);if(qty>p.stock)throw new Error(`Stock insuffisant pour ${p.name}.`);subtotal+=p.price_fcfa*qty;}
+    const delivery=Math.max(0,Number(delivery_fcfa)||0);
+    const allowedPayments=new Set(["A_PAYER","LIVRAISON","WAVE","ORANGE_MONEY"]);
+    const chosenPayment=allowedPayments.has(String(payment_method))?String(payment_method):"A_PAYER";
+    const customerResult=await client.query(`INSERT INTO customers(name,phone,email,address,city) VALUES($1,$2,$3,$4,$5) RETURNING id`,[String(customer.name).trim().slice(0,100),String(customer.phone).trim().slice(0,30),customer.email?String(customer.email).trim().slice(0,160):null,String(customer.address).trim().slice(0,250),String(customer.city||"Dakar").trim().slice(0,80)]);
+    const orderNumber="EG-"+new Date().toISOString().slice(0,10).replace(/-/g,"")+"-"+crypto.randomBytes(3).toString("hex").toUpperCase();
+    const initialStatus=["WAVE","ORANGE_MONEY"].includes(chosenPayment)?"EN_ATTENTE_PAIEMENT":"CONFIRMEE";
+    const orderResult=await client.query(`INSERT INTO orders(order_number,customer_id,payment_method,status,subtotal_fcfa,delivery_fcfa,total_fcfa) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *`,[orderNumber,customerResult.rows[0].id,chosenPayment,initialStatus,subtotal,delivery,subtotal+delivery]);
+    for(const[id,qty]of totals){const p=byId.get(id);await client.query(`INSERT INTO order_items(order_id,product_id,product_name,unit_price_fcfa,quantity) VALUES($1,$2,$3,$4,$5)`,[orderResult.rows[0].id,p.id,p.name,p.price_fcfa,qty]);await client.query("UPDATE products SET stock=stock-$1,updated_at=NOW() WHERE id=$2",[qty,p.id]);}
+    await client.query("COMMIT");
+    res.status(201).json({order_number:orderNumber,status:initialStatus,payment_status:"PENDING",total_fcfa:subtotal+delivery});
+  }catch(e){await client.query("ROLLBACK");res.status(400).json({error:e.message||"Commande impossible."});}finally{client.release();}
+});
+
+app.post("/api/reviews", reviewLimiter, async (req,res) => {
+  const { order_number, product_id, rating, comment = "" } = req.body || {};
+  const score = Number(rating);
+  if (!order_number || !product_id || !Number.isInteger(score) || score < 1 || score > 5) return res.status(400).json({ error: "Commande, produit et note valides sont obligatoires." });
+  const text = String(comment || "").trim().slice(0, 1200);
   const client = await db.pool.connect();
   try {
     await client.query("BEGIN");
-    const ids = [...new Set(items.map(x => x.product_id))];
-    const products = await client.query("SELECT id,name,price_fcfa,stock FROM products WHERE id = ANY($1::uuid[]) AND active=TRUE FOR UPDATE", [ids]);
-    const byId = new Map(products.rows.map(p => [p.id, p]));
-    const totals = new Map();
-    for (const item of items) {
-      const p = byId.get(item.product_id);
-      const qty = Number(item.quantity);
-      if (!p || !Number.isInteger(qty) || qty < 1) throw new Error("Produit ou quantité invalide.");
-      totals.set(p.id, (totals.get(p.id) || 0) + qty);
-    }
-    let subtotal = 0;
-    for (const [id, qty] of totals) {
-      const p = byId.get(id);
-      if (qty > p.stock) throw new Error(`Stock insuffisant pour ${p.name}.`);
-      subtotal += p.price_fcfa * qty;
-    }
-    const delivery = Math.max(0, Number(delivery_fcfa) || 0);
-    const allowedPayments = new Set(["A_PAYER", "LIVRAISON", "WAVE", "ORANGE_MONEY"]);
-    const chosenPayment = allowedPayments.has(String(payment_method)) ? String(payment_method) : "A_PAYER";
-    const customerResult = await client.query(
-      `INSERT INTO customers(name,phone,email,address,city) VALUES($1,$2,$3,$4,$5) RETURNING id`,
-      [String(customer.name).trim().slice(0, 100), String(customer.phone).trim().slice(0, 30), customer.email ? String(customer.email).trim().slice(0, 160) : null, String(customer.address).trim().slice(0, 250), String(customer.city || "Dakar").trim().slice(0, 80)]
-    );
-    const orderNumber = "EG-" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + "-" + crypto.randomBytes(3).toString("hex").toUpperCase();
-    const initialStatus = ["WAVE", "ORANGE_MONEY"].includes(chosenPayment) ? "EN_ATTENTE_PAIEMENT" : "CONFIRMEE";
-    const orderResult = await client.query(
-      `INSERT INTO orders(order_number,customer_id,payment_method,status,subtotal_fcfa,delivery_fcfa,total_fcfa)
-       VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [orderNumber, customerResult.rows[0].id, chosenPayment, initialStatus, subtotal, delivery, subtotal + delivery]
-    );
-    for (const [id, qty] of totals) {
-      const p = byId.get(id);
-      await client.query(`INSERT INTO order_items(order_id,product_id,product_name,unit_price_fcfa,quantity) VALUES($1,$2,$3,$4,$5)`, [orderResult.rows[0].id, p.id, p.name, p.price_fcfa, qty]);
-      await client.query("UPDATE products SET stock=stock-$1, updated_at=NOW() WHERE id=$2", [qty, p.id]);
-    }
+    const order = await client.query("SELECT id,customer_id,status FROM orders WHERE order_number=$1", [String(order_number).trim()]);
+    if (!order.rows[0]) throw new Error("Commande introuvable.");
+    if (order.rows[0].status !== "LIVREE") throw new Error("Un avis vérifié peut être déposé après la livraison.");
+    const item = await client.query("SELECT 1 FROM order_items WHERE order_id=$1 AND product_id=$2", [order.rows[0].id, product_id]);
+    if (!item.rows[0]) throw new Error("Ce produit ne fait pas partie de cette commande.");
+    await client.query("INSERT INTO product_reviews(product_id,order_id,customer_id,rating,comment,verified_purchase) VALUES($1,$2,$3,$4,$5,TRUE)", [product_id, order.rows[0].id, order.rows[0].customer_id, score, text]);
+    const stats = await client.query("SELECT ROUND(AVG(rating)::numeric,2) AS average, COUNT(*)::int AS count FROM product_reviews WHERE product_id=$1", [product_id]);
+    const average = Number(stats.rows[0]?.average || 0);
+    const count = Number(stats.rows[0]?.count || 0);
+    const p = await client.query(`SELECT p.approval_status,p.delivery_max_minutes,s.status AS supplier_status,s.verification_level AS supplier_level FROM products p LEFT JOIN suppliers s ON s.id=p.supplier_id WHERE p.id=$1`, [product_id]);
+    const row = p.rows[0] || {};
+    const verification = computeVerification({ approval_status: row.approval_status, supplier_status: row.supplier_status, supplier_level: row.supplier_level, rating_average: average, rating_count: count, delivery_max_minutes: row.delivery_max_minutes });
+    await client.query("UPDATE products SET rating_average=$1,rating_count=$2,verification_score=$3,verified_level=$4,verified_at=CASE WHEN $3>=68 THEN NOW() ELSE verified_at END,updated_at=NOW() WHERE id=$5", [average,count,verification.score,verification.level,product_id]);
     await client.query("COMMIT");
-    res.status(201).json({ order_number: orderNumber, status: initialStatus, payment_status: "PENDING", total_fcfa: subtotal + delivery });
+    res.status(201).json({ ok: true, verified_purchase: true, rating_average: average, rating_count: count, verified_level: verification.level, verification_score: verification.score });
   } catch (e) {
     await client.query("ROLLBACK");
-    res.status(400).json({ error: e.message || "Commande impossible." });
-  } finally {
-    client.release();
-  }
+    const duplicate = String(e.code || "") === "23505";
+    res.status(duplicate ? 409 : 400).json({ error: duplicate ? "Vous avez déjà évalué ce produit pour cette commande." : e.message || "Avis impossible." });
+  } finally { client.release(); }
 });
 
-app.get("/api/orders/:number", async (req, res) => {
-  const order = await db.query(
-    `SELECT o.order_number,o.status,o.payment_status,o.payment_method,o.total_fcfa,o.created_at,c.name,c.phone,c.address,c.city
-     FROM orders o JOIN customers c ON c.id=o.customer_id WHERE o.order_number=$1`,
-    [req.params.number]
-  );
-  if (!order.rows[0]) return res.status(404).json({ error: "Commande introuvable." });
-  const items = await db.query(`SELECT product_name,unit_price_fcfa,quantity FROM order_items WHERE order_id=(SELECT id FROM orders WHERE order_number=$1)`, [req.params.number]);
-  res.json({ ...order.rows[0], items: items.rows });
+app.get("/api/orders/:number", async (req,res) => {
+  const order=await db.query(`SELECT o.order_number,o.status,o.payment_status,o.payment_method,o.total_fcfa,o.created_at,c.name,c.phone,c.address,c.city FROM orders o JOIN customers c ON c.id=o.customer_id WHERE o.order_number=$1`,[req.params.number]);
+  if(!order.rows[0]) return res.status(404).json({error:"Commande introuvable."});
+  const items=await db.query(`SELECT product_name,unit_price_fcfa,quantity,product_id FROM order_items WHERE order_id=(SELECT id FROM orders WHERE order_number=$1)`,[req.params.number]);
+  res.json({...order.rows[0],items:items.rows});
 });
 
-app.post("/api/ai/search", async (req, res) => {
-  const message = String(req.body?.message || "").trim();
-  const budgetMatch = message.match(/(\d[\d\s]*)\s*(?:fcfa|f|francs?)/i);
-  const budget = budgetMatch ? Number(budgetMatch[1].replace(/\s/g, "")) : null;
-  const rawWords = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/);
-  const stop = new Set(["pour","avec","moins","plus","dans","une","des","les","the","que","cherche","recherche","donne","moi","je","veux","mon","ma","un","a","au","en","et"]);
-  const words = rawWords.filter(w => w.length > 2 && !stop.has(w)).slice(0, 8);
-  const clauses = words.map((_, i) => `(name ILIKE $${i + 1} OR description ILIKE $${i + 1} OR category ILIKE $${i + 1})`);
-  const params = words.map(w => `%${w}%`);
-  let sql = "SELECT id,name,category,description,price_fcfa,stock,image_url FROM products WHERE active=TRUE";
-  if (clauses.length) sql += " AND (" + clauses.join(" OR ") + ")";
-  if (budget) { params.push(budget); sql += ` AND price_fcfa <= $${params.length}`; }
-  sql += " ORDER BY stock > 0 DESC, created_at DESC LIMIT 12";
-  const result = await db.query(sql, params);
-  res.json({ message, budget, products: result.rows });
+app.post("/api/ai/search", async (req,res) => {
+  const message=String(req.body?.message||"").trim();
+  if(!message) return res.status(400).json({error:"Décrivez ce que vous recherchez."});
+  const intent=extractAiIntent(message);
+  const params=[];
+  const filters=["p.active=TRUE"];
+  if(intent.budget){params.push(intent.budget);filters.push(`p.price_fcfa <= $${params.length}`);}
+  if(intent.category){params.push(`${intent.category.replace("beaute","Beauté").replace("bebes","Bébés")}%%`);filters.push(`normalize`);}
+  let sql=`SELECT p.id,p.name,p.category,p.subcategory,p.description,p.price_fcfa,p.old_price_fcfa,p.stock,p.image_url,p.verified_level,p.verification_score,p.rating_average,p.rating_count,p.delivery_min_minutes,p.delivery_max_minutes,p.delivery_city,COALESCE(s.business_name,'') AS supplier_name FROM products p LEFT JOIN suppliers s ON s.id=p.supplier_id WHERE ${filters.filter(x=>x!=="normalize").join(" AND ")}`;
+  const searchable=intent.words.slice(0,12);
+  const likeClauses=[];
+  for(const word of searchable){params.push(`%${word}%`);const n=params.length;likeClauses.push(`(p.name ILIKE $${n} OR p.description ILIKE $${n} OR p.category ILIKE $${n} OR p.subcategory ILIKE $${n} OR p.sku ILIKE $${n})`);}
+  if(likeClauses.length) sql += ` AND (${likeClauses.join(" OR ")})`;
+  sql += " ORDER BY p.stock > 0 DESC,p.verification_score DESC,p.rating_average DESC,p.rating_count DESC,p.created_at DESC LIMIT 40";
+  const result=await db.query(sql,params);
+  const ranked=result.rows.map(p=>{
+    const haystack=tokenize(`${p.name} ${p.description} ${p.category} ${p.subcategory} ${p.supplier_name}`);
+    const exact=intent.words.reduce((score,w)=>score+(haystack.includes(w)?1:0),0);
+    const budgetBoost=intent.budget?Math.max(0,1-(Number(p.price_fcfa)/intent.budget))*20:0;
+    const verifiedBoost=Number(p.verification_score||0)*0.12;
+    const ratingBoost=Number(p.rating_average||0)*3;
+    const stockBoost=Number(p.stock)>0?8:0;
+    return {...p,ai_score:Number((exact*12+budgetBoost+verifiedBoost+ratingBoost+stockBoost).toFixed(2))};
+  }).sort((a,b)=>b.ai_score-a.ai_score).slice(0,12);
+  res.json({message,budget:intent.budget,category:intent.category,keywords:intent.words,products:ranked});
 });
 
-app.use(express.static(webDir, { extensions: ["html"] }));
-app.get("/", (_req, res) => res.sendFile(path.join(webDir, "index.html")));
-app.listen(PORT, "0.0.0.0", () => console.log(`EgonarMarket: http://localhost:${PORT}`));
+app.use(express.static(webDir,{extensions:["html"]}));
+app.get("/",(_req,res)=>res.sendFile(path.join(webDir,"index.html")));
+app.listen(PORT,"0.0.0.0",()=>console.log(`EgonarMarket: http://localhost:${PORT}`));
