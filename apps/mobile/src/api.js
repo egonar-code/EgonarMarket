@@ -1,9 +1,23 @@
-import { API_BASE_URL } from "./config";
+import * as SecureStore from "expo-secure-store";
+import { API_BASE_URL, MOBILE_ROLE } from "./config";
 
+const TOKEN_KEY = `egonar_${MOBILE_ROLE}_token`;
 let sessionToken = null;
 
-export function setSessionToken(token) {
+export async function initSession() {
+  sessionToken = await SecureStore.getItemAsync(TOKEN_KEY);
+  return sessionToken;
+}
+
+export async function setSessionToken(token) {
   sessionToken = token || null;
+  if (sessionToken) await SecureStore.setItemAsync(TOKEN_KEY, sessionToken);
+  else await SecureStore.deleteItemAsync(TOKEN_KEY);
+}
+
+export async function clearSession() {
+  sessionToken = null;
+  await SecureStore.deleteItemAsync(TOKEN_KEY);
 }
 
 export async function api(path, options = {}) {
@@ -26,14 +40,18 @@ export async function api(path, options = {}) {
 }
 
 export const supplierApi = {
-  login: (email, password) => api("/api/supplier/login", { method: "POST", body: JSON.stringify({ email, password }) }),
+  login: async (email, password) => {
+    const data = await api("/api/supplier/login", { method: "POST", body: JSON.stringify({ email, password }) });
+    await setSessionToken(data.token);
+    return data;
+  },
   me: () => api("/api/supplier/me"),
   stats: () => api("/api/supplier/stats"),
   products: () => api("/api/supplier/products"),
   createProduct: product => api("/api/supplier/products", { method: "POST", body: JSON.stringify(product) }),
   updateProduct: (id, patch) => api(`/api/supplier/products/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
   deactivateProduct: id => api(`/api/supplier/products/${id}`, { method: "DELETE" }),
-  logout: () => api("/api/supplier/logout", { method: "POST" })
+  logout: async () => { try { return await api("/api/supplier/logout", { method: "POST" }); } finally { await clearSession(); } }
 };
 
 export const adminApi = {
