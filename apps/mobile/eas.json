@@ -1,0 +1,28 @@
+{
+  "build": {
+    "admin-preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_APP_ROLE": "admin"
+      }
+    },
+    "supplier-preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_APP_ROLE": "supplier"
+      }
+    },
+    "admin-production": {
+      "distribution": "store",
+      "env": {
+        "EXPO_PUBLIC_APP_ROLE": "admin"
+      }
+    },
+    "supplier-production": {
+      "distribution": "store",
+      "env": {
+        "EXPO_PUBLIC_APP_ROLE": "supplier"
+      }
+    }
+  }
+}
