@@ -5,9 +5,14 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web"
+    "supplier": "EXPO_PUBLIC_APP_ROLE=supplier expo start",
+    "admin": "EXPO_PUBLIC_APP_ROLE=admin expo start",
+    "android:supplier": "EXPO_PUBLIC_APP_ROLE=supplier expo run:android",
+    "android:admin": "EXPO_PUBLIC_APP_ROLE=admin expo run:android",
+    "ios:supplier": "EXPO_PUBLIC_APP_ROLE=supplier expo run:ios",
+    "ios:admin": "EXPO_PUBLIC_APP_ROLE=admin expo run:ios",
+    "web:supplier": "EXPO_PUBLIC_APP_ROLE=supplier expo start --web",
+    "web:admin": "EXPO_PUBLIC_APP_ROLE=admin expo start --web"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.1.0",
