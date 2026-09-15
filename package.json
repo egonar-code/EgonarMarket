@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bash scripts/codespace-bootstrap.sh && tail -f /tmp/egonarmarket.log",
     "start": "node apps/api/src/server.js",
-    "db:init": "node apps/api/src/seed.js"
+    "db:init": "node apps/api/src/seed.js",
+    "db:test-supplier": "node apps/api/src/create-test-supplier.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
