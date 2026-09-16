@@ -13,12 +13,13 @@ const spaces = [
 ];
 
 export default function SupplierUniverseGate({ children }) {
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(MOBILE_ROLE !== "supplier");
   const [selected, setSelected] = useState(null);
 
   useEffect(() => {
-    if (MOBILE_ROLE !== "supplier") { setReady(true); return undefined; }
+    if (MOBILE_ROLE !== "supplier") return undefined;
     let active = true;
+    let timer;
     const check = async () => {
       try {
         const saved = await AsyncStorage.getItem(KEY);
@@ -32,8 +33,14 @@ export default function SupplierUniverseGate({ children }) {
       }
     };
     check();
-    return () => { active = false; };
-  }, []);
+    timer = setInterval(async () => {
+      if (selected) return;
+      const saved = await AsyncStorage.getItem(KEY).catch(() => null);
+      if (saved && active) { setSelected(saved); return; }
+      try { await supplierApi.me(); if (active) setReady(true); } catch {}
+    }, 1500);
+    return () => { active = false; clearInterval(timer); };
+  }, [selected]);
 
   async function choose(id) {
     await AsyncStorage.setItem(KEY, id);
