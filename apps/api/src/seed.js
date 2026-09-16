@@ -8,8 +8,13 @@ async function main() {
   const schema = fs.readFileSync(path.join(__dirname, "../../../db/schema.sql"), "utf8");
   await db.query(schema);
 
-  const taxonomy = fs.readFileSync(path.join(__dirname, "../../../db/migrations/20260916_category_taxonomy.sql"), "utf8");
-  await db.query(taxonomy);
+  for (const migration of [
+    "20260916_category_taxonomy.sql",
+    "20260916_category_taxonomy_fix.sql"
+  ]) {
+    const sql = fs.readFileSync(path.join(__dirname, "../../../db/migrations", migration), "utf8");
+    await db.query(sql);
+  }
 
   const email = process.env.ADMIN_EMAIL || "admin@egonarmarket.sn";
   const password = process.env.ADMIN_PASSWORD;
