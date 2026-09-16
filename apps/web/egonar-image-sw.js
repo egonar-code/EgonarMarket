@@ -1,3 +1,14 @@
+const CACHE_VERSION = 'egonar-images-v3';
+const FALLBACK = '/images/egonar-fallback.svg';
+
+self.addEventListener('install', event => {
+  event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener('fetch', event => {
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin || requestUrl.pathname !== '/__egonar-image') return;
@@ -8,10 +19,9 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(target, { mode: 'no-cors', credentials: 'omit', cache: 'no-store' })
       .then(response => {
-        // An opaque response is still valid for an <img> request.
         if (response.type === 'opaque' || response.ok) return response;
-        return fetch('/images/egonar-fallback.svg');
+        return fetch(FALLBACK);
       })
-      .catch(() => fetch('/images/egonar-fallback.svg'))
+      .catch(() => fetch(FALLBACK))
   );
 });
