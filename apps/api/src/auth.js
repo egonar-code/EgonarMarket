@@ -10,7 +10,9 @@ function signAdmin(admin) {
 
 function requireAdmin(req, res, next) {
   try {
-    const token = req.cookies?.egonar_admin;
+    const bearer = String(req.headers.authorization || "");
+    const headerToken = bearer.startsWith("Bearer ") ? bearer.slice(7).trim() : "";
+    const token = headerToken || req.cookies?.egonar_admin;
     if (!token) return res.status(401).json({ error: "Authentification requise." });
     req.admin = jwt.verify(token, process.env.JWT_SECRET);
     next();
