@@ -3,24 +3,29 @@ import { API_BASE_URL, MOBILE_ROLE } from "./config";
 
 const TOKEN_KEY = `egonar_${MOBILE_ROLE}_token`;
 let sessionToken = null;
+let sessionReady = false;
+const sessionReadyPromise = SecureStore.getItemAsync(TOKEN_KEY).then(token => { sessionToken = token || null; sessionReady = true; return sessionToken; }).catch(() => { sessionReady = true; return null; });
 
 export async function initSession() {
-  sessionToken = await SecureStore.getItemAsync(TOKEN_KEY);
+  await sessionReadyPromise;
   return sessionToken;
 }
 
 export async function setSessionToken(token) {
+  await sessionReadyPromise;
   sessionToken = token || null;
   if (sessionToken) await SecureStore.setItemAsync(TOKEN_KEY, sessionToken);
   else await SecureStore.deleteItemAsync(TOKEN_KEY);
 }
 
 export async function clearSession() {
+  await sessionReadyPromise;
   sessionToken = null;
   await SecureStore.deleteItemAsync(TOKEN_KEY);
 }
 
 export async function api(path, options = {}) {
+  await sessionReadyPromise;
   const headers = {
     Accept: "application/json",
     ...(options.body ? { "Content-Type": "application/json" } : {}),
@@ -55,11 +60,15 @@ export const supplierApi = {
 };
 
 export const adminApi = {
-  login: (email, password) => api("/api/admin/login", { method: "POST", body: JSON.stringify({ email, password }) }),
+  login: async (email, password) => {
+    const data = await api("/api/admin/login", { method: "POST", body: JSON.stringify({ email, password }) });
+    await setSessionToken(data.token);
+    return data;
+  },
   me: () => api("/api/admin/me"),
   suppliers: () => api("/api/supplier/admin/suppliers"),
   pendingProducts: () => api("/api/supplier/admin/products?status=PENDING"),
   updateSupplierStatus: (id, status) => api(`/api/supplier/admin/suppliers/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   approveProduct: (id, approval_status) => api(`/api/supplier/admin/products/${id}/approval`, { method: "PATCH", body: JSON.stringify({ approval_status }) }),
-  logout: () => api("/api/admin/logout", { method: "POST" })
+  logout: async () => { try { return await api("/api/admin/logout", { method: "POST" }); } finally { await clearSession(); } }
 };
