@@ -9,14 +9,17 @@
   function activateSearch(label) {
     const value = String(label || '').trim();
     if (!value) return;
-
     const input = document.getElementById('search');
     const form = document.getElementById('search-form');
     if (!input || !form) return;
-
     input.value = value;
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     document.getElementById('produits')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function categoryContext(label) {
+    const universe = String(document.body?.dataset?.universe || 'MARKET').toUpperCase();
+    return window.EgonarCategoryRuntime?.resolve?.(universe, label) || null;
   }
 
   function enhance() {
@@ -28,6 +31,8 @@
         span.setAttribute('tabindex', '0');
         span.classList.add('egonar-category-action');
         const label = span.textContent.trim();
+        const context = categoryContext(label);
+        if (context?.name) span.title = `Filtrer ${context.name} · ${label}`;
         span.addEventListener('click', () => activateSearch(label));
         span.addEventListener('keydown', event => {
           if (event.key === 'Enter' || event.key === ' ') {
