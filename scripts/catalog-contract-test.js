@@ -11,7 +11,7 @@ const checks = [
   ["apps/web/food-app.js", /product_id:id,quantity:1/, "Saveurs ajoute au panier avec le contrat product_id/quantity."],
   ["apps/web/travel-app.js", /product_id:id,quantity:1/, "Évasion ajoute au panier avec le contrat product_id/quantity."],
   ["apps/api/src/server.js", /const UNIVERSES = new Set\(\[\"MARKET\",\"SAVEURS\",\"EVASION\"\]\)/, "L'API valide les univers."],
-  ["apps/api/src/supplier-server.js", /approval_status='PENDING'/, "Les produits fournisseurs sont soumis à validation."],
+  ["apps/api/src/supplier-server.js", /active,approval_status,supplier_id\) VALUES\(\$1,\$2,\$3,\$4,\$5,\$6,\$7,\$8,\$9,\$10,\$11,FALSE,'PENDING'/, "Les produits fournisseurs sont inactifs tant qu'ils ne sont pas validés."],
   ["apps/api/src/supplier-server.js", /approval === \"APPROVED\"/, "L'approbation admin pilote l'activation publique."],
 ];
 
