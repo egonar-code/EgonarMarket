@@ -8,7 +8,7 @@
     "start": "node apps/api/src/server.js",
     "db:init": "node apps/api/src/seed.js",
     "db:test-supplier": "node apps/api/src/create-test-supplier.js",
-    "check": "node --check apps/api/src/server.js && node --check apps/api/src/supplier-server.js && node --check apps/api/src/auth.js && node --check apps/api/src/db.js && node --check apps/api/src/seed.js && node --check apps/web/app.js && node --check apps/web/food-app.js && node --check apps/web/travel-app.js && node --check apps/web/i18n.js && node --check apps/web/secondary-i18n.js && node --check apps/web/ai-launcher.js && node --check apps/web/product-finder.js && node --check apps/web/supplier-app.js && node --check apps/web/image-fallbacks.js && node scripts/catalog-contract-test.js"
+    "check": "node --check apps/api/src/server.js && node --check apps/api/src/supplier-server.js && node --check apps/api/src/auth.js && node --check apps/api/src/db.js && node --check apps/api/src/seed.js && node --check apps/web/app.js && node --check apps/web/food-app.js && node --check apps/web/travel-app.js && node --check apps/web/i18n.js && node --check apps/web/secondary-i18n.js && node --check apps/web/ai-launcher.js && node --check apps/web/product-finder.js && node --check apps/web/supplier-app.js && node --check apps/web/image-fallbacks.js && node scripts/catalog-contract-test.js && node scripts/category-taxonomy-test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
