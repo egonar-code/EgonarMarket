@@ -7,7 +7,7 @@ import SupplierAiCoach, { SUPPLIER_SPACES } from "./SupplierAiCoach";
 import SupplierOrdersPanel from "./SupplierOrdersPanel";
 
 const KEY = "egonar_supplier_universe";
-const colors = { bg: "#f6f8fb", card: "#fff", ink: "#111827", muted: "#6b7280", accent: "#2563eb", border: "#e5e7eb", dark: "#0f172a" };
+const colors = { bg: "#f6f8fb", card: "#fff", ink: "#111827", muted: "#6b7280", accent: "#2563eb", border: "#e5e7eb" };
 
 export default function SupplierUniverseGate({ children }) {
   const [ready, setReady] = useState(MOBILE_ROLE !== "supplier");
@@ -20,18 +20,30 @@ export default function SupplierUniverseGate({ children }) {
     (async () => {
       try {
         const saved = await AsyncStorage.getItem(KEY);
-        if (saved && active) { setSelected(saved); setReady(true); return; }
+        if (saved && SUPPLIER_SPACES[saved] && active) { setSelected(saved); setReady(true); return; }
+        if (saved && active) await AsyncStorage.removeItem(KEY);
         await supplierApi.me();
-        if (active) setReady(true);
       } catch {
+        // The authenticated session is checked by App before this gate is mounted.
+      } finally {
         if (active) setReady(true);
       }
     })();
     return () => { active = false; };
   }, []);
 
-  async function choose(id) { await AsyncStorage.setItem(KEY, id); setSelected(id); }
-  async function changeUniverse() { await AsyncStorage.removeItem(KEY); setSelected(null); setOrdersOpen(false); }
+  async function choose(id) {
+    if (!SUPPLIER_SPACES[id]) return;
+    await AsyncStorage.setItem(KEY, id);
+    setOrdersOpen(false);
+    setSelected(id);
+  }
+
+  async function changeUniverse() {
+    await AsyncStorage.removeItem(KEY);
+    setSelected(null);
+    setOrdersOpen(false);
+  }
 
   if (!ready) return <SafeAreaView style={styles.safe}><View style={styles.center}><ActivityIndicator size="large"/><Text style={styles.muted}>Chargement…</Text></View></SafeAreaView>;
   if (MOBILE_ROLE !== "supplier") return children;
