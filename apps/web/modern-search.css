@@ -1,4 +1,8 @@
 /* Egonar — barre de recherche moderne + robot IA + confiance + états */
+/* Critical boot state: prevent the legacy search/AI panel from flashing before the launcher initializes. */
+html.egonar-ai-boot .smart.wrap,html.egonar-ai-boot .food-search,html.egonar-ai-boot .travel-search{visibility:hidden!important}
+html.egonar-ai-boot #egonar-voice-assistant{visibility:hidden!important}
+#egonar-voice-assistant.egonar-ai-open{visibility:visible!important}
 .header .search{position:relative;width:min(720px,100%);max-width:720px;display:grid;grid-template-columns:1fr 76px;align-items:stretch;gap:0;padding:0;overflow:hidden;background:#fff;border:0;border-radius:999px;box-shadow:0 18px 42px rgba(0,0,0,.12);transition:box-shadow .2s,transform .2s}
 .header .search:focus-within{box-shadow:0 22px 50px rgba(0,0,0,.17),0 0 0 4px rgba(245,158,11,.12);transform:translateY(-1px)}
 .header .search input{width:100%;min-width:0;height:64px;border:0!important;border-radius:999px 0 0 999px!important;padding:0 24px 0 28px!important;background:#fff!important;color:#1a1a1a;outline:0;font-size:18px;font-weight:500}
