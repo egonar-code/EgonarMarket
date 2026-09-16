@@ -14,13 +14,8 @@
     root.querySelectorAll?.('img').forEach(img => {
       if (img.dataset.egonarImageFallbackBound === '1') return;
       img.dataset.egonarImageFallbackBound = '1';
-      const source = img.getAttribute('src') || '';
       const universe = img.dataset.universe || document.body.dataset.universe || 'MARKET';
-      if (source && isExternalImage(source)) {
-        img.setAttribute('src', fallback({ universe }));
-      } else if (!source) {
-        img.src = fallback({ universe });
-      }
+      if (!img.getAttribute('src')) img.src = fallback({ universe });
       img.addEventListener('error', () => {
         img.onerror = null;
         img.src = fallback({ universe: img.dataset.universe || universe });
