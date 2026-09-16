@@ -8,6 +8,9 @@ async function main() {
   const schema = fs.readFileSync(path.join(__dirname, "../../../db/schema.sql"), "utf8");
   await db.query(schema);
 
+  const taxonomy = fs.readFileSync(path.join(__dirname, "../../../db/migrations/20260916_category_taxonomy.sql"), "utf8");
+  await db.query(taxonomy);
+
   const email = process.env.ADMIN_EMAIL || "admin@egonarmarket.sn";
   const password = process.env.ADMIN_PASSWORD;
   if (!password || password === "replace-this-password") {
@@ -32,7 +35,7 @@ async function main() {
     );
   }
 
-  await db.query(`UPDATE products SET image_url='/images/product-cover.svg' WHERE image_url IS NULL OR image_url LIKE 'http%';`);
+  await db.query(`UPDATE products SET image_url='/images/product-cover.svg' WHERE image_url IS NULL OR image_url='';`);
   await db.query(
     `UPDATE products SET verified_level='VERIFIED', verification_score=92, rating_average=4.8, rating_count=37, delivery_min_minutes=45, delivery_max_minutes=90, delivery_city='Dakar', verified_at=COALESCE(verified_at,NOW()) WHERE slug='t-shirt-premium'`);
   await db.query(
@@ -40,7 +43,7 @@ async function main() {
   await db.query(
     `UPDATE products SET verified_level='VERIFIED', verification_score=89, rating_average=4.7, rating_count=24, delivery_min_minutes=60, delivery_max_minutes=120, delivery_city='Dakar', verified_at=COALESCE(verified_at,NOW()) WHERE slug='montre-classique'`);
 
-  console.log("Base EgonarMarket initialisée.");
+  console.log("Base EgonarMarket initialisée avec la taxonomie des catégories.");
   await db.pool.end();
 }
 
