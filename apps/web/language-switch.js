@@ -1,10 +1,8 @@
 (function () {
   'use strict';
-  document.addEventListener('DOMContentLoaded', function () {
-    const selector = document.querySelector('[data-language-selector]');
-    if (!selector) return;
-    selector.addEventListener('change', function () {
+  document.addEventListener('change', function (event) {
+    if (event.target && event.target.matches('[data-language-selector]')) {
       window.location.reload();
-    });
-  });
+    }
+  }, true);
 })();
