@@ -6,44 +6,8 @@ const travelOffers = [
   { title: "Circuit découverte du Sénégal", type: "Séjour", destination: "Sénégal", tags: "circuit senegal découverte voyage vacances nature culture", price: 150000, note: "Itinéraire découverte", image: "https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?auto=format&fit=crop&w=1000&q=85" }
 ];
 window.travelOffers = travelOffers;
-
-function travelMoney(value) {
-  return new Intl.NumberFormat("fr-FR").format(value) + " FCFA";
-}
-
-function travelSearch(message, type, dates) {
-  const text = String(message || "").trim().toLowerCase();
-  if (!text && (!type || type === "Type de voyage")) return;
-  const budgetMatch = text.match(/(?:moins de|à moins de|budget|maximum|max)\s*([0-9\s]+)/i) || text.match(/([0-9]{3,})\s*(?:fcfa|f)/i);
-  const budget = budgetMatch ? Number(budgetMatch[1].replace(/\s/g, "")) : null;
-  const words = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter(w => w.length > 2);
-  const results = travelOffers.filter(item => {
-    const hay = `${item.title} ${item.type} ${item.destination} ${item.tags}`.toLowerCase();
-    const textMatch = words.length === 0 || words.some(w => hay.includes(w));
-    const typeMatch = !type || type === "Type de voyage" || item.type.toLowerCase() === type.toLowerCase();
-    return textMatch && typeMatch && (!budget || item.price <= budget);
-  });
-  renderTravelResults(results.length ? results : travelOffers.slice(0, 3), text || type, budget, dates);
-}
-
-function renderTravelResults(results, query, budget, dates) {
-  const box = document.getElementById("travel-smart-results");
-  if (!box) return;
-  const parts = [query ? `« ${query} »` : "votre recherche", budget ? `budget ${travelMoney(budget)}` : "", dates ? `dates ${dates}` : ""].filter(Boolean);
-  box.innerHTML = `<div class="travel-result-head"><strong>Suggestions pour ${parts.join(" · ")}</strong><span>${results.length} résultat${results.length > 1 ? "s" : ""}</span></div><div class="destinations">${results.map(item => `<article class="destination"><img src="${item.image}" alt="${item.title}" loading="lazy" style="width:100%;height:220px;object-fit:cover;border-radius:16px;margin-bottom:14px"><b>${item.type} · ${item.title}</b><span>${item.destination} · ${item.note}</span><strong>${travelMoney(item.price)}</strong><a class="btn primary" href="#explorer">Explorer</a></article>`).join("")}</div>`;
-  box.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.querySelector(".travel-search form");
-  const input = form?.querySelector("input[type='search']");
-  const type = form?.querySelector("select");
-  const dates = form?.querySelector("input[type='text']");
-  form?.addEventListener("submit", e => { e.preventDefault(); travelSearch(input?.value || "", type?.value || "", dates?.value || ""); });
-  form?.querySelector("button")?.addEventListener("click", () => travelSearch(input?.value || "", type?.value || "", dates?.value || ""));
-  if (!document.getElementById("egonar-voice-assistant")) {
-    const script = document.createElement("script");
-    script.src = "assistant-voice.js";
-    document.body.appendChild(script);
-  }
-});
+function travelMoney(value) { return new Intl.NumberFormat("fr-FR").format(value) + " FCFA"; }
+function travelText(fr,en){ return window.EgonarI18n?.getLang?.()==="en" ? en : fr; }
+function travelSearch(message,type,dates){ const text=String(message||"").trim().toLowerCase(); if(!text&&(!type||type==="Type de voyage"))return; const budgetMatch=text.match(/(?:moins de|à moins de|budget|maximum|max|under|less than)\s*([0-9\s]+)/i)||text.match(/([0-9]{3,})\s*(?:fcfa|f|francs?)/i); const budget=budgetMatch?Number(budgetMatch[1].replace(/\s/g,"")):null; const words=text.normalize("NFD").replace(/[\u0300-\u036f]/g,"").split(/\s+/).filter(w=>w.length>2); const results=travelOffers.filter(item=>{const hay=`${item.title} ${item.type} ${item.destination} ${item.tags}`.toLowerCase();const textMatch=words.length===0||words.some(w=>hay.includes(w));const typeMatch=!type||type==="Type de voyage"||item.type.toLowerCase()===type.toLowerCase();return textMatch&&typeMatch&&(!budget||item.price<=budget)});renderTravelResults(results.length?results:travelOffers.slice(0,3),text||type,budget,dates); }
+function renderTravelResults(results,query,budget,dates){const box=document.getElementById("travel-smart-results");if(!box)return;const parts=[query?`« ${query} »`:travelText("votre recherche","your search"),budget?`${travelText("budget","budget")} ${travelMoney(budget)}`:"",dates?`${travelText("dates","dates")} ${dates}`:""].filter(Boolean);const label=travelText("résultat","result");box.innerHTML=`<div class="travel-result-head"><strong>${travelText("Suggestions pour","Suggestions for")} ${parts.join(" · ")}</strong><span>${results.length} ${label}${results.length>1?"s":""}</span></div><div class="destinations">${results.map(item=>`<article class="destination"><img src="${item.image}" alt="${item.title}" loading="lazy" style="width:100%;height:220px;object-fit:cover;border-radius:16px;margin-bottom:14px"><b>${item.type} · ${item.title}</b><span>${item.destination} · ${item.note}</span><strong>${travelMoney(item.price)}</strong><a class="btn primary" href="#explorer">${travelText("Explorer","Explore")}</a></article>`).join("")}</div>`;box.scrollIntoView({behavior:"smooth",block:"start"});}
+document.addEventListener("DOMContentLoaded",()=>{const form=document.querySelector(".travel-search form");const input=form?.querySelector("input[type='search']");const type=form?.querySelector("select");const dates=form?.querySelector("input[type='text']");form?.addEventListener("submit",e=>{e.preventDefault();travelSearch(input?.value||"",type?.value||"",dates?.value||"")});form?.querySelector("button")?.addEventListener("click",()=>travelSearch(input?.value||"",type?.value||"",dates?.value||""));if(!document.getElementById("egonar-voice-assistant")){const script=document.createElement("script");script.src="assistant-voice.js";document.body.appendChild(script)}});
