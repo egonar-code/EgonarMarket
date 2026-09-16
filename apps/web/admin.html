@@ -10,4 +10,4 @@ async function editProduct(id){const p=products.find(x=>x.id===id);if(!p)return;
 async function toggleProduct(id,active){const r=active?await j('/admin/products/'+id,{method:'DELETE'}):await j('/admin/products/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({active:true})});if(!r.ok)return alert(r.data.error||'Opération impossible.');refresh()}
 async function setStatus(id,status){const r=await j('/admin/orders/'+id+'/status',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});if(!r.ok)alert(r.data.error||'Statut impossible.');refresh()}
 $('product-filter').oninput=drawProducts;$('order-filter').oninput=drawOrders;
-</script></body></html>
+</script><script src="secondary-i18n.js"></script></body></html>
