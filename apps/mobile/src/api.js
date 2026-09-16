@@ -1,5 +1,5 @@
 import * as SecureStore from "expo-secure-store";
-import { API_BASE_URL, MOBILE_ROLE } from "./config";
+import { API_BASE_URL, MOBILE_ROLE, SUPPLIER_API_BASE_URL } from "./config";
 
 const TOKEN_KEY = `egonar_${MOBILE_ROLE}_token`;
 let sessionToken = null;
@@ -24,7 +24,7 @@ export async function clearSession() {
   await SecureStore.deleteItemAsync(TOKEN_KEY);
 }
 
-export async function api(path, options = {}) {
+export async function api(path, options = {}, baseUrl = API_BASE_URL) {
   await sessionReadyPromise;
   const headers = {
     Accept: "application/json",
@@ -32,7 +32,7 @@ export async function api(path, options = {}) {
     ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
     ...(options.headers || {})
   };
-  const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, credentials: "include" });
+  const response = await fetch(`${baseUrl}${path}`, { ...options, headers, credentials: "include" });
   const type = response.headers.get("content-type") || "";
   const data = type.includes("application/json") ? await response.json() : await response.text();
   if (!response.ok) {
@@ -66,9 +66,9 @@ export const adminApi = {
     return data;
   },
   me: () => api("/api/admin/me"),
-  suppliers: () => api("/api/supplier/admin/suppliers"),
-  pendingProducts: () => api("/api/supplier/admin/products?status=PENDING"),
-  updateSupplierStatus: (id, status) => api(`/api/supplier/admin/suppliers/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
-  approveProduct: (id, approval_status) => api(`/api/supplier/admin/products/${id}/approval`, { method: "PATCH", body: JSON.stringify({ approval_status }) }),
+  suppliers: () => api("/api/supplier/admin/suppliers", {}, SUPPLIER_API_BASE_URL),
+  pendingProducts: () => api("/api/supplier/admin/products?status=PENDING", {}, SUPPLIER_API_BASE_URL),
+  updateSupplierStatus: (id, status) => api(`/api/supplier/admin/suppliers/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }, SUPPLIER_API_BASE_URL),
+  approveProduct: (id, approval_status) => api(`/api/supplier/admin/products/${id}/approval`, { method: "PATCH", body: JSON.stringify({ approval_status }) }, SUPPLIER_API_BASE_URL),
   logout: async () => { try { return await api("/api/admin/logout", { method: "POST" }); } finally { await clearSession(); } }
 };
