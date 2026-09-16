@@ -15,11 +15,4 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      - run: node --check apps/api/src/server.js
-      - run: node --check apps/api/src/supplier-server.js
-      - run: node --check apps/api/src/auth.js
-      - run: node --check apps/api/src/db.js
-      - run: node --check apps/api/src/seed.js
-      - run: node --check apps/web/app.js
-      - run: node --check apps/web/secondary-i18n.js
-      - run: node --check apps/web/language-switch.js
+      - run: npm run check
