@@ -14,4 +14,4 @@ $("supplier-products").innerHTML=(p.data||[]).map(x=>`<div class="admin-row"><sp
 async function setSupplier(id,status){const r=await call('/api/supplier/admin/suppliers/'+id+'/status',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});if(!r.ok)alert(r.data.error||'Erreur');refresh()}
 async function approve(id,status){const r=await call('/api/supplier/admin/products/'+id+'/approval',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({approval_status:status})});if(!r.ok)alert(r.data.error||'Erreur');refresh()}
 function esc(s){return String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}boot();
-</script></body></html>
+</script><script src="secondary-i18n.js"></script></body></html>
