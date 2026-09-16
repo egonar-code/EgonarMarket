@@ -1,9 +1,9 @@
 (() => {
   'use strict';
   const FALLBACKS = {
-    MARKET: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80',
-    SAVEURS: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80',
-    EVASION: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80'
+    MARKET: '/assets/egonar-market-fallback.svg',
+    SAVEURS: '/assets/egonar-saveurs-fallback.svg',
+    EVASION: '/assets/egonar-evasion-fallback.svg'
   };
   function fallback(product = {}) {
     const universe = String(product.universe || '').toUpperCase();
@@ -15,8 +15,7 @@
       img.dataset.egonarImageFallbackBound = '1';
       const source = img.getAttribute('src') || '';
       const universe = img.dataset.universe || document.body.dataset.universe || 'MARKET';
-      const src = source || fallback({ universe });
-      if (!source) img.src = src;
+      if (!source) img.src = fallback({ universe });
       img.addEventListener('error', () => {
         img.onerror = null;
         const next = fallback({ universe: img.dataset.universe || universe });
