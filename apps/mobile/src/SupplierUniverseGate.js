@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MOBILE_ROLE } from "./config";
 import { supplierApi } from "./api";
 import SupplierAiCoach, { SUPPLIER_SPACES } from "./SupplierAiCoach";
+import SupplierOrdersPanel from "./SupplierOrdersPanel";
 
 const KEY = "egonar_supplier_universe";
 const colors = { bg: "#f6f8fb", card: "#fff", ink: "#111827", muted: "#6b7280", accent: "#2563eb", border: "#e5e7eb", dark: "#0f172a" };
@@ -11,6 +12,7 @@ const colors = { bg: "#f6f8fb", card: "#fff", ink: "#111827", muted: "#6b7280", 
 export default function SupplierUniverseGate({ children }) {
   const [ready, setReady] = useState(MOBILE_ROLE !== "supplier");
   const [selected, setSelected] = useState(null);
+  const [ordersOpen, setOrdersOpen] = useState(false);
 
   useEffect(() => {
     if (MOBILE_ROLE !== "supplier") return undefined;
@@ -28,72 +30,16 @@ export default function SupplierUniverseGate({ children }) {
     return () => { active = false; };
   }, []);
 
-  async function choose(id) {
-    await AsyncStorage.setItem(KEY, id);
-    setSelected(id);
-  }
-
-  async function changeUniverse() {
-    await AsyncStorage.removeItem(KEY);
-    setSelected(null);
-  }
+  async function choose(id) { await AsyncStorage.setItem(KEY, id); setSelected(id); }
+  async function changeUniverse() { await AsyncStorage.removeItem(KEY); setSelected(null); setOrdersOpen(false); }
 
   if (!ready) return <SafeAreaView style={styles.safe}><View style={styles.center}><ActivityIndicator size="large"/><Text style={styles.muted}>Chargement…</Text></View></SafeAreaView>;
   if (MOBILE_ROLE !== "supplier") return children;
 
-  if (!selected) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.page}>
-          <Text style={styles.kicker}>EGONAR FOURNISSEUR</Text>
-          <Text style={styles.title}>Que souhaitez-vous vendre sur Egonar ?</Text>
-          <Text style={styles.subtitle}>Votre réponse détermine votre espace professionnel de vente.</Text>
-          {Object.entries(SUPPLIER_SPACES).map(([id, space]) => (
-            <Pressable key={id} onPress={() => choose(id)} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
-              <Text style={styles.icon}>{space.icon}</Text>
-              <View style={styles.main}><Text style={styles.name}>{space.name}</Text><Text style={styles.cardTitle}>{space.title}</Text><Text style={styles.text}>{space.text}</Text></View>
-              <Text style={styles.arrow}>›</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
+  if (!selected) return <SafeAreaView style={styles.safe}><ScrollView contentContainerStyle={styles.page}><Text style={styles.kicker}>EGONAR FOURNISSEUR</Text><Text style={styles.title}>Que souhaitez-vous vendre sur Egonar ?</Text><Text style={styles.subtitle}>Votre réponse détermine votre espace professionnel de vente.</Text>{Object.entries(SUPPLIER_SPACES).map(([id, space]) => <Pressable key={id} onPress={() => choose(id)} style={({ pressed }) => [styles.card, pressed && styles.pressed]}><Text style={styles.icon}>{space.icon}</Text><View style={styles.main}><Text style={styles.name}>{space.name}</Text><Text style={styles.cardTitle}>{space.title}</Text><Text style={styles.text}>{space.text}</Text></View><Text style={styles.arrow}>›</Text></Pressable>)}</ScrollView></SafeAreaView>;
 
   const space = SUPPLIER_SPACES[selected] || SUPPLIER_SPACES.marketplace;
-  return (
-    <SupplierAiCoach universe={selected}>
-      <View style={styles.wrapper}>
-        {children}
-        <View style={styles.switchBar}>
-          <View><Text style={styles.switchLabel}>Espace actuel</Text><Text style={styles.currentSpace}>{space.icon} {space.name}</Text></View>
-          <Pressable onPress={changeUniverse} style={({ pressed }) => [styles.switchButton, pressed && styles.pressed]}><Text style={styles.switchText}>Changer d’espace</Text></Pressable>
-        </View>
-      </View>
-    </SupplierAiCoach>
-  );
+  return <SupplierAiCoach universe={selected}><View style={styles.wrapper}>{children}<View style={styles.switchBar}><View><Text style={styles.switchLabel}>Espace actuel</Text><Text style={styles.currentSpace}>{space.icon} {space.name}</Text></View><View style={styles.actions}><Pressable onPress={() => setOrdersOpen(true)} style={({ pressed }) => [styles.switchButton, pressed && styles.pressed]}><Text style={styles.switchText}>Commandes</Text></Pressable><Pressable onPress={changeUniverse} style={({ pressed }) => [styles.switchButton, pressed && styles.pressed]}><Text style={styles.switchText}>Changer d’espace</Text></Pressable></View></View><SupplierOrdersPanel visible={ordersOpen} onClose={() => setOrdersOpen(false)} /></View></SupplierAiCoach>;
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
-  wrapper: { flex: 1, backgroundColor: colors.bg },
-  page: { flexGrow: 1, justifyContent: "center", padding: 22 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
-  muted: { color: colors.muted },
-  kicker: { color: colors.accent, fontSize: 12, fontWeight: "900", letterSpacing: 2, marginBottom: 10 },
-  title: { color: colors.ink, fontSize: 30, lineHeight: 36, fontWeight: "900" },
-  subtitle: { color: colors.muted, fontSize: 16, lineHeight: 23, marginTop: 10, marginBottom: 18 },
-  card: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 20, padding: 17, marginTop: 12, flexDirection: "row", alignItems: "center" },
-  pressed: { transform: [{ scale: 0.985 }] },
-  icon: { fontSize: 34, marginRight: 14 },
-  main: { flex: 1 },
-  name: { color: colors.ink, fontSize: 19, fontWeight: "900" },
-  cardTitle: { color: colors.accent, fontSize: 14, fontWeight: "800", marginTop: 3 },
-  text: { color: colors.muted, fontSize: 13, lineHeight: 18, marginTop: 5 },
-  arrow: { color: colors.accent, fontSize: 34, marginLeft: 8 },
-  switchBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 9, backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border },
-  switchLabel: { color: colors.muted, fontSize: 11 },
-  currentSpace: { color: colors.ink, fontWeight: "800", fontSize: 12, marginTop: 2 },
-  switchButton: { marginLeft: "auto", backgroundColor: "#fff", borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9 },
-  switchText: { color: colors.accent, fontWeight: "800", fontSize: 12 }
-});
+const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: colors.bg }, wrapper: { flex: 1, backgroundColor: colors.bg }, page: { flexGrow: 1, justifyContent: "center", padding: 22 }, center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 }, muted: { color: colors.muted }, kicker: { color: colors.accent, fontSize: 12, fontWeight: "900", letterSpacing: 2, marginBottom: 10 }, title: { color: colors.ink, fontSize: 30, lineHeight: 36, fontWeight: "900" }, subtitle: { color: colors.muted, fontSize: 16, lineHeight: 23, marginTop: 10, marginBottom: 18 }, card: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 20, padding: 17, marginTop: 12, flexDirection: "row", alignItems: "center" }, pressed: { transform: [{ scale: 0.985 }] }, icon: { fontSize: 34, marginRight: 14 }, main: { flex: 1 }, name: { color: colors.ink, fontSize: 19, fontWeight: "900" }, cardTitle: { color: colors.accent, fontSize: 14, fontWeight: "800", marginTop: 3 }, text: { color: colors.muted, fontSize: 13, lineHeight: 18, marginTop: 5 }, arrow: { color: colors.accent, fontSize: 34, marginLeft: 8 }, switchBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 9, backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border }, switchLabel: { color: colors.muted, fontSize: 10 }, currentSpace: { color: colors.ink, fontWeight: "800", fontSize: 12, marginTop: 2 }, actions: { marginLeft: "auto", flexDirection: "row", gap: 7 }, switchButton: { backgroundColor: "#fff", borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 11, paddingVertical: 9 }, switchText: { color: colors.accent, fontWeight: "800", fontSize: 11 } });
