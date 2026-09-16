@@ -117,7 +117,7 @@ app.post("/api/supplier/products", requireSupplier, async (req, res) => {
     const price = Number(price_fcfa); const oldPrice = old_price_fcfa === null || old_price_fcfa === "" ? null : Number(old_price_fcfa);
     if (oldPrice !== null && (!validInteger(oldPrice) || oldPrice < price)) return res.status(400).json({ error: "L'ancien prix doit être supérieur ou égal au prix actuel." });
     const slug = `${String(name).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${Date.now()}`;
-    const result = await db.query(`INSERT INTO products(name,slug,universe,category,subcategory,description,price_fcfa,old_price_fcfa,stock,sku,image_url,active,approval_status,supplier_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,TRUE,'PENDING',$12) RETURNING *`, [String(name).trim().slice(0, 160), slug, universe, String(category).trim().toUpperCase(), String(subcategory).trim(), String(description).trim(), price, oldPrice, Number(stock), sku ? String(sku).trim() : null, String(image_url || "").trim(), req.supplier.sub]);
+    const result = await db.query(`INSERT INTO products(name,slug,universe,category,subcategory,description,price_fcfa,old_price_fcfa,stock,sku,image_url,active,approval_status,supplier_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,FALSE,'PENDING',$12) RETURNING *`, [String(name).trim().slice(0, 160), slug, universe, String(category).trim().toUpperCase(), String(subcategory).trim(), String(description).trim(), price, oldPrice, Number(stock), sku ? String(sku).trim() : null, String(image_url || "").trim(), req.supplier.sub]);
     res.status(201).json(result.rows[0]);
   } catch (e) { console.error(e); res.status(400).json({ error: "Impossible de soumettre le produit." }); }
 });
@@ -154,23 +154,18 @@ app.delete("/api/supplier/products/:id", requireSupplier, async (req, res) => {
 app.get("/api/supplier/admin/suppliers", requireAdmin, async (_req, res) => res.json((await db.query(`SELECT id,business_name,contact_name,phone,email,status,commission_percent,created_at FROM suppliers ORDER BY created_at DESC`)).rows));
 app.patch("/api/supplier/admin/suppliers/:id/status", requireAdmin, async (req, res) => {
   const allowed = new Set(["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]); const status = String(req.body?.status || ""); if (!allowed.has(status)) return res.status(400).json({ error: "Statut fournisseur invalide." });
-  const result = await db.query("UPDATE suppliers SET status=$1, updated_at=NOW() WHERE id=$2 RETURNING id,business_name,status", [status, req.params.id]); if (!result.rows[0]) return res.status(404).json({ error: "Fournisseur introuvable." }); res.json(result.rows[0]);
+  const result = await db.query("UPDATE suppliers SET status=$1, updated_at=NOW() WHERE id=$2 RETURNING id,business_name,status", [status, req.params.id]);
+  if (!result.rows[0]) return res.status(404).json({ error: "Fournisseur introuvable." });
+  res.json(result.rows[0]);
 });
-app.get("/api/supplier/admin/products", requireAdmin, async (req, res) => {
-  const status = String(req.query.status || "").trim(); const universe = String(req.query.universe || "").trim() ? normalizeUniverse(req.query.universe) : null;
-  if (req.query.universe && !universe) return res.status(400).json({ error: "Univers invalide." });
-  const params = []; let sql = `SELECT p.id,p.name,p.universe,p.category,p.price_fcfa,p.stock,p.approval_status,p.active,p.supplier_id,s.business_name FROM products p LEFT JOIN suppliers s ON s.id=p.supplier_id`;
-  const where = [];
-  if (status) { params.push(status); where.push(`p.approval_status=$${params.length}`); }
-  if (universe) { params.push(universe); where.push(`p.universe=$${params.length}`); }
-  if (where.length) sql += ` WHERE ${where.join(" AND ")}`;
-  sql += " ORDER BY p.created_at DESC"; res.json((await db.query(sql, params)).rows);
-});
+
 app.patch("/api/supplier/admin/products/:id/approval", requireAdmin, async (req, res) => {
-  const approval = String(req.body?.approval_status || ""); if (!new Set(["PENDING", "APPROVED", "REJECTED"]).has(approval)) return res.status(400).json({ error: "Statut de validation invalide." });
-  const result = await db.query("UPDATE products SET approval_status=$1, active=$2, updated_at=NOW() WHERE id=$3 RETURNING id,name,universe,approval_status,active", [approval, approval === "APPROVED", req.params.id]); if (!result.rows[0]) return res.status(404).json({ error: "Produit introuvable." }); res.json(result.rows[0]);
+  const approval = String(req.body?.approval_status || "");
+  if (!new Set(["PENDING", "APPROVED", "REJECTED"]).has(approval)) return res.status(400).json({ error: "Statut de validation invalide." });
+  const result = await db.query("UPDATE products SET approval_status=$1, active=$2, updated_at=NOW() WHERE id=$3 RETURNING id,name,universe,approval_status,active", [approval, approval === "APPROVED", req.params.id]);
+  if (!result.rows[0]) return res.status(404).json({ error: "Produit introuvable." });
+  res.json(result.rows[0]);
 });
 
 app.use(express.static(webDir, { extensions: ["html"] }));
-app.get("/", (_req, res) => res.sendFile(path.join(webDir, "supplier.html")));
-app.listen(PORT, "0.0.0.0", () => console.log(`EgonarMarket Supplier Portal: http://localhost:${PORT}`));
+app.listen(PORT, "0.0.0.0", () => console.log(`EgonarMarket supplier portal: http://localhost:${PORT}`));
