@@ -1,10 +1,10 @@
 import "./src/session-bootstrap";
 import { registerRootComponent } from "expo";
-import App from "./src/App";
+import AppSafe from "./src/AppSafe";
 import SupplierUniverseGate from "./src/SupplierUniverseGate";
 
 function Root() {
-  return <SupplierUniverseGate><App /></SupplierUniverseGate>;
+  return <SupplierUniverseGate><AppSafe /></SupplierUniverseGate>;
 }
 
 registerRootComponent(Root);
