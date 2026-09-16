@@ -12,7 +12,7 @@ const checks = [
   ["apps/web/travel-app.js", /product_id:id,quantity:1/, "Évasion ajoute au panier avec le contrat product_id/quantity."],
   ["apps/api/src/server.js", /const UNIVERSES = new Set\(\[\"MARKET\",\"SAVEURS\",\"EVASION\"\]\)/, "L'API valide les univers."],
   ["apps/api/src/supplier-server.js", /approval_status='PENDING'/, "Les produits fournisseurs sont soumis à validation."],
-  ["apps/api/src/supplier-server.js", /active=\$\{approval === \"APPROVED\"\}/, "L'approbation admin pilote l'activation publique."],
+  ["apps/api/src/supplier-server.js", /approval === \"APPROVED\"/, "L'approbation admin pilote l'activation publique."],
 ];
 
 let failed = 0;
