@@ -38,6 +38,7 @@ function requireSupplier(req, res, next) {
 }
 
 function setSupplierCookie(res, token) { res.cookie("egonar_supplier", token, { httpOnly: true, sameSite: "lax", secure, maxAge: 12 * 60 * 60 * 1000 }); }
+function validInteger(value, { min = 0 } = {}) { return Number.isInteger(Number(value)) && Number(value) >= min; }
 
 app.get("/api/health", async (_req, res) => {
   try { await db.query("SELECT 1"); res.json({ ok: true, service: "EgonarMarket Supplier Portal", database: "ok" }); }
@@ -75,12 +76,12 @@ app.get("/api/supplier/me", requireSupplier, async (req, res) => {
 });
 
 app.get("/api/supplier/stats", requireSupplier, async (req, res) => {
-  const result = await db.query(`SELECT COUNT(*) FILTER (WHERE active=TRUE)::int AS active_products, COUNT(*) FILTER (WHERE approval_status='PENDING')::int AS pending_products, COALESCE(SUM(stock),0)::int AS total_stock FROM products WHERE supplier_id=$1`, [req.supplier.sub]);
+  const result = await db.query(`SELECT COUNT(*) FILTER (WHERE active=TRUE AND approval_status='APPROVED')::int AS active_products, COUNT(*) FILTER (WHERE approval_status='PENDING')::int AS pending_products, COALESCE(SUM(stock) FILTER (WHERE active=TRUE),0)::int AS total_stock FROM products WHERE supplier_id=$1`, [req.supplier.sub]);
   res.json(result.rows[0]);
 });
 
 app.get("/api/supplier/sales-stats", requireSupplier, async (req, res) => {
-  const result = await db.query(`SELECT COUNT(DISTINCT o.id)::int AS orders_count, COALESCE(SUM(oi.quantity),0)::int AS units_sold, COALESCE(SUM(oi.quantity * oi.unit_price_fcfa),0)::int AS gross_sales_fcfa, COALESCE(SUM(oi.quantity * oi.unit_price_fcfa) * MAX(s.commission_percent) / 100,0)::int AS estimated_commission_fcfa FROM orders o JOIN order_items oi ON oi.order_id=o.id JOIN products p ON p.id=oi.product_id JOIN suppliers s ON s.id=p.supplier_id WHERE p.supplier_id=$1 AND o.status NOT IN ('ANNULEE','ANNULEE_CLIENT')`, [req.supplier.sub]);
+  const result = await db.query(`SELECT COUNT(DISTINCT o.id)::int AS orders_count, COALESCE(SUM(oi.quantity),0)::int AS units_sold, COALESCE(SUM(oi.quantity * oi.unit_price_fcfa),0)::int AS gross_sales_fcfa, COALESCE((SUM(oi.quantity * oi.unit_price_fcfa) * MAX(s.commission_percent) / 100),0)::int AS estimated_commission_fcfa FROM orders o JOIN order_items oi ON oi.order_id=o.id JOIN products p ON p.id=oi.product_id JOIN suppliers s ON s.id=p.supplier_id WHERE p.supplier_id=$1 AND o.status NOT IN ('ANNULEE','ANNULEE_CLIENT')`, [req.supplier.sub]);
   res.json(result.rows[0]);
 });
 
@@ -97,11 +98,12 @@ app.get("/api/supplier/products", requireSupplier, async (req, res) => {
 app.post("/api/supplier/products", requireSupplier, async (req, res) => {
   try {
     const { name, category, subcategory = "", description = "", price_fcfa, old_price_fcfa = null, stock = 0, sku = null, image_url = "" } = req.body || {};
-    if (!String(name || "").trim() || !String(category || "").trim() || !Number.isInteger(Number(price_fcfa)) || Number(price_fcfa) < 0) return res.status(400).json({ error: "Nom, catégorie et prix valides sont obligatoires." });
+    if (!String(name || "").trim() || !String(category || "").trim() || !validInteger(price_fcfa)) return res.status(400).json({ error: "Nom, catégorie et prix valides sont obligatoires." });
+    if (!validInteger(stock)) return res.status(400).json({ error: "Le stock doit être un nombre entier positif ou nul." });
     const price = Number(price_fcfa); const oldPrice = old_price_fcfa === null || old_price_fcfa === "" ? null : Number(old_price_fcfa);
-    if (oldPrice !== null && (!Number.isInteger(oldPrice) || oldPrice < price)) return res.status(400).json({ error: "L'ancien prix doit être supérieur ou égal au prix actuel." });
+    if (oldPrice !== null && (!validInteger(oldPrice) || oldPrice < price)) return res.status(400).json({ error: "L'ancien prix doit être supérieur ou égal au prix actuel." });
     const slug = `${String(name).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${Date.now()}`;
-    const result = await db.query(`INSERT INTO products(name,slug,category,subcategory,description,price_fcfa,old_price_fcfa,stock,sku,image_url,active,approval_status,supplier_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE,'PENDING',$11) RETURNING *`, [String(name).trim().slice(0, 160), slug, String(category).trim().toUpperCase(), String(subcategory).trim(), String(description).trim(), price, oldPrice, Math.max(0, Number(stock) || 0), sku ? String(sku).trim() : null, String(image_url || "").trim(), req.supplier.sub]);
+    const result = await db.query(`INSERT INTO products(name,slug,category,subcategory,description,price_fcfa,old_price_fcfa,stock,sku,image_url,active,approval_status,supplier_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE,'PENDING',$11) RETURNING *`, [String(name).trim().slice(0, 160), slug, String(category).trim().toUpperCase(), String(subcategory).trim(), String(description).trim(), price, oldPrice, Number(stock), sku ? String(sku).trim() : null, String(image_url || "").trim(), req.supplier.sub]);
     res.status(201).json(result.rows[0]);
   } catch (e) { console.error(e); res.status(400).json({ error: "Impossible de soumettre le produit." }); }
 });
@@ -110,11 +112,23 @@ app.patch("/api/supplier/products/:id", requireSupplier, async (req, res) => {
   try {
     const allowed = ["name", "category", "subcategory", "description", "price_fcfa", "old_price_fcfa", "stock", "sku", "image_url"]; const keys = Object.keys(req.body || {}).filter(k => allowed.includes(k));
     if (!keys.length) return res.status(400).json({ error: "Aucune modification." });
-    if (keys.includes("price_fcfa")) req.body.price_fcfa = Number(req.body.price_fcfa); if (keys.includes("stock")) req.body.stock = Math.max(0, Number(req.body.stock) || 0); if (keys.includes("old_price_fcfa") && req.body.old_price_fcfa !== null && req.body.old_price_fcfa !== "") req.body.old_price_fcfa = Number(req.body.old_price_fcfa);
+    if (keys.includes("name") && !String(req.body.name || "").trim()) return res.status(400).json({ error: "Le nom du produit est obligatoire." });
+    if (keys.includes("category") && !String(req.body.category || "").trim()) return res.status(400).json({ error: "La catégorie est obligatoire." });
+    if (keys.includes("price_fcfa") && !validInteger(req.body.price_fcfa)) return res.status(400).json({ error: "Le prix doit être un nombre entier positif ou nul." });
+    if (keys.includes("stock") && !validInteger(req.body.stock)) return res.status(400).json({ error: "Le stock doit être un nombre entier positif ou nul." });
+    if (keys.includes("old_price_fcfa") && req.body.old_price_fcfa !== null && req.body.old_price_fcfa !== "" && !validInteger(req.body.old_price_fcfa)) return res.status(400).json({ error: "L'ancien prix doit être un nombre entier positif ou nul." });
+    if (keys.includes("price_fcfa") || keys.includes("old_price_fcfa")) {
+      const current = await db.query("SELECT price_fcfa,old_price_fcfa FROM products WHERE id=$1 AND supplier_id=$2", [req.params.id, req.supplier.sub]);
+      if (!current.rows[0]) return res.status(404).json({ error: "Produit introuvable." });
+      const nextPrice = keys.includes("price_fcfa") ? Number(req.body.price_fcfa) : current.rows[0].price_fcfa;
+      const nextOld = keys.includes("old_price_fcfa") ? (req.body.old_price_fcfa === null || req.body.old_price_fcfa === "" ? null : Number(req.body.old_price_fcfa)) : current.rows[0].old_price_fcfa;
+      if (nextOld !== null && nextOld < nextPrice) return res.status(400).json({ error: "L'ancien prix doit être supérieur ou égal au prix actuel." });
+    }
+    if (keys.includes("category")) req.body.category = String(req.body.category).trim().toUpperCase();
     const values = keys.map(k => req.body[k]); const set = keys.map((k, i) => `${k}=$${i + 1}`).join(","); values.push(req.params.id, req.supplier.sub);
-    const result = await db.query(`UPDATE products SET ${set}, approval_status='PENDING', updated_at=NOW() WHERE id=$${values.length - 1} AND supplier_id=$${values.length} RETURNING *`, values);
+    const result = await db.query(`UPDATE products SET ${set}, active=FALSE, approval_status='PENDING', updated_at=NOW() WHERE id=$${values.length - 1} AND supplier_id=$${values.length} RETURNING *`, values);
     if (!result.rows[0]) return res.status(404).json({ error: "Produit introuvable." }); res.json(result.rows[0]);
-  } catch (e) { res.status(400).json({ error: e.message || "Modification impossible." }); }
+  } catch (e) { console.error(e); res.status(400).json({ error: e.message || "Modification impossible." }); }
 });
 
 app.delete("/api/supplier/products/:id", requireSupplier, async (req, res) => {
