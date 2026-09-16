@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   slug TEXT UNIQUE NOT NULL,
+  universe TEXT NOT NULL DEFAULT 'MARKET' CHECK (universe IN ('MARKET','SAVEURS','EVASION')),
   category TEXT NOT NULL,
   subcategory TEXT NOT NULL DEFAULT '',
   description TEXT NOT NULL DEFAULT '',
@@ -90,15 +91,18 @@ CREATE TABLE IF NOT EXISTS suppliers (
   status TEXT NOT NULL DEFAULT 'PENDING',
   commission_percent NUMERIC(5,2) NOT NULL DEFAULT 10 CHECK (commission_percent >= 0 AND commission_percent <= 100),
   verification_level TEXT NOT NULL DEFAULT 'STANDARD',
-  rating_average NUMERIC(3,2) NOT NULL DEFAULT 0 CHECK (rating_average >= 0 AND rating_average <= 5),
-  rating_count INTEGER NOT NULL DEFAULT 0 CHECK (rating_count >= 0),
-  orders_count INTEGER NOT NULL DEFAULT 0 CHECK (orders_count >= 0),
-  cancellation_rate NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (cancellation_rate >= 0 AND cancellation_rate <= 100),
+  rating_average NUMERIC(3,2) NOT NULL DEFAULT 0,
+  rating_count INTEGER NOT NULL DEFAULT 0,
+  orders_count INTEGER NOT NULL DEFAULT 0,
+  cancellation_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
   verified_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE products ADD COLUMN IF NOT EXISTS universe TEXT NOT NULL DEFAULT 'MARKET';
+ALTER TABLE products DROP CONSTRAINT IF EXISTS products_universe_check;
+ALTER TABLE products ADD CONSTRAINT products_universe_check CHECK (universe IN ('MARKET','SAVEURS','EVASION'));
 ALTER TABLE products ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'APPROVED';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_id UUID;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS verified_level TEXT NOT NULL DEFAULT 'STANDARD';
@@ -119,6 +123,8 @@ ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS orders_count INTEGER NOT NULL DEF
 ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS cancellation_rate NUMERIC(5,2) NOT NULL DEFAULT 0;
 ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
 
+CREATE INDEX IF NOT EXISTS idx_products_universe ON products(universe);
+CREATE INDEX IF NOT EXISTS idx_products_universe_active ON products(universe,active,created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_active ON products(active);
 CREATE INDEX IF NOT EXISTS idx_products_stock ON products(stock);
