@@ -11,7 +11,8 @@ const required = {
   EVASION: ['Hôtels','Appartements & Locations','Résidences & Maisons d’hôtes','Plages & Resorts','Excursions','Activités & Expériences','Tourisme & Culture','Restaurants & Gastronomie','Transport & Mobilité','Billetterie & Événements','Voyages organisés','Lune de miel & Romantique','Famille','Business & Séminaires','Bien-être','Destinations']
 };
 for (const [universe, categories] of Object.entries(required)) {
-  if (!sql.includes(`'${universe}'`)) throw new Error(`Univers manquant: ${universe}`);
+  const tupleCount = (sql.match(new RegExp(`\\('${universe}',`, 'g')) || []).length;
+  if (tupleCount < categories.length) throw new Error(`Nombre de catégories insuffisant pour ${universe}: ${tupleCount}/${categories.length}`);
   for (const category of categories) {
     if (!sql.includes(`'${category}'`)) throw new Error(`Catégorie manquante: ${universe} / ${category}`);
   }
