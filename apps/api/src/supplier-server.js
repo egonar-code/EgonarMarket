@@ -136,7 +136,7 @@ app.patch("/api/supplier/products/:id", requireSupplier, async (req, res) => {
       const current = await db.query("SELECT price_fcfa,old_price_fcfa FROM products WHERE id=$1 AND supplier_id=$2", [req.params.id, req.supplier.sub]);
       if (!current.rows[0]) return res.status(404).json({ error: "Produit introuvable." });
       const nextPrice = keys.includes("price_fcfa") ? Number(req.body.price_fcfa) : current.rows[0].price_fcfa;
-      const nextOld = keys.includes("old_price_fcfa") ? (req.body.old_price_fcfa === null || req.body.old_price_fcfcfa === "" ? null : Number(req.body.old_price_fcfa)) : current.rows[0].old_price_fcfa;
+      const nextOld = keys.includes("old_price_fcfa") ? (req.body.old_price_fcfa === null || req.body.old_price_fcfa === "" ? null : Number(req.body.old_price_fcfa)) : current.rows[0].old_price_fcfa;
       if (nextOld !== null && nextOld < nextPrice) return res.status(400).json({ error: "L'ancien prix doit être supérieur ou égal au prix actuel." });
     }
     if (keys.includes("category")) req.body.category = String(req.body.category).trim().toUpperCase();
