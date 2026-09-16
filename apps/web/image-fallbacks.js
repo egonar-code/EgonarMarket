@@ -82,14 +82,7 @@
     if (document.getElementById('egonar-category-catalog-style')) return;
     const s = document.createElement('style');
     s.id = 'egonar-category-catalog-style';
-    s.textContent = `
-      .egonar-category-panel{margin:18px 0 28px;padding:20px;border:1px solid rgba(15,47,65,.10);border-radius:22px;background:rgba(255,255,255,.96);box-shadow:0 10px 30px rgba(15,47,65,.06)}
-      .egonar-category-head{display:flex;justify-content:space-between;gap:16px;align-items:end;margin-bottom:16px}.egonar-category-head h3{margin:0;font-size:20px}.egonar-category-head p{margin:5px 0 0;opacity:.72;font-size:13px}
-      .egonar-category-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
-      .egonar-category-item{border:1px solid rgba(15,47,65,.09);border-radius:16px;background:#fff;padding:13px 14px}.egonar-category-item summary{cursor:pointer;list-style:none;font-weight:800;display:flex;gap:9px;align-items:center}.egonar-category-item summary::-webkit-details-marker{display:none}.egonar-category-item summary:after{content:'+';margin-left:auto;opacity:.5}.egonar-category-item[open] summary:after{content:'−'}.egonar-category-subcats{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}.egonar-category-subcats span{font-size:11px;padding:5px 8px;border-radius:999px;background:#f3f7f9;color:#38505d}
-      .egonar-category-filters{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}.egonar-filter{font-size:11px;padding:6px 9px;border-radius:999px;background:#eef7fb;color:#145c7c;font-weight:700}.egonar-category-count{font-size:11px;opacity:.55;white-space:nowrap}
-      @media(max-width:650px){.egonar-category-grid{grid-template-columns:1fr}.egonar-category-panel{padding:15px}.egonar-category-head{align-items:flex-start;flex-direction:column}}
-    `;
+    s.textContent = `.egonar-category-panel{margin:18px 0 28px;padding:20px;border:1px solid rgba(15,47,65,.10);border-radius:22px;background:rgba(255,255,255,.96);box-shadow:0 10px 30px rgba(15,47,65,.06)}.egonar-category-head{display:flex;justify-content:space-between;gap:16px;align-items:end;margin-bottom:16px}.egonar-category-head h3{margin:0;font-size:20px}.egonar-category-head p{margin:5px 0 0;opacity:.72;font-size:13px}.egonar-category-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.egonar-category-item{border:1px solid rgba(15,47,65,.09);border-radius:16px;background:#fff;padding:13px 14px}.egonar-category-item summary{cursor:pointer;list-style:none;font-weight:800;display:flex;gap:9px;align-items:center}.egonar-category-item summary::-webkit-details-marker{display:none}.egonar-category-item summary:after{content:'+';margin-left:auto;opacity:.5}.egonar-category-item[open] summary:after{content:'−'}.egonar-category-subcats{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}.egonar-category-subcats span{font-size:11px;padding:5px 8px;border-radius:999px;background:#f3f7f9;color:#38505d}.egonar-category-filters{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}.egonar-filter{font-size:11px;padding:6px 9px;border-radius:999px;background:#eef7fb;color:#145c7c;font-weight:700}.egonar-category-count{font-size:11px;opacity:.55;white-space:nowrap}@media(max-width:650px){.egonar-category-grid{grid-template-columns:1fr}.egonar-category-panel{padding:15px}.egonar-category-head{align-items:flex-start;flex-direction:column}}`;
     document.head.appendChild(s);
   };
 
@@ -108,14 +101,6 @@
     css();
     const universe = String(document.body?.dataset?.universe || 'MARKET').toUpperCase();
     categoryPanel(universe);
-    if (universe === 'MARKET') {
-      const chips = document.querySelector('.chips');
-      const list = CATEGORY_CATALOG.MARKET;
-      if (chips && !chips.dataset.egonarCategoryEnhanced) {
-        chips.dataset.egonarCategoryEnhanced = '1';
-        chips.innerHTML = `<button type="button" class="chip active" data-category="">Toutes</button>${list.slice(0,12).map(([slug,name,icon]) => `<button type="button" class="chip" data-category="${name.replace(/&amp;/g,'&')}">${icon} ${name}</button>`).join('')}<span class="category-more" title="Voir toutes les catégories">+ ${list.length-12} autres</span>`;
-      }
-    }
   }
 
   window.EgonarImage = { fallback, bind, isExternalImage };
