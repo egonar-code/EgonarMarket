@@ -1,5 +1,10 @@
 import "./src/session-bootstrap";
 import { registerRootComponent } from "expo";
 import App from "./src/App";
+import SupplierUniverseGate from "./src/SupplierUniverseGate";
 
-registerRootComponent(App);
+function Root() {
+  return <SupplierUniverseGate><App /></SupplierUniverseGate>;
+}
+
+registerRootComponent(Root);
