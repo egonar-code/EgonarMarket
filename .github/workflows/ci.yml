@@ -16,6 +16,7 @@ jobs:
           node-version: 20
       - run: npm install
       - run: node --check apps/api/src/server.js
+      - run: node --check apps/api/src/supplier-server.js
       - run: node --check apps/api/src/auth.js
       - run: node --check apps/api/src/db.js
       - run: node --check apps/api/src/seed.js
