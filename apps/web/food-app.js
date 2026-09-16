@@ -6,26 +6,12 @@ const foodOffers = [
   { title: "Pack famille sénégalais", type: "Menu", city: "Dakar", tags: "famille menu repas thieb yassa mafe partage", price: 12000, note: "Idéal pour 4 personnes", image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=85" }
 ];
 window.foodOffers = foodOffers;
-
 function foodMoney(value) { return new Intl.NumberFormat("fr-FR").format(value) + " FCFA"; }
 function foodText(fr, en) { return window.EgonarI18n?.getLang?.() === "en" ? en : fr; }
-
-function foodSearch(message) {
-  const text = String(message || "").trim().toLowerCase();
-  if (!text) return;
-  const budgetMatch = text.match(/(?:moins de|à moins de|budget|maximum|max|under|less than)\s*([0-9\s]+)/i) || text.match(/([0-9]{3,})\s*(?:fcfa|f|francs?)/i);
-  const budget = budgetMatch ? Number(budgetMatch[1].replace(/\s/g, "")) : null;
-  const words = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter(w => w.length > 2);
-  const results = foodOffers.filter(item => { const hay = `${item.title} ${item.type} ${item.city} ${item.tags}`.toLowerCase(); const match = words.length === 0 || words.some(w => hay.includes(w)); return match && (!budget || item.price <= budget); });
-  renderFoodResults(results.length ? results : foodOffers.slice(0, 3), text, budget);
-}
-
-function renderFoodResults(results, query, budget) {
-  const box = document.getElementById("food-smart-results"); if (!box) return;
-  const budgetText = budget ? ` · ${foodText("budget","budget")} ${foodMoney(budget)}` : "";
-  const suggestions = foodText("suggestion","suggestion");
-  box.innerHTML = `<div class="food-result-head"><strong>${foodText("Résultats pour","Results for")} « ${query} »${budgetText}</strong><span>${results.length} ${suggestions}${results.length > 1 ? "s" : ""}</span></div><div class="menu-grid">${results.map(item => `<article class="menu-card"><img src="${item.image}" alt="${item.title}" loading="lazy" style="width:100%;height:210px;object-fit:cover;display:block;border-radius:16px 16px 0 0"><div class="menu-body"><span class="badge">${item.type}</span><h3>${item.title}</h3><p>${item.city} · ${item.note}</p><div class="product-bottom"><strong>${foodMoney(item.price)}</strong><a class="btn primary" href="#explorer">${foodText("Voir l'offre","View offer")}</a></div></div></article>`).join("")}</div>`;
-  box.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-document.addEventListener("DOMContentLoaded", () => { const form = document.querySelector(".food-search form"); const input = form?.querySelector("input"); form?.addEventListener("submit", e => { e.preventDefault(); foodSearch(input?.value || ""); }); form?.querySelector("button")?.addEventListener("click", () => foodSearch(input?.value || "")); if (!document.getElementById("egonar-voice-assistant")) { const script = document.createElement("script"); script.src = "assistant-voice.js"; document.body.appendChild(script); } });
+function foodApiBase() { return String(window.EgonarPlatformConfig?.apiBase || "").replace(/\/$/, ""); }
+function foodApiUrl(path) { return `${foodApiBase()}${path}`; }
+async function fetchFoodOffers() { try { const response = await fetch(foodApiUrl("/api/products?universe=SAVEURS"), { headers: { Accept: "application/json" } }); if (!response.ok) throw new Error("catalogue"); const products = await response.json(); return Array.isArray(products) ? products.map(p => ({ title:p.name,type:p.category || foodText("Offre","Offer"),city:p.delivery_city || "Dakar",tags:`${p.name} ${p.category || ""} ${p.subcategory || ""} ${p.description || ""}`,price:Number(p.price_fcfa)||0,oldPrice:p.old_price_fcfa,note:p.delivery_max_minutes ? foodText(`Livraison jusqu'à ${p.delivery_max_minutes} min`,`Delivery up to ${p.delivery_max_minutes} min`) : foodText("Disponible sur EgonarMarket","Available on EgonarMarket"),image:p.image_url || "",id:p.id,stock:Number(p.stock)||0})) : []; } catch { return []; } }
+function foodSearchLocal(offers,message) { const text=String(message||"").trim().toLowerCase(); if(!text)return {results:offers,budget:null}; const budgetMatch=text.match(/(?:moins de|à moins de|budget|maximum|max|under|less than)\s*([0-9\s]+)/i)||text.match(/([0-9]{3,})\s*(?:fcfa|f|francs?)/i); const budget=budgetMatch?Number(budgetMatch[1].replace(/\s/g,"")):null; const words=text.normalize("NFD").replace(/[\u0300-\u036f]/g,"").split(/\s+/).filter(w=>w.length>2); const results=offers.filter(item=>{const hay=`${item.title} ${item.type} ${item.city} ${item.tags}`.toLowerCase();return(words.length===0||words.some(w=>hay.includes(w)))&&(!budget||item.price<=budget)}); return {results,budget}; }
+function renderFoodResults(results,query,budget) { const box=document.getElementById("food-smart-results");if(!box)return;const budgetText=budget?` · ${foodText("budget","budget")} ${foodMoney(budget)}`:"";const suggestions=foodText("suggestion","suggestion");box.innerHTML=`<div class="food-result-head"><strong>${foodText("Résultats pour","Results for")} « ${query} »${budgetText}</strong><span>${results.length} ${suggestions}${results.length>1?"s":""}</span></div><div class="menu-grid">${results.map(item=>`<article class="menu-card"><img src="${item.image}" alt="${item.title}" loading="lazy" style="width:100%;height:210px;object-fit:cover;display:block;border-radius:16px 16px 0 0"><div class="menu-body"><span class="badge">${item.type}</span><h3>${item.title}</h3><p>${item.city} · ${item.note}</p><div class="product-bottom"><strong>${foodMoney(item.price)}</strong><a class="btn primary" href="#explorer">${foodText("Voir l'offre","View offer")}</a></div></div></article>`).join("")}</div>`;box.scrollIntoView({behavior:"smooth",block:"start"}); }
+async function foodSearch(message) { const text=String(message||"").trim();if(!text)return;const live=await fetchFoodOffers();const offers=live.length?live:foodOffers;const local=foodSearchLocal(offers,text);const results=local.results.length?local.results:offers.slice(0,3);renderFoodResults(results,text.toLowerCase(),local.budget); }
+document.addEventListener("DOMContentLoaded",()=>{const form=document.querySelector(".food-search form");const input=form?.querySelector("input");form?.addEventListener("submit",e=>{e.preventDefault();foodSearch(input?.value||"")});form?.querySelector("button")?.addEventListener("click",()=>foodSearch(input?.value||""));if(!document.getElementById("egonar-voice-assistant")){const script=document.createElement("script");script.src="assistant-voice.js";document.body.appendChild(script)}});
