@@ -15,6 +15,12 @@ const checks = [
   ["apps/api/src/server.js", "const UNIVERSES = new Set([\"MARKET\",\"SAVEURS\",\"EVASION\"])", "L'API valide les univers."],
   ["apps/api/src/supplier-server.js", "active,approval_status,supplier_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,FALSE,'PENDING'", "Les produits fournisseurs sont inactifs tant qu'ils ne sont pas validés."],
   ["apps/api/src/supplier-server.js", "approval === \"APPROVED\"", "L'approbation admin pilote l'activation publique."],
+  ["apps/web/image-fallbacks.js", "window.EgonarImage", "Le gestionnaire de secours des images est présent."],
+  ["apps/web/index.html", "image-fallbacks.js", "Market charge le gestionnaire de secours des images."],
+  ["apps/web/food.html", "image-fallbacks.js", "Saveurs charge le gestionnaire de secours des images."],
+  ["apps/web/travel.html", "image-fallbacks.js", "Évasion charge le gestionnaire de secours des images."],
+  ["apps/web/produit.html", "window.EgonarImage?.fallback(p)", "La fiche produit prévoit une image de secours."],
+  ["apps/web/panier.html", "window.EgonarImage?.fallback(p)", "Le panier prévoit une image de secours."],
 ];
 
 let failed = 0;
@@ -37,4 +43,4 @@ if (failed) {
   console.error(`\n${failed} contrôle(s) ont échoué.`);
   process.exit(1);
 }
-console.log(`\nTous les contrôles catalogue/univers sont OK (${checks.length}).`);
+console.log(`\nTous les contrôles catalogue/univers/images sont OK (${checks.length}).`);
