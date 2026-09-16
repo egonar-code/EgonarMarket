@@ -6,6 +6,7 @@
     EVASION: '/images/egonar-fallback.svg'
   };
   const PROXY_PREFIX = '/__egonar-image?url=';
+  const WORKER_URL = '/egonar-image-sw.js?v=3';
   const isExternalImage = src => /^https?:\/\//i.test(String(src || ''));
   const proxied = src => isExternalImage(src) ? `${PROXY_PREFIX}${encodeURIComponent(src)}` : src;
   function fallback(product = {}) {
@@ -28,15 +29,16 @@
   }
   function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.register('/egonar-image-sw.js', { scope: '/' }).then(registration => {
-      if (navigator.serviceWorker.controller) return;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!sessionStorage.getItem('egonar-image-sw-reloaded')) {
-          sessionStorage.setItem('egonar-image-sw-reloaded', '1');
-          window.location.reload();
-        }
-      }, { once: true });
+    navigator.serviceWorker.register(WORKER_URL, { scope: '/' }).then(registration => {
       registration.update().catch(() => {});
+      if (!navigator.serviceWorker.controller) {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!sessionStorage.getItem('egonar-image-sw-reloaded-v3')) {
+            sessionStorage.setItem('egonar-image-sw-reloaded-v3', '1');
+            window.location.reload();
+          }
+        }, { once: true });
+      }
     }).catch(() => {});
   }
   window.EgonarImage = { fallback, bind, proxied };
