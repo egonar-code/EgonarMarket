@@ -21,3 +21,5 @@ jobs:
       - run: node --check apps/api/src/db.js
       - run: node --check apps/api/src/seed.js
       - run: node --check apps/web/app.js
+      - run: node --check apps/web/secondary-i18n.js
+      - run: node --check apps/web/language-switch.js
