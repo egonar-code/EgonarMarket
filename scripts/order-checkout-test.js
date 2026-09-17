@@ -12,7 +12,8 @@ const checks = [
   [checkout, "fetch(API+'/config')", 'Le checkout récupère les tarifs configurés.'],
   [checkout, 'deliveryFee()', 'Le checkout affiche un devis de livraison.'],
   [checkout, 'payment_method', 'Le checkout transmet le mode de paiement séparément du client.'],
-  [packageJson.scripts.start, 'order-hardening-preload.js', 'Le démarrage de production charge le durcissement.']
+  [packageJson.scripts.start, 'scripts/start-all.js', 'Le démarrage de production utilise le lanceur des deux API.'],
+  [launcher, 'order-hardening-preload.js', 'Le lanceur de production conserve le durcissement des commandes.']
 ];
 
 let failed = 0;
