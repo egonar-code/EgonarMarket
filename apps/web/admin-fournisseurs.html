@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Gestion des fournisseurs EgonarMarket">
+<title>Fournisseurs — Administration EgonarMarket</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="header"><div class="nav wrap"><a class="logo" href="index.html">Egonar<span>Market</span></a><nav><a href="admin.html">Administration</a><a href="index.html">Boutique</a></nav></div></header>
+<main class="wrap section">
+<div class="admin-head"><div><p class="eyebrow">ESPACE ADMIN</p><h1>Fournisseurs</h1><p class="muted">Validez, refusez ou suspendez les partenaires avant publication de leurs produits.</p></div><div class="admin-order-tools"><button id="refresh" class="btn secondary" type="button">Actualiser</button><button id="logout" class="btn secondary" type="button" hidden>Déconnexion</button></div></div>
+<section id="login"><form id="lf" class="form narrow"><input name="email" type="email" autocomplete="username" placeholder="Email administrateur" required><input name="password" type="password" autocomplete="current-password" placeholder="Mot de passe" required><button class="btn primary">Connexion</button></form><div id="login-msg" class="state error" hidden></div></section>
+<section id="panel" style="display:none">
+<div class="admin-stats"><div><span>Total fournisseurs</span><strong id="total">0</strong></div><div><span>En attente</span><strong id="pending">0</strong></div><div><span>Approuvés</span><strong id="approved">0</strong></div><div><span>Suspendus</span><strong id="suspended">0</strong></div></div>
+<section class="admin-orders-section"><div class="section-head"><div><h2>Partenaires</h2><p id="summary" class="muted"></p></div><div class="admin-order-tools"><input id="filter" class="admin-filter" placeholder="Entreprise, contact, email…"><select id="status-filter" class="admin-filter"><option value="">Tous les statuts</option><option value="PENDING">En attente</option><option value="APPROVED">Approuvé</option><option value="REJECTED">Refusé</option><option value="SUSPENDED">Suspendu</option></select></div></div><div id="suppliers"></div></section>
+</section>
+</main>
+<script>
+const API='/api', $=id=>document.getElementById(id);
+const STATUS={PENDING:'En attente',APPROVED:'Approuvé',REJECTED:'Refusé',SUSPENDED:'Suspendu'};
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const j=(u,o={})=>fetch(API+u,{credentials:'include',...o}).then(async r=>({ok:r.ok,data:await r.json().catch(()=>({}))}));
+let suppliers=[];
+async function boot(){const r=await j('/admin/me');if(!r.ok){$('login-msg').hidden=false;return}$('login').style.display='none';$('panel').style.display='block';$('logout').hidden=false;refresh()}
+$('lf').onsubmit=async e=>{e.preventDefault();const r=await j('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});if(!r.ok){$('login-msg').textContent=r.data.error||'Connexion impossible';$('login-msg').hidden=false;return}location.reload()};
+$('logout').onclick=async()=>{await j('/admin/logout',{method:'POST'});location.reload()};
+async function setStatus(id,status){const r=await j('/supplier/admin/suppliers/'+encodeURIComponent(id)+'/status',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});if(!r.ok)return alert(r.data.error||'Statut fournisseur impossible.');await refresh()}
+function draw(){const q=$('filter').value.trim().toLowerCase(), sf=$('status-filter').value;const list=suppliers.filter(s=>(!sf||s.status===sf)&&(!q||(s.business_name+' '+(s.contact_name||'')+' '+(s.email||'')+' '+(s.phone||'')).toLowerCase().includes(q)));$('summary').textContent=list.length+' fournisseur'+(list.length>1?'s':'');$('suppliers').innerHTML=list.map(s=>`<article class="admin-order-card"><div class="admin-order-top"><div><p class="eyebrow">FOURNISSEUR</p><h3>${esc(s.business_name)}</h3><p class="muted">${esc(s.contact_name||'Contact non renseigné')} · ${esc(s.email||'')} · ${esc(s.phone||'')}</p></div><span class="admin-order-badge">${esc(STATUS[s.status]||s.status||'Inconnu')}</span></div><div class="admin-order-grid"><div><h4>Informations</h4><p>Commission : ${Number(s.commission_percent)||0}%</p><p class="small muted">Inscrit le ${s.created_at?new Date(s.created_at).toLocaleDateString('fr-FR'):'—'}</p></div><div><h4>Action</h4><select class="admin-filter" onchange="setStatus('${esc(s.id)}',this.value)" aria-label="Statut de ${esc(s.business_name)}">${Object.entries(STATUS).map(([v,l])=>`<option value="${v}" ${s.status===v?'selected':''}>${l}</option>`).join('')}</select></div></div></article>`).join('')||'<p class="muted">Aucun fournisseur correspondant.</p>';}
+async function refresh(){const r=await j('/supplier/admin/suppliers');if(!r.ok)return alert(r.data.error||'Impossible de charger les fournisseurs.');suppliers=r.data||[];$('total').textContent=suppliers.length;$('pending').textContent=suppliers.filter(s=>s.status==='PENDING').length;$('approved').textContent=suppliers.filter(s=>s.status==='APPROVED').length;$('suspended').textContent=suppliers.filter(s=>s.status==='SUSPENDED').length;draw()}
+$('filter').oninput=draw;$('status-filter').onchange=draw;$('refresh').onclick=refresh;boot();
+</script>
+<script src="secondary-i18n.js"></script>
+</body>
+</html>
