@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 
 export NODE_ENV="${NODE_ENV:-development}"
 export PORT="${PORT:-3000}"
+export SUPPLIER_PORT="${SUPPLIER_PORT:-3001}"
 export PREVIEW_PORT="${PREVIEW_PORT:-8080}"
 export JWT_SECRET="${JWT_SECRET:-egonarmarket-local-dev-secret}"
 export ADMIN_EMAIL="${ADMIN_EMAIL:-admin@egonarmarket.sn}"
@@ -52,6 +53,12 @@ if ! curl -fsS "http://127.0.0.1:${PORT}/api/health" >/dev/null 2>&1; then
   fi
 fi
 
+if ! curl -fsS "http://127.0.0.1:${SUPPLIER_PORT}/api/health" >/dev/null 2>&1; then
+  if [ -n "${DATABASE_URL:-}" ]; then
+    nohup node apps/api/src/supplier-server.js >/tmp/egonarmarket-supplier.log 2>&1 &
+  fi
+fi
+
 for i in $(seq 1 20); do
   if curl -fsS "http://127.0.0.1:${PORT}/api/health" >/dev/null 2>&1; then
     echo "EgonarMarket API disponible sur http://localhost:${PORT}"
@@ -59,6 +66,10 @@ for i in $(seq 1 20); do
   fi
   sleep 1
 done
+
+if curl -fsS "http://127.0.0.1:${SUPPLIER_PORT}/api/health" >/dev/null 2>&1; then
+  echo "API fournisseurs disponible sur http://localhost:${SUPPLIER_PORT}"
+fi
 
 if curl -fsS "http://127.0.0.1:${PREVIEW_PORT}/" >/dev/null 2>&1; then
   echo "Aperçu boutique disponible sur http://localhost:${PREVIEW_PORT}"
