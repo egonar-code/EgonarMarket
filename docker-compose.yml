@@ -26,6 +26,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
+      SUPPLIER_PORT: 3001
       DATABASE_URL: postgresql://egonar:egonar_password@postgres:5432/egonarmarket
       JWT_SECRET: egonarmarket-local-dev-secret
       ADMIN_EMAIL: admin@egonarmarket.sn
@@ -38,6 +39,7 @@ services:
         condition: service_healthy
     ports:
       - "3000:3000"
+      - "3001:3001"
     command: ["sh", "-c", "npm run db:init && npm run start"]
 
 volumes:
