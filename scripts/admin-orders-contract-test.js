@@ -7,13 +7,13 @@ const preload = fs.readFileSync('apps/api/src/order-hardening-preload.js', 'utf8
 
 const checks = [
   [admin, "j('/admin/orders')", "Le tableau admin charge les commandes depuis l'API sécurisée."],
-  [admin, "'/api/admin/orders/'+id+'/status'", "Le tableau admin utilise la route de changement de statut."],
+  [admin, "j('/admin/orders/'+id+'/status'", "Le tableau admin utilise la route de changement de statut."],
   [admin, 'EN_ATTENTE_PAIEMENT', "Le tableau admin connaît le statut de paiement en attente."],
   [admin, 'EN_LIVRAISON', "Le tableau admin connaît le statut de livraison."],
   [admin, 'ANNULEE', "Le tableau admin connaît le statut d'annulation."],
-  [admin, 'orders.filter(x=>x.status!==\'ANNULEE\')', "Le chiffre d'affaires exclut les commandes annulées."],
-  [tracking, '/api/orders/:order_number', "Le suivi client repose sur le numéro de commande."],
-  [tracking, 'setInterval(load,30000)', "Le suivi actualise automatiquement l'état de la commande."],
+  [admin, "orders.filter(x=>x.status!=='ANNULEE')", "Le chiffre d'affaires exclut les commandes annulées."],
+  [tracking, "/orders/"+encodeURIComponent(n), "Le suivi client utilise le numéro de commande."],
+  [tracking, 'setInterval(()=>', "Le suivi actualise automatiquement l'état de la commande."],
   [checkout, "suivi.html?order=", "Le checkout redirige vers le suivi après création."],
   [preload, 'status', "Le durcissement serveur traite le statut de commande."]
 ];
