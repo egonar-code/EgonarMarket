@@ -10,7 +10,8 @@ async function main() {
 
   for (const migration of [
     "20260916_category_taxonomy.sql",
-    "20260916_category_taxonomy_fix.sql"
+    "20260916_category_taxonomy_fix.sql",
+    "20260917_supplier_password.sql"
   ]) {
     const sql = fs.readFileSync(path.join(__dirname, "../../../db/migrations", migration), "utf8");
     await db.query(sql);
