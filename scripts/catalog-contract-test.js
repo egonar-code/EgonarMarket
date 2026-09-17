@@ -14,7 +14,15 @@ const checks = [
   ["apps/web/travel-app.js", "product_id:id,quantity:1", "Évasion ajoute au panier avec le contrat product_id/quantity."],
   ["apps/api/src/server.js", "const UNIVERSES = new Set([\"MARKET\",\"SAVEURS\",\"EVASION\"])", "L'API valide les univers."],
   ["apps/api/src/supplier-server.js", "active,approval_status,supplier_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,FALSE,'PENDING'", "Les produits fournisseurs sont inactifs tant qu'ils ne sont pas validés."],
-  ["apps/api/src/supplier-server.js", "approval === \"APPROVED\"", "L'approbation admin pilote l'activation publique."],
+  ["apps/api/src/supplier-server.js", "app.get(\"/api/supplier/sales-stats\"", "L'espace fournisseur expose les statistiques commerciales."],
+  ["apps/api/src/supplier-server.js", "app.get(\"/api/supplier/orders\"", "L'espace fournisseur expose ses commandes."],
+  ["apps/api/src/supplier-server.js", "app.patch(\"/api/supplier/products/:id\"", "Un fournisseur peut modifier et resoumettre un produit."],
+  ["apps/web/supplier.html", "name=\"universe\"", "Le formulaire fournisseur impose le choix d'un univers."],
+  ["apps/web/supplier.html", "id=\"sales-count\"", "Le tableau fournisseur affiche les ventes."],
+  ["apps/web/supplier.html", "id=\"orders\"", "Le tableau fournisseur affiche ses commandes."],
+  ["apps/web/supplier-app.js", "sales-stats", "Le front fournisseur charge les statistiques commerciales."],
+  ["apps/web/supplier-app.js", "editProduct", "Le front fournisseur permet la modification d'un produit."],
+  ["apps/web/supplier-app.js", "deactivateProduct", "Le front fournisseur permet de désactiver un produit."],
   ["apps/web/image-fallbacks.js", "window.EgonarImage", "Le gestionnaire de secours des images est présent."],
   ["apps/web/index.html", "image-fallbacks.js", "Market charge le gestionnaire de secours des images."],
   ["apps/web/food.html", "image-fallbacks.js", "Saveurs charge le gestionnaire de secours des images."],
@@ -25,22 +33,10 @@ const checks = [
 
 let failed = 0;
 for (const [file, expected, message] of checks) {
-  if (!fs.existsSync(file)) {
-    console.error(`✗ ${file}: fichier introuvable`);
-    failed++;
-    continue;
-  }
+  if (!fs.existsSync(file)) { console.error(`✗ ${file}: fichier introuvable`); failed++; continue; }
   const content = read(file);
-  if (!content.includes(expected)) {
-    console.error(`✗ ${message}`);
-    failed++;
-  } else {
-    console.log(`✓ ${message}`);
-  }
+  if (!content.includes(expected)) { console.error(`✗ ${message}`); failed++; }
+  else console.log(`✓ ${message}`);
 }
-
-if (failed) {
-  console.error(`\n${failed} contrôle(s) ont échoué.`);
-  process.exit(1);
-}
-console.log(`\nTous les contrôles catalogue/univers/images sont OK (${checks.length}).`);
+if (failed) { console.error(`\n${failed} contrôle(s) ont échoué.`); process.exit(1); }
+console.log(`\nTous les contrôles catalogue/univers/images/fournisseur sont OK (${checks.length}).`);
