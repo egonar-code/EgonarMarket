@@ -8,6 +8,7 @@ const checks = [
   [bootstrap, 'SUPPLIER_PORT="${SUPPLIER_PORT:-3001}"', 'Le bootstrap définit un port fournisseur dédié.'],
   [bootstrap, 'node apps/api/src/supplier-server.js', 'Le bootstrap démarre le serveur fournisseurs.'],
   [bootstrap, '/api/health" >/dev/null 2>&1', 'Le bootstrap vérifie la disponibilité des API.'],
+  [bootstrap, 'node -r ./apps/api/src/order-hardening-preload.js apps/api/src/server.js', 'Le bootstrap démarre l’API principale avec le durcissement commande.'],
   [supplier, 'window.EGONAR_SUPPLIER_API', 'Le dashboard fournisseur accepte une URL API configurable.'],
   [supplier, '/api/supplier/me', 'Le dashboard fournisseur utilise les routes fournisseurs.'],
   [admin, "const API='/api'", 'Le centre fournisseurs conserve l’API principale pour l’authentification admin.'],
