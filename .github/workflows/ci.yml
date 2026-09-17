@@ -9,10 +9,31 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: egonarmarket
+          POSTGRES_USER: egonar
+          POSTGRES_PASSWORD: egonar_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U egonar -d egonarmarket"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgresql://egonar:egonar_password@127.0.0.1:5432/egonarmarket
+      JWT_SECRET: egonarmarket-ci-secret
+      ADMIN_EMAIL: admin@egonarmarket.sn
+      ADMIN_PASSWORD: EgonarCI2026!
+      NODE_ENV: test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm install
+      - run: npm run db:init
       - run: npm run check
