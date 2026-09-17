@@ -1,6 +1,7 @@
 const fs = require('fs');
 const preload = fs.readFileSync('apps/api/src/order-hardening-preload.js', 'utf8');
 const checkout = fs.readFileSync('apps/web/commande.html', 'utf8');
+const launcher = fs.readFileSync('scripts/start-all.js', 'utf8');
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 
 const checks = [
