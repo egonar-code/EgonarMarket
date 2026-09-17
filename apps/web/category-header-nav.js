@@ -15,20 +15,22 @@
     s.textContent = `
       #categories .section-head{margin-bottom:22px}
       #categories .section-head h2{font-size:clamp(30px,4vw,42px);letter-spacing:-.045em}
-      .egonar-all-categories{display:grid;gap:14px}
-      .egonar-category-group{overflow:hidden;border:1px solid #e9e9e9;border-radius:18px;background:#fff;box-shadow:0 8px 28px rgba(0,0,0,.05)}
-      .egonar-category-group-head{display:flex;align-items:center;gap:10px;padding:15px 18px 10px;font-size:13px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
-      .egonar-category-group-head small{margin-left:auto;color:#999;font-size:11px;font-weight:700;letter-spacing:0;text-transform:none}
-      .egonar-category-scroll{overflow:hidden;position:relative}
-      .egonar-category-track{display:flex;gap:8px;width:max-content;padding:3px 18px 15px;animation:egonarCategoriesRight 38s linear infinite}
-      .egonar-category-group:nth-child(2) .egonar-category-track{animation-duration:34s;animation-delay:-7s}
-      .egonar-category-group:nth-child(3) .egonar-category-track{animation-duration:36s;animation-delay:-14s}
-      .egonar-category-scroll:hover .egonar-category-track,.egonar-category-scroll:focus-within .egonar-category-track{animation-play-state:paused}
-      .egonar-category-pill{appearance:none;display:inline-flex;align-items:center;white-space:nowrap;border:1px solid #e1e1e1;border-radius:999px;background:#f9f9f9;color:#222;padding:10px 14px;font-size:12px;font-weight:750;cursor:pointer;transition:all .16s ease}
-      .egonar-category-pill:hover,.egonar-category-pill:focus-visible{background:#111;color:#fff;border-color:#111;transform:translateY(-1px);outline:none;box-shadow:0 5px 14px rgba(0,0,0,.12)}
-      @keyframes egonarCategoriesRight{from{transform:translateX(-25%)}to{transform:translateX(0)}}
-      @media(max-width:700px){.egonar-category-scroll{overflow-x:auto;scrollbar-width:none}.egonar-category-scroll::-webkit-scrollbar{display:none}.egonar-category-track{animation:none!important;padding-left:14px;padding-right:14px}.egonar-category-pill{font-size:11px;padding:9px 12px}.egonar-category-group-head{padding-left:14px;padding-right:14px}}
-      @media(prefers-reduced-motion:reduce){.egonar-category-track{animation:none!important}}
+      .egonar-all-categories{display:grid;gap:10px}
+      .egonar-category-group{overflow:hidden;border:1px solid #e7e7e7;border-radius:16px;background:#fff;box-shadow:0 6px 22px rgba(0,0,0,.045)}
+      .egonar-category-toggle{width:100%;appearance:none;border:0;background:#fff;color:#161616;display:flex;align-items:center;gap:12px;padding:17px 20px;text-align:left;font:inherit;font-size:15px;font-weight:850;cursor:pointer}
+      .egonar-category-toggle:hover{background:#fafafa}
+      .egonar-category-toggle:focus-visible{outline:2px solid currentColor;outline-offset:-3px}
+      .egonar-category-toggle .category-icon{font-size:18px}
+      .egonar-category-toggle .category-title{flex:1}
+      .egonar-category-toggle .category-count{font-size:11px;font-weight:700;color:#999}
+      .egonar-category-toggle .category-chevron{font-size:16px;transition:transform .2s ease}
+      .egonar-category-group.open .category-chevron{transform:rotate(180deg)}
+      .egonar-category-list{display:none;padding:0 20px 18px}
+      .egonar-category-group.open .egonar-category-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px 10px}
+      .egonar-category-item{appearance:none;border:1px solid #ececec;background:#f9f9f9;color:#222;border-radius:10px;padding:10px 11px;text-align:left;font-size:12px;font-weight:650;cursor:pointer;transition:all .15s ease}
+      .egonar-category-item:hover,.egonar-category-item:focus-visible{background:#111;color:#fff;border-color:#111;outline:none}
+      @media(max-width:800px){.egonar-category-group.open .egonar-category-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:520px){.egonar-category-toggle{padding:15px 14px}.egonar-category-list{padding:0 14px 14px}.egonar-category-group.open .egonar-category-list{grid-template-columns:1fr}.egonar-category-item{padding:10px}}
     `;
     document.head.appendChild(s);
   }
@@ -45,26 +47,52 @@
   function makeGroup(universe) {
     const group = document.createElement('section');
     group.className = 'egonar-category-group';
-    const head = document.createElement('div');
-    head.className = 'egonar-category-group-head';
-    head.innerHTML = `<span>${ICONS[universe]} ${universe}</span><small>${DATA[universe].length} catégories</small>`;
-    const scroll = document.createElement('div');
-    scroll.className = 'egonar-category-scroll';
-    const track = document.createElement('div');
-    track.className = 'egonar-category-track';
 
-    const items = [...DATA[universe], ...DATA[universe]];
-    items.forEach(label => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'egonar-category-pill';
-      button.textContent = label;
-      button.title = `Rechercher ${label}`;
-      button.addEventListener('click', () => activate(label));
-      track.appendChild(button);
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'egonar-category-toggle';
+    toggle.setAttribute('aria-expanded', 'false');
+
+    const icon = document.createElement('span');
+    icon.className = 'category-icon';
+    icon.textContent = ICONS[universe];
+
+    const title = document.createElement('span');
+    title.className = 'category-title';
+    title.textContent = universe;
+
+    const count = document.createElement('span');
+    count.className = 'category-count';
+    count.textContent = `${DATA[universe].length} catégories`;
+
+    const chevron = document.createElement('span');
+    chevron.className = 'category-chevron';
+    chevron.textContent = '⌄';
+    chevron.setAttribute('aria-hidden', 'true');
+
+    toggle.append(icon, title, count, chevron);
+
+    const list = document.createElement('div');
+    list.className = 'egonar-category-list';
+    list.hidden = true;
+
+    DATA[universe].forEach(label => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'egonar-category-item';
+      item.textContent = label;
+      item.title = `Rechercher ${label}`;
+      item.addEventListener('click', () => activate(label));
+      list.appendChild(item);
     });
-    scroll.appendChild(track);
-    group.append(head, scroll);
+
+    toggle.addEventListener('click', () => {
+      const isOpen = group.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', String(isOpen));
+      list.hidden = !isOpen;
+    });
+
+    group.append(toggle, list);
     return group;
   }
 
@@ -72,18 +100,21 @@
     const section = document.getElementById('categories');
     if (!section) return false;
     styles();
+
     const heading = section.querySelector('.section-head h2');
     if (heading) heading.textContent = 'Toutes nos catégories';
-    const old = section.querySelector('.chips');
-    if (old) old.remove();
-    let container = section.querySelector('.egonar-all-categories');
-    if (!container) {
-      container = document.createElement('div');
-      container.className = 'egonar-all-categories';
-      container.setAttribute('aria-label','Toutes nos catégories');
-      ['MARKET','SAVEURS','EVASION'].forEach(u => container.appendChild(makeGroup(u)));
-      section.appendChild(container);
-    }
+
+    const oldChips = section.querySelector('.chips');
+    if (oldChips) oldChips.remove();
+
+    const existing = section.querySelector('.egonar-all-categories');
+    if (existing) existing.remove();
+
+    const container = document.createElement('div');
+    container.className = 'egonar-all-categories';
+    container.setAttribute('aria-label', 'Toutes nos catégories');
+    ['MARKET','SAVEURS','EVASION'].forEach(universe => container.appendChild(makeGroup(universe)));
+    section.appendChild(container);
     return true;
   }
 
