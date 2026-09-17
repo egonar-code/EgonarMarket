@@ -35,96 +35,95 @@
     document.head.appendChild(s);
   }
 
-  function activate(label, universe) {
-    const input = document.getElementById('search');
-    const form = document.getElementById('search-form');
+  function activate(label) {
+    const input = document.querySelector('input[type="search"]#search, input[type="search"]');
+    const form = input?.closest('form');
     if (!input || !form) return;
     input.value = label;
-    document.body.dataset.categoryUniverse = universe;
     form.dispatchEvent(new Event('submit', { bubbles:true, cancelable:true }));
     document.getElementById('produits')?.scrollIntoView({behavior:'smooth',block:'start'});
+    document.getElementById('explorer')?.scrollIntoView({behavior:'smooth',block:'start'});
   }
 
   function makeGroup(universe) {
     const group = document.createElement('section');
-    group.className = `egonar-category-group egonar-category-${universe.toLowerCase()}`;
-    group.dataset.universe = universe;
-
+    group.className = 'egonar-category-group';
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'egonar-category-toggle';
     toggle.setAttribute('aria-expanded', 'false');
-
     const icon = document.createElement('span');
     icon.className = 'category-icon';
     icon.textContent = ICONS[universe];
-
     const title = document.createElement('span');
     title.className = 'category-title';
     title.textContent = universe;
-
     const count = document.createElement('span');
     count.className = 'category-count';
     count.textContent = `${DATA[universe].length} catégories`;
-
     const chevron = document.createElement('span');
     chevron.className = 'category-chevron';
     chevron.textContent = '⌄';
     chevron.setAttribute('aria-hidden', 'true');
-
     toggle.append(icon, title, count, chevron);
 
     const list = document.createElement('div');
     list.className = 'egonar-category-list';
     list.hidden = true;
-    list.setAttribute('aria-label', `Catégories ${universe}`);
-
     DATA[universe].forEach(label => {
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'egonar-category-item';
       item.textContent = label;
-      item.title = `Rechercher ${label} dans ${universe}`;
-      item.addEventListener('click', () => activate(label, universe));
+      item.addEventListener('click', () => activate(label));
       list.appendChild(item);
     });
-
     toggle.addEventListener('click', () => {
       const isOpen = group.classList.toggle('open');
       toggle.setAttribute('aria-expanded', String(isOpen));
       list.hidden = !isOpen;
     });
-
     group.append(toggle, list);
     return group;
   }
 
   function build() {
+    const universe = String(document.body?.dataset?.universe || 'MARKET').toUpperCase();
     const section = document.getElementById('categories');
     if (!section) return false;
     styles();
-
     const heading = section.querySelector('.section-head h2');
     if (heading) heading.textContent = 'Toutes nos catégories';
-
     section.querySelector('.chips')?.remove();
     section.querySelector('.egonar-all-categories')?.remove();
-
     const container = document.createElement('div');
     container.className = 'egonar-all-categories';
-    container.setAttribute('aria-label', 'Toutes nos catégories par plateforme');
-
-    ['MARKET','SAVEURS','EVASION'].forEach(universe => {
-      container.appendChild(makeGroup(universe));
-    });
-
+    container.setAttribute('aria-label', `Catégories ${universe}`);
+    container.appendChild(makeGroup(DATA[universe] ? universe : 'MARKET'));
     section.appendChild(container);
     return true;
   }
 
+  function ensureSection() {
+    if (document.getElementById('categories')) return document.getElementById('categories');
+    const anchor = document.getElementById('explorer');
+    if (!anchor) return null;
+    const section = document.createElement('section');
+    section.id = 'categories';
+    section.className = 'wrap section';
+    section.innerHTML = '<div class="section-head"><div><p class="eyebrow">EXPLORER</p><h2>Toutes nos catégories</h2></div></div>';
+    anchor.parentNode.insertBefore(section, anchor);
+    return section;
+  }
+
   function start() {
+    const universe = String(document.body?.dataset?.universe || 'MARKET').toUpperCase();
+    if (universe !== 'MARKET') ensureSection();
     if (build()) return;
-    const observer = new MutationObserver(() => { if (build()) observer.disconnect(); });
+    const observer = new MutationObserver(() => {
+      if (universe !== 'MARKET') ensureSection();
+      if (build()) observer.disconnect();
+    });
     observer.observe(document.documentElement, {childList:true,subtree:true});
     setTimeout(() => observer.disconnect(), 10000);
   }
