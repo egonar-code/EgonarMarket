@@ -22,6 +22,15 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
+app.get("/api/health", async (_req, res) => {
+  try {
+    await db.query("SELECT 1");
+    res.json({ ok: true, service: "EgonarMarket Supplier API", database: "ok" });
+  } catch {
+    res.status(503).json({ ok: false, service: "EgonarMarket Supplier API", database: "error" });
+  }
+});
+
 const SUPPLIER_UNIVERSES = new Set(["MARKET", "SAVEURS", "EVASION"]);
 function normalizeUniverse(value) {
   const universe = String(value || "MARKET").trim().toUpperCase();
