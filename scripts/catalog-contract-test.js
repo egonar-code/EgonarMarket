@@ -23,6 +23,10 @@ const checks = [
   ["apps/web/supplier-app.js", "sales-stats", "Le front fournisseur charge les statistiques commerciales."],
   ["apps/web/supplier-app.js", "editProduct", "Le front fournisseur permet la modification d'un produit."],
   ["apps/web/supplier-app.js", "deactivateProduct", "Le front fournisseur permet de désactiver un produit."],
+  ["apps/web/admin-fournisseurs.html", "/supplier/admin/suppliers", "L'administration dispose d'un centre fournisseurs sécurisé."],
+  ["apps/web/admin-fournisseurs.html", "/supplier/admin/suppliers/", "L'administration peut changer le statut d'un fournisseur."],
+  ["apps/web/admin-fournisseurs.html", "PENDING", "Le centre fournisseurs gère les demandes en attente."],
+  ["apps/web/admin-fournisseurs.html", "SUSPENDED", "Le centre fournisseurs gère la suspension."],
   ["apps/web/image-fallbacks.js", "window.EgonarImage", "Le gestionnaire de secours des images est présent."],
   ["apps/web/index.html", "image-fallbacks.js", "Market charge le gestionnaire de secours des images."],
   ["apps/web/food.html", "image-fallbacks.js", "Saveurs charge le gestionnaire de secours des images."],
@@ -39,4 +43,4 @@ for (const [file, expected, message] of checks) {
   else console.log(`✓ ${message}`);
 }
 if (failed) { console.error(`\n${failed} contrôle(s) ont échoué.`); process.exit(1); }
-console.log(`\nTous les contrôles catalogue/univers/images/fournisseur sont OK (${checks.length}).`);
+console.log(`\nTous les contrôles catalogue/univers/images/fournisseur/admin sont OK (${checks.length}).`);
