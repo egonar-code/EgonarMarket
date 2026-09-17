@@ -12,8 +12,8 @@ const checks = [
   [admin, 'EN_LIVRAISON', "Le tableau admin connaît le statut de livraison."],
   [admin, 'ANNULEE', "Le tableau admin connaît le statut d'annulation."],
   [admin, "orders.filter(x=>x.status!=='ANNULEE')", "Le chiffre d'affaires exclut les commandes annulées."],
-  [tracking, "/orders/"+encodeURIComponent(n), "Le suivi client utilise le numéro de commande."],
-  [tracking, 'setInterval(()=>', "Le suivi actualise automatiquement l'état de la commande."],
+  [tracking, "API+'/orders/'+encodeURIComponent(n)", "Le suivi client utilise le numéro de commande."],
+  [tracking, 'setInterval(()=>{', "Le suivi actualise automatiquement l'état de la commande."],
   [checkout, "suivi.html?order=", "Le checkout redirige vers le suivi après création."],
   [preload, 'status', "Le durcissement serveur traite le statut de commande."]
 ];
