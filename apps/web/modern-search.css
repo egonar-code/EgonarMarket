@@ -16,3 +16,11 @@ body:not(.food-page):not(.travel-page) .smart.wrap,body.food-page .food-search,b
 @keyframes egonarRobotFloat{0%,100%{transform:translate(calc(var(--robot-x,0px) - 1px),calc(-50% + var(--robot-y,0px))) rotate(-1deg)}50%{transform:translate(calc(var(--robot-x,0px) + 1px),calc(-50% - 5px + var(--robot-y,0px))) rotate(1deg)}}
 @keyframes egonarScan{from{left:-18%}to{left:110%}}
 @media(max-width:900px){.header .search{width:min(100%,560px)}}@media(max-width:600px){.header .search{grid-template-columns:1fr 64px;border-radius:999px}.header .search input{height:56px;padding:0 18px 0 20px!important;font-size:16px}.header .search button{width:64px;min-width:64px;height:56px}.header .search button svg{width:27px;height:27px}.smart{padding:18px}.smart form{padding:5px}.smart button{padding:0 16px!important}.smart input{padding:14px!important}#egonar-voice-assistant .voice-form{padding-left:58px}#egonar-voice-assistant .voice-form:before{left:-10px;width:72px;height:72px}.ai-suggestion-row{justify-content:flex-start;overflow:auto;flex-wrap:nowrap;scrollbar-width:none;padding:0 2px 2px}.ai-suggestion-row::-webkit-scrollbar{display:none}}@media(prefers-reduced-motion:reduce){#egonar-voice-assistant .voice-form:before,#egonar-voice-assistant .voice-form:after,.ai-suggestion{animation:none!important}.ai-suggestion{transition:none}}
+
+/* Navigation des catégories intégrée à la recherche principale */
+.nav{position:relative}
+.egonar-search-with-categories{grid-template-columns:auto 1fr 76px!important;overflow:visible!important}
+.egonar-search-with-categories .egonar-all-categories{border-radius:999px 0 0 999px!important;border:0!important;border-right:1px solid #eee!important;height:64px}
+.egonar-search-with-categories #search{border-radius:0!important}
+.egonar-category-navigation{position:absolute!important;left:0!important;right:0!important;top:calc(100% + 10px)!important;width:100%!important;margin:0!important;z-index:100!important}
+@media(max-width:900px){.egonar-category-navigation{position:absolute!important;left:0!important;right:0!important;width:100%!important}.nav{position:relative}}
