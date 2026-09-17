@@ -35,18 +35,20 @@
     document.head.appendChild(s);
   }
 
-  function activate(label) {
+  function activate(label, universe) {
     const input = document.getElementById('search');
     const form = document.getElementById('search-form');
     if (!input || !form) return;
     input.value = label;
+    document.body.dataset.categoryUniverse = universe;
     form.dispatchEvent(new Event('submit', { bubbles:true, cancelable:true }));
     document.getElementById('produits')?.scrollIntoView({behavior:'smooth',block:'start'});
   }
 
   function makeGroup(universe) {
     const group = document.createElement('section');
-    group.className = 'egonar-category-group';
+    group.className = `egonar-category-group egonar-category-${universe.toLowerCase()}`;
+    group.dataset.universe = universe;
 
     const toggle = document.createElement('button');
     toggle.type = 'button';
@@ -75,14 +77,15 @@
     const list = document.createElement('div');
     list.className = 'egonar-category-list';
     list.hidden = true;
+    list.setAttribute('aria-label', `Catégories ${universe}`);
 
     DATA[universe].forEach(label => {
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'egonar-category-item';
       item.textContent = label;
-      item.title = `Rechercher ${label}`;
-      item.addEventListener('click', () => activate(label));
+      item.title = `Rechercher ${label} dans ${universe}`;
+      item.addEventListener('click', () => activate(label, universe));
       list.appendChild(item);
     });
 
@@ -104,16 +107,17 @@
     const heading = section.querySelector('.section-head h2');
     if (heading) heading.textContent = 'Toutes nos catégories';
 
-    const oldChips = section.querySelector('.chips');
-    if (oldChips) oldChips.remove();
-
-    const existing = section.querySelector('.egonar-all-categories');
-    if (existing) existing.remove();
+    section.querySelector('.chips')?.remove();
+    section.querySelector('.egonar-all-categories')?.remove();
 
     const container = document.createElement('div');
     container.className = 'egonar-all-categories';
-    container.setAttribute('aria-label', 'Toutes nos catégories');
-    ['MARKET','SAVEURS','EVASION'].forEach(universe => container.appendChild(makeGroup(universe)));
+    container.setAttribute('aria-label', 'Toutes nos catégories par plateforme');
+
+    ['MARKET','SAVEURS','EVASION'].forEach(universe => {
+      container.appendChild(makeGroup(universe));
+    });
+
     section.appendChild(container);
     return true;
   }
