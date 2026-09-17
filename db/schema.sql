@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS suppliers (
   contact_name TEXT NOT NULL DEFAULT '',
   phone TEXT NOT NULL DEFAULT '',
   email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'PENDING',
   commission_percent NUMERIC(5,2) NOT NULL DEFAULT 10 CHECK (commission_percent >= 0 AND commission_percent <= 100),
   verification_level TEXT NOT NULL DEFAULT 'STANDARD',
