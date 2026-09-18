@@ -38,6 +38,8 @@ for (const [file, universe] of pages) {
   }
 }
 
+const header = fs.readFileSync('apps/web/category-header-nav.js', 'utf8');
+
 const taxonomyChecks = [
   ['MARKET', 'Services', 17],
   ['SAVEURS', 'Offres & Menus', 12],
@@ -53,7 +55,6 @@ for (const [universe, lastCategory, count] of taxonomyChecks) {
   }
 }
 
-const header = fs.readFileSync('apps/web/category-header-nav.js', 'utf8');
 if (!header.includes("currentUniverse() !== 'EVASION'")) {
   console.error('✗ category-header-nav.js: le hub catégories doit être limité à Évasion');
   failed++;
