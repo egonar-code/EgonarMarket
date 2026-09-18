@@ -55,8 +55,8 @@ for (const [universe, lastCategory, count] of taxonomyChecks) {
   }
 }
 
-if (!header.includes("currentUniverse() !== 'EVASION'")) {
-  console.error('✗ category-header-nav.js: le hub catégories doit être limité à Évasion');
+if (!header.includes('FEATURED_BY_UNIVERSE') || !header.includes('MARKET:') || !header.includes('SAVEURS:') || !header.includes('EVASION:')) {
+  console.error('✗ category-header-nav.js: les trois univers ne disposent pas du nouveau hub catégories');
   failed++;
 }
 if (!header.includes('egonar-category-photo') || !header.includes('Afficher la liste')) {
