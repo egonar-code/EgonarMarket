@@ -47,7 +47,7 @@
     'Plages & Resorts':'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=85',
     'Excursions':'https://location-quad-lacrose.com/wp-content/uploads/2019/07/3.jpg',
     'Activités & Expériences':'https://www.lac-rose-excursion.com/_next/image?q=75&url=%2Fexcursions%2Fchameaux.jpg&w=3840',
-    'Tourisme & Culture':'https://commons.wikimedia.org/wiki/Special:Redirect/file/African%20Renaissance%20Monument%20%285502494604%29.jpg',
+    'Tourisme & Culture':'/assets/user-evasion-monument.jpg',
     'Restaurants & Gastronomie':'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=85',
     'Transport & Mobilité':'https://cdn.generationvoyage.fr/2025/03/Aeroport-International-Blaise-Diagne-au-Senegal.jpeg',
     'Billetterie & Événements':'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=900&q=85',
@@ -62,12 +62,12 @@
   const FALLBACK = '/assets/egonar-evasion-fallback.svg';
 
   const USER_ASSETS = {
-    'Thiéboudienne':'/assets/user-saveurs-thieboudienne.webp',
-    'Plats sénégalais':'/assets/user-saveurs-thieboudienne.webp',
-    'Plats & Menus':'/assets/user-saveurs-plats-menus.webp',
-    'Épicerie':'https://www.intracen.org/sites/default/files/styles/content_100/public/media/image/media_image/2023/08/08/Supermarket%20in%20Dakar%20features%20local%20brands.jpg?itok=b6fzUMbo',
+    'Thiéboudienne':'/assets/user-saveurs-thieboudienne.jpg',
+    'Plats sénégalais':'/assets/user-saveurs-thieboudienne.jpg',
+    'Plats & Menus':'/assets/user-saveurs-plats-menus.jpg',
+    'Épicerie':'https://images.unsplash.com/photo-1604719312566-8912e9c8a213?auto=format&fit=crop&w=900&q=85',
     'Se faire livrer':'/assets/user-saveurs-delivery.png',
-    'Tourisme & Culture':'/assets/user-evasion-monument.webp'
+    'Tourisme & Culture':'/assets/user-evasion-monument.jpg'
   };
   const IMAGE_FALLBACKS = {
     'Thiéboudienne':'https://upload.wikimedia.org/wikipedia/commons/5/51/Thieboudienne.JPG',
