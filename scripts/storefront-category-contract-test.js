@@ -10,8 +10,9 @@ let failed = 0;
 
 for (const [file, universe] of pages) {
   const html = fs.readFileSync(file, 'utf8');
-  const bodyEnd = html.indexOf('>');
-  const body = bodyEnd >= 0 ? html.slice(0, bodyEnd + 1) : '';
+  const bodyStart = html.search(/<body\\b/i);
+  const bodyEnd = bodyStart >= 0 ? html.indexOf('>', bodyStart) : -1;
+  const body = bodyEnd >= 0 ? html.slice(bodyStart, bodyEnd + 1) : '';
 
   if (!body.includes('data-universe="' + universe + '"')) {
     console.error('✗ ' + file + ': univers ' + universe + ' absent du body');
