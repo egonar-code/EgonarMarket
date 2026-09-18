@@ -2,93 +2,135 @@
   'use strict';
 
   const DATA = {
-    MARKET: ['Mode & Vêtements','Téléphones & Accessoires','Informatique & Électronique','Maison & Décoration','Électroménager','Beauté & Soins','Bébé & Enfant','Sports & Loisirs','Alimentation & Épicerie','Supermarché & Quotidien','Accessoires & Maroquinerie','Auto & Moto','Bricolage & Jardin','Bureau & Fournitures','Livres, Culture & Éducation','Produits locaux & Artisanat','Services'],
-    SAVEURS: ['Restaurants','Plats sénégalais','Fast-Food','Petit-déjeuner & Brunch','Boissons','Desserts & Pâtisseries','Épicerie','Fruits & Légumes','Boucherie & Poissonnerie','Traiteur & Événementiel','Cuisine maison','Offres & Menus'],
-    EVASION: ['Hôtels','Appartements & Locations','Résidences & Maisons d’hôtes','Plages & Resorts','Excursions','Activités & Expériences','Tourisme & Culture','Restaurants & Gastronomie','Transport & Mobilité','Billetterie & Événements','Voyages organisés','Lune de miel & Romantique','Famille','Business & Séminaires','Bien-être','Destinations']
+    MARKET: [
+      ['Mode & Vêtements','👕','Mode, vêtements et style'],['Téléphones & Accessoires','📱','Smartphones et accessoires'],
+      ['Informatique & Électronique','💻','PC, audio, TV et électronique'],['Maison & Décoration','🏠','Maison, meubles et décoration'],
+      ['Électroménager','⚡','Équipements du quotidien'],['Beauté & Soins','✨','Beauté, parfums et soins'],
+      ['Bébé & Enfant','🧸','Bébé, enfants et puériculture'],['Sports & Loisirs','⚽','Sport, jeux et loisirs'],
+      ['Alimentation & Épicerie','🛒','Alimentation et essentiels'],['Supermarché & Quotidien','🧺','Courses du quotidien'],
+      ['Accessoires & Maroquinerie','👜','Sacs et accessoires'],['Auto & Moto','🚗','Auto, moto et accessoires'],
+      ['Bricolage & Jardin','🛠️','Outils et jardin'],['Bureau & Fournitures','📚','Bureau et fournitures'],
+      ['Livres, Culture & Éducation','📖','Livres, culture et apprentissage'],['Produits locaux & Artisanat','🎨','Créations et savoir-faire locaux'],
+      ['Services','🤝','Services de nos partenaires']
+    ],
+    SAVEURS: [
+      ['Restaurants','🍽️','Restaurants et tables partenaires'],['Plats sénégalais','🇸🇳','Thiéboudienne, yassa, mafé…'],
+      ['Fast-Food','🍔','Burgers, tacos, pizzas et menus'],['Petit-déjeuner & Brunch','🥐','Petit-déjeuner et brunch'],
+      ['Boissons','🥤','Jus, cafés et boissons fraîches'],['Desserts & Pâtisseries','🍰','Desserts et pâtisseries'],
+      ['Épicerie','🛒','Produits d’épicerie'],['Fruits & Légumes','🥬','Produits frais et de saison'],
+      ['Boucherie & Poissonnerie','🐟','Viandes et produits de la mer'],['Traiteur & Événementiel','🎉','Traiteurs et événements'],
+      ['Cuisine maison','👩🏾‍🍳','Plats préparés à la maison'],['Offres & Menus','🔥','Promotions, formules et menus']
+    ],
+    EVASION: [
+      ['Hôtels','🏨','Hôtels et hébergements'],['Appartements & Locations','🏡','Locations courte et longue durée'],
+      ['Résidences & Maisons d’hôtes','🛏️','Résidences et maisons d’hôtes'],['Plages & Resorts','🏝️','Plages, resorts et détente'],
+      ['Excursions','🧭','Excursions et sorties'],['Activités & Expériences','🎟️','Visites et expériences'],
+      ['Tourisme & Culture','🕌','Patrimoine et découverte'],['Restaurants & Gastronomie','🍴','Restaurants et gastronomie'],
+      ['Transport & Mobilité','🚐','Transferts et chauffeurs'],['Billetterie & Événements','🎫','Billets et événements'],
+      ['Voyages organisés','🗺️','Circuits et voyages accompagnés'],['Lune de miel & Romantique','💍','Séjours romantiques'],
+      ['Famille','👨‍👩‍👧','Séjours et activités en famille'],['Business & Séminaires','💼','Déplacements professionnels'],
+      ['Bien-être','🧘🏾','Spa, détente et bien-être'],['Destinations','🌍','Explorez les destinations']
+    ]
   };
-  const META = { MARKET:['🛍️','MARKET'], SAVEURS:['🍽️','SAVEURS'], EVASION:['✈️','ÉVASION'] };
 
-  const universe = () => {
+  const META = {
+    MARKET:['🛍️','MARKET','LE GRAND MARCHÉ','Tout ce dont vous avez besoin, dans un espace simple à explorer.'],
+    SAVEURS:['🍽️','SAVEURS','À TABLE','Restaurants, plats et produits frais réunis au même endroit.'],
+    EVASION:['✈️','ÉVASION','PARTEZ À LA DÉCOUVERTE','Séjours, activités et expériences pour votre prochaine escapade.']
+  };
+
+  const currentUniverse = () => {
     const value = String(document.body?.dataset?.universe || 'MARKET').toUpperCase();
     return DATA[value] ? value : 'MARKET';
   };
 
-  function styles() {
-    if (document.getElementById('egonar-category-final-style')) return;
+  function injectStyles() {
+    if (document.getElementById('egonar-category-premium-style')) return;
     const style = document.createElement('style');
-    style.id = 'egonar-category-final-style';
+    style.id = 'egonar-category-premium-style';
     style.textContent = `
-      #categories .section-head{margin-bottom:18px}
-      #categories .section-head h2{font-size:clamp(28px,4vw,40px);letter-spacing:-.04em}
-      .egonar-all-categories{display:grid;gap:10px}
-      .egonar-category-group{overflow:hidden;border:1px solid #e7e7e7;border-radius:16px;background:#fff;box-shadow:0 6px 22px rgba(0,0,0,.045)}
-      .egonar-category-toggle{width:100%;appearance:none;border:0;background:#fff;color:#161616;display:flex;align-items:center;gap:12px;padding:17px 20px;text-align:left;font:inherit;font-size:15px;font-weight:850;cursor:pointer}
-      .egonar-category-toggle:hover,.egonar-category-toggle:focus-visible{background:#fafafa;outline:2px solid currentColor;outline-offset:-3px}
-      .egonar-category-toggle .category-icon{font-size:18px}.egonar-category-toggle .category-title{flex:1}.egonar-category-toggle .category-count{font-size:11px;font-weight:700;color:#999}.egonar-category-toggle .category-chevron{font-size:17px;transition:transform .2s ease}.egonar-category-group.open .category-chevron{transform:rotate(180deg)}
-      .egonar-category-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px 10px;padding:0 20px 18px}.egonar-category-list[hidden]{display:none!important}
-      .egonar-category-item{appearance:none;border:1px solid #ececec;background:#f9f9f9;color:#222;border-radius:10px;padding:10px 11px;text-align:left;font-size:12px;font-weight:650;cursor:pointer;transition:.15s ease}.egonar-category-item:hover,.egonar-category-item:focus-visible{background:#111;color:#fff;border-color:#111;outline:none}
-      @media(max-width:800px){.egonar-category-list{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.egonar-category-toggle{padding:15px 14px}.egonar-category-list{grid-template-columns:1fr;padding:0 14px 14px}.egonar-category-item{padding:10px}}
+      #categories.egonar-category-hub .section-head{margin-bottom:18px}
+      #categories.egonar-category-hub .section-head h2{font-size:clamp(28px,4vw,40px);letter-spacing:-.045em}
+      .egonar-category-shell{border:1px solid rgba(17,17,17,.08);border-radius:24px;background:linear-gradient(145deg,#fff,#fafafa);box-shadow:0 16px 45px rgba(17,17,17,.08);overflow:hidden}
+      .egonar-category-trigger{width:100%;border:0;background:transparent;color:#111;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;padding:20px 22px;text-align:left;cursor:pointer;font:inherit}
+      .egonar-category-trigger:hover{background:#fafafa}.egonar-category-trigger:focus-visible{outline:3px solid #ddd;outline-offset:-3px}
+      .egonar-category-brand{width:50px;height:50px;border-radius:15px;display:grid;place-items:center;background:#111;color:#fff;font-size:24px}
+      .egonar-category-kicker{display:block;font-size:10px;letter-spacing:.14em;font-weight:900;color:#888;margin-bottom:6px}
+      .egonar-category-title{display:block;font-size:19px;font-weight:900;letter-spacing:-.02em}
+      .egonar-category-intro{display:block;color:#777;font-size:12px;margin-top:4px}
+      .egonar-category-action{display:flex;align-items:center;gap:8px;border:1px solid #e7e7e7;background:#fff;border-radius:999px;padding:9px 12px;font-size:11px;font-weight:850;white-space:nowrap}
+      .egonar-category-chevron{transition:transform .2s}.egonar-category-shell.open .egonar-category-chevron{transform:rotate(180deg)}
+      .egonar-category-panel{border-top:1px solid #eee;padding:18px 20px 20px;background:#fff}
+      .egonar-category-panel[hidden]{display:none!important}
+      .egonar-category-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+      .egonar-category-toolbar strong{font-size:12px}.egonar-category-count{font-size:11px;color:#888}
+      .egonar-category-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+      .egonar-category-item{appearance:none;border:1px solid #ececef;background:#fafafa;color:#191919;border-radius:15px;min-height:76px;padding:11px;text-align:left;cursor:pointer;display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:center;transition:.16s ease}
+      .egonar-category-item:hover{transform:translateY(-2px);background:#fff;border-color:#d5d5d8;box-shadow:0 8px 20px rgba(0,0,0,.07)}
+      .egonar-category-item:focus-visible{outline:3px solid #ddd}
+      .egonar-category-icon{width:34px;height:34px;border-radius:11px;background:#fff;display:grid;place-items:center;font-size:17px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+      .egonar-category-name{font-size:12px;font-weight:850;line-height:1.25}.egonar-category-desc{display:block;color:#888;font-size:9px;margin-top:3px;line-height:1.3}
+      .egonar-category-close{width:100%;margin-top:12px;border:1px dashed #ddd;background:#fff;border-radius:12px;padding:9px;font-size:11px;font-weight:800;color:#666;cursor:pointer}
+      .egonar-category-close:hover{color:#111;background:#fafafa}
+      @media(max-width:1000px){.egonar-category-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+      @media(max-width:700px){.egonar-category-trigger{padding:16px}.egonar-category-brand{width:44px;height:44px}.egonar-category-action span:first-child{display:none}.egonar-category-panel{padding:14px}.egonar-category-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}
+      @media(max-width:460px){.egonar-category-grid{grid-template-columns:1fr}.egonar-category-title{font-size:16px}.egonar-category-intro{font-size:11px}}
     `;
     document.head.appendChild(style);
   }
 
   function activate(label) {
-    const input = document.querySelector('input[type="search"]#search, .food-search input[type="search"], .travel-search input[type="search"], input[type="search"]');
+    const input = document.querySelector('input[type="search"]#search,.food-search input[type="search"],.travel-search input[type="search"],input[type="search"]');
     const form = input?.closest('form');
     if (!input || !form) return;
     input.value = label;
-    form.dispatchEvent(new Event('submit', { bubbles:true, cancelable:true }));
-    document.getElementById('produits')?.scrollIntoView({behavior:'smooth',block:'start'});
-    document.getElementById('food-smart-results')?.scrollIntoView({behavior:'smooth',block:'start'});
-    document.getElementById('travel-smart-results')?.scrollIntoView({behavior:'smooth',block:'start'});
+    form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+    ['produits','food-smart-results','travel-smart-results'].forEach(id => document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'}));
   }
 
-  function makeGroup(current) {
-    const group = document.createElement('section');
-    group.className = 'egonar-category-group';
-    const toggle = document.createElement('button');
-    toggle.type = 'button'; toggle.className = 'egonar-category-toggle'; toggle.setAttribute('aria-expanded','false');
-    const [iconText,titleText] = META[current];
-    toggle.innerHTML = `<span class="category-icon" aria-hidden="true">${iconText}</span><span class="category-title">${titleText}</span><span class="category-count">${DATA[current].length} catégories</span><span class="category-chevron" aria-hidden="true">⌄</span>`;
-    const listId = `egonar-category-list-${current.toLowerCase()}`;
-    toggle.setAttribute('aria-controls',listId);
-    const list = document.createElement('div'); list.id=listId; list.className='egonar-category-list'; list.hidden=true;
-    DATA[current].forEach(label => { const item=document.createElement('button'); item.type='button'; item.className='egonar-category-item'; item.textContent=label; item.addEventListener('click',()=>activate(label)); list.appendChild(item); });
-    toggle.addEventListener('click',()=>{ const open=!list.hidden; list.hidden=open; group.classList.toggle('open',!open); toggle.setAttribute('aria-expanded',String(!open)); });
-    group.append(toggle,list); return group;
+  function makeItem([label,icon,description]) {
+    const item=document.createElement('button');
+    item.type='button';item.className='egonar-category-item';
+    item.innerHTML='<span class="egonar-category-icon" aria-hidden="true">'+icon+'</span><span><span class="egonar-category-name">'+label+'</span><span class="egonar-category-desc">'+description+'</span></span>';
+    item.addEventListener('click',()=>activate(label));
+    return item;
+  }
+
+  function makeShell(current) {
+    const [icon,title,kicker,intro]=META[current], categories=DATA[current];
+    const shell=document.createElement('div');shell.className='egonar-category-shell';
+    const trigger=document.createElement('button');trigger.type='button';trigger.className='egonar-category-trigger';trigger.setAttribute('aria-expanded','false');
+    const panelId='egonar-category-panel-'+current.toLowerCase();trigger.setAttribute('aria-controls',panelId);
+    trigger.innerHTML='<span class="egonar-category-brand" aria-hidden="true">'+icon+'</span><span><span class="egonar-category-kicker">'+kicker+'</span><span class="egonar-category-title">'+title+'</span><span class="egonar-category-intro">'+intro+'</span></span><span class="egonar-category-action"><span>Explorer</span><span>'+categories.length+' catégories</span><span class="egonar-category-chevron">⌄</span></span>';
+    const panel=document.createElement('div');panel.id=panelId;panel.className='egonar-category-panel';panel.hidden=true;
+    const toolbar=document.createElement('div');toolbar.className='egonar-category-toolbar';toolbar.innerHTML='<strong>Choisissez une catégorie</strong><span class="egonar-category-count">Uniquement '+title+'</span>';
+    const grid=document.createElement('div');grid.className='egonar-category-grid';grid.setAttribute('role','list');
+    categories.forEach(category=>{const item=makeItem(category);item.setAttribute('role','listitem');grid.appendChild(item);});
+    const close=document.createElement('button');close.type='button';close.className='egonar-category-close';close.textContent='Masquer les catégories ↑';
+    close.addEventListener('click',()=>{panel.hidden=true;shell.classList.remove('open');trigger.setAttribute('aria-expanded','false');trigger.focus();});
+    panel.append(toolbar,grid,close);
+    trigger.addEventListener('click',()=>{const open=panel.hidden;panel.hidden=!open;shell.classList.toggle('open',open);trigger.setAttribute('aria-expanded',String(open));});
+    shell.append(trigger,panel);return shell;
   }
 
   function ensureSection() {
-    let section=document.getElementById('categories');
-    if (section) return section;
-    const anchor=document.getElementById('explorer'); if(!anchor) return null;
-    section=document.createElement('section'); section.id='categories'; section.className='wrap section';
+    let section=document.getElementById('categories');if(section)return section;
+    const anchor=document.getElementById('explorer');if(!anchor)return null;
+    section=document.createElement('section');section.id='categories';section.className='wrap section egonar-category-hub';
     section.innerHTML='<div class="section-head"><div><p class="eyebrow">EXPLORER</p><h2>Toutes nos catégories</h2></div></div>';
-    anchor.parentNode.insertBefore(section,anchor); return section;
+    anchor.parentNode.insertBefore(section,anchor);return section;
   }
 
   function build() {
-    const section=ensureSection(); if(!section) return false;
-    styles();
-    const current=universe();
-    const heading=section.querySelector('.section-head h2'); if(heading) heading.textContent='Toutes nos catégories';
-    const stale=section.querySelector('.egonar-all-categories'); if(stale) stale.remove();
-    const container=document.createElement('div'); container.className='egonar-all-categories'; container.setAttribute('aria-label',`Catégories ${META[current][1]}`); container.appendChild(makeGroup(current)); section.appendChild(container);
-    return true;
+    const section=ensureSection();if(!section)return false;injectStyles();
+    section.classList.add('egonar-category-hub');
+    section.querySelector('.egonar-category-shell')?.remove();
+    section.querySelector('.egonar-all-categories')?.remove();
+    section.appendChild(makeShell(currentUniverse()));return true;
   }
 
-  function cleanupLegacySearchNavigation() {
-    document.getElementById('egonar-category-navigation')?.remove();
-    document.getElementById('egonar-all-categories')?.remove();
-    document.querySelector('.egonar-search-with-categories')?.classList.remove('egonar-search-with-categories');
-  }
+  function cleanup(){document.getElementById('egonar-category-navigation')?.remove();document.getElementById('egonar-all-categories')?.remove();document.querySelector('.egonar-search-with-categories')?.classList.remove('egonar-search-with-categories');}
 
-  function start() {
-    cleanupLegacySearchNavigation();
-    if(build()) return;
-    const observer=new MutationObserver(()=>{ cleanupLegacySearchNavigation(); if(build()) observer.disconnect(); });
-    observer.observe(document.documentElement,{childList:true,subtree:true});
-    setTimeout(()=>observer.disconnect(),10000);
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start,{once:true}); else start();
+  function start(){cleanup();if(build())return;const observer=new MutationObserver(()=>{cleanup();if(build())observer.disconnect();});observer.observe(document.documentElement,{childList:true,subtree:true});setTimeout(()=>observer.disconnect(),10000);}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
