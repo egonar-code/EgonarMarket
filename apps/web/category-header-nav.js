@@ -193,7 +193,7 @@
     'Boucherie & Poissonnerie':'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=900&q=85',
     'Traiteur & Événementiel':'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=900&q=85',
     'Cuisine maison':'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85',
-    'Offres & Menus':'https://cdn.phonebooky.com/blog/wp-content/uploads/2020/07/07114341/Crunchy-Fried-Chicken-from-Greenwich.jpg',
+    'Offres & Menus':'https://images.pexels.com/photos/15029878/pexels-photo-15029878.jpeg?auto=compress&cs=tinysrgb&w=900',
     'Se faire livrer':'https://images.pexels.com/photos/8988463/pexels-photo-8988463.jpeg?auto=compress&cs=tinysrgb&w=900',
     'Hôtels':'https://static.fram.fr/photos/vacances-senegal/dakar/vue-panoramique-jumbo-le-saly_849040_tgmob.jpg',
     'Appartements & Locations':'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=85',
