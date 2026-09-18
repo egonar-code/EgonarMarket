@@ -72,33 +72,31 @@
       .egonar-category-heading h2{margin:5px 0;font-size:clamp(32px,4vw,46px);letter-spacing:-.045em;color:#122c52}
       .egonar-category-heading p{margin:0;color:#41607c;font-size:16px;line-height:1.45}
       .egonar-category-all-link{border:1px solid #1680ff;background:#fff;color:#0875ed;border-radius:999px;padding:12px 18px;font-weight:850;white-space:nowrap;cursor:pointer}
-      .egonar-featured-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
-      .egonar-featured-category{position:relative;min-height:205px;border:0;border-radius:20px;overflow:hidden;padding:0;text-align:left;color:#fff;cursor:pointer;background:#10283a;box-shadow:0 12px 28px rgba(23,83,112,.12);transition:transform .2s,box-shadow .2s}
-      .egonar-featured-category:hover{transform:translateY(-4px);box-shadow:0 18px 38px rgba(23,83,112,.2)}
-      .egonar-featured-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-      .egonar-featured-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.02) 15%,rgba(0,0,0,.82) 100%)}
-      .egonar-featured-badge{position:absolute;left:15px;bottom:62px;width:45px;height:45px;border-radius:14px;background:#fff;color:#0875ed;display:grid;place-items:center;font-size:22px;box-shadow:0 6px 18px rgba(0,0,0,.14)}
-      .egonar-featured-copy{position:absolute;left:16px;right:48px;bottom:16px;display:flex;flex-direction:column;gap:4px}
-      .egonar-featured-copy strong{font-size:19px;line-height:1.1}
-      .egonar-featured-copy small{font-size:12px;line-height:1.35;color:#fff}
-      .egonar-featured-arrow{position:absolute;right:14px;bottom:14px;width:40px;height:40px;border-radius:50%;background:#fff;color:#122c52;display:grid;place-items:center;font-size:22px;font-weight:900}
+      .egonar-featured-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+      .egonar-featured-category{position:relative;min-height:88px;border:1px solid #e6edf2;border-radius:18px;overflow:hidden;padding:10px;background:#fff;color:#172f43;cursor:pointer;display:grid;grid-template-columns:60px 1fr auto;gap:11px;align-items:center;text-align:left;box-shadow:0 8px 22px rgba(23,83,112,.06);transition:transform .16s,box-shadow .16s,border-color .16s}
+      .egonar-featured-category:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(23,83,112,.12);border-color:#b9d7e8}
+      .egonar-featured-photo{width:60px;height:60px;object-fit:cover;border-radius:14px;display:block;background:#eef3f6}
+      .egonar-featured-overlay{display:none}
+      .egonar-featured-badge{display:none}
+      .egonar-featured-copy{position:static;display:flex;flex-direction:column;gap:3px;min-width:0}
+      .egonar-featured-copy strong{font-size:14px;line-height:1.15;color:#163a55}
+      .egonar-featured-copy small{font-size:11px;line-height:1.3;color:#6d8190}
+      .egonar-featured-arrow{position:static;width:28px;height:28px;border-radius:50%;background:#eef7fb;color:#14527d;display:grid;place-items:center;font-size:18px;font-weight:900}
       .egonar-all-categories-wrap{margin-top:16px}
       .egonar-all-categories-toggle{width:100%;padding:14px;border:1px solid #dce8f2;border-radius:15px;background:#f7fbff;color:#14527d;font-weight:850;cursor:pointer}
       .egonar-all-categories-toggle span{margin-left:8px}
-      .egonar-all-categories-panel{padding-top:14px}
+      .egonar-all-categories-panel{padding-top:12px}
       .egonar-all-categories-panel[hidden]{display:none!important}
-      .egonar-category-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-      .egonar-category-item{appearance:none;border:1px solid #e8e8ea;background:#fff;color:#171717;border-radius:17px;min-height:96px;padding:10px;text-align:left;cursor:pointer;display:grid;grid-template-columns:86px 1fr auto;gap:14px;align-items:center;transition:transform .16s ease,box-shadow .16s ease}
-      .egonar-category-item:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(0,0,0,.08)}
-      .egonar-category-photo{width:86px;height:76px;border-radius:12px;object-fit:cover;background:#f1f1f1;display:block}
-      .egonar-category-name{display:block;font-size:16px;font-weight:900;line-height:1.2}
-      .egonar-category-desc{display:block;color:#777;font-size:12px;line-height:1.4;margin-top:5px}
-      .egonar-category-go{font-size:21px;color:#8a8a8a;padding:0 5px}
-      @media(max-width:800px){#categories.egonar-category-hub{width:min(100% - 24px,1280px)}.egonar-featured-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.egonar-category-grid{grid-template-columns:1fr}}
-      @media(max-width:560px){.egonar-category-heading{align-items:flex-start;flex-direction:column}.egonar-featured-grid{grid-template-columns:1fr}.egonar-category-heading h2{font-size:31px}.egonar-featured-category{min-height:190px}}
-      @media(max-width:800px){#categories.egonar-category-hub{width:min(100% - 24px,1280px)}.egonar-category-grid{grid-template-columns:1fr}.egonar-category-trigger{padding:18px}.egonar-category-panel{padding:17px}.egonar-category-brand{width:50px;height:50px}}
-      @media(max-width:560px){.egonar-category-trigger{grid-template-columns:auto 1fr;gap:13px}.egonar-category-action{grid-column:1/-1;justify-content:center}.egonar-category-title{font-size:19px}.egonar-category-intro{font-size:12px}.egonar-category-toolbar{align-items:flex-start;flex-direction:column;gap:5px}.egonar-category-item{grid-template-columns:72px 1fr auto;min-height:88px;gap:11px}.egonar-category-photo{width:72px;height:64px}.egonar-category-name{font-size:15px}.egonar-category-desc{font-size:11px}}
-    `;
+      .egonar-category-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .egonar-category-item{appearance:none;border:1px solid #e8e8ea;background:#fff;color:#171717;border-radius:15px;min-height:68px;padding:10px 12px;text-align:left;cursor:pointer;display:grid;grid-template-columns:36px 1fr auto;gap:11px;align-items:center;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+      .egonar-category-item:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,.06);border-color:#cfe0ea}
+      .egonar-category-brand{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:#f3f7f9;font-size:18px}
+      .egonar-category-name{display:block;font-size:14px;font-weight:900;line-height:1.2}
+      .egonar-category-desc{display:block;color:#777;font-size:11px;line-height:1.35;margin-top:4px}
+      .egonar-category-go{font-size:21px;color:#8a8a8a;padding:0 3px}
+      @media(max-width:900px){#categories.egonar-category-hub{width:min(100% - 24px,1280px)}.egonar-featured-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.egonar-category-grid{grid-template-columns:1fr}}
+      @media(max-width:560px){.egonar-category-heading{align-items:flex-start;flex-direction:column}.egonar-featured-grid{display:flex;overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:4px}.egonar-featured-category{flex:0 0 240px;min-height:82px;scroll-snap-align:start}.egonar-category-heading h2{font-size:31px}}
+        `;
     document.head.appendChild(style);
   }
 
@@ -121,20 +119,16 @@
     const item=document.createElement('button');
     item.type='button';
     item.className='egonar-category-item';
-    const photo=document.createElement('img');
-    photo.className='egonar-category-photo';
-    photo.src=imageFor(label);
-    photo.alt='';
-    photo.loading='lazy';
-    photo.decoding='async';
-    photo.addEventListener('error',()=>{photo.onerror=null;photo.src=FALLBACK;},{once:true});
+    const brand=document.createElement('span');
+    brand.className='egonar-category-brand';
+    brand.textContent=icon;
     const copy=document.createElement('span');
     copy.innerHTML='<span class="egonar-category-name">'+label+'</span><span class="egonar-category-desc">'+description+'</span>';
     const go=document.createElement('span');
     go.className='egonar-category-go';
     go.setAttribute('aria-hidden','true');
     go.textContent='›';
-    item.append(photo,copy,go);
+    item.append(brand,copy,go);
     item.title='Explorer '+label;
     item.addEventListener('click',()=>activate(label));
     return item;
@@ -183,7 +177,7 @@
     'Sports & Loisirs':'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=900&q=85',
     'Produits locaux & Artisanat':'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?auto=format&fit=crop&w=900&q=85',
     'Restaurants':'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=85',
-    'Plats sénégalais':'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85',
+    'Plats sénégalais':'https://upload.wikimedia.org/wikipedia/commons/5/51/Thieboudienne.JPG',
     'Fast-Food':'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=85',
     'Petit-déjeuner & Brunch':'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=900&q=85',
     'Boissons':'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=900&q=85',
@@ -197,8 +191,13 @@
     const item=document.createElement('button'); item.type='button'; item.className='egonar-featured-category';
     const photo=document.createElement('img'); photo.className='egonar-featured-photo'; photo.src=FEATURED_IMAGES[key]||FALLBACK; photo.alt=title; photo.loading='lazy'; photo.decoding='async';
     photo.addEventListener('error',()=>{photo.onerror=null;photo.src=FALLBACK;},{once:true});
-    item.innerHTML='<span class="egonar-featured-overlay"></span><span class="egonar-featured-badge">'+icon+'</span><span class="egonar-featured-copy"><strong>'+title+'</strong><small>'+description+'</small></span><span class="egonar-featured-arrow">→</span>';
-    item.insertBefore(photo,item.firstChild); item.addEventListener('click',()=>activate(key)); return item;
+    const copy=document.createElement('span'); copy.className='egonar-featured-copy';
+    copy.innerHTML='<strong>'+title+'</strong><small>'+description+'</small>';
+    const arrow=document.createElement('span'); arrow.className='egonar-featured-arrow'; arrow.textContent='→'; arrow.setAttribute('aria-hidden','true');
+    item.append(photo,copy,arrow);
+    item.title='Explorer '+title;
+    item.addEventListener('click',()=>activate(key));
+    return item;
   }
 
   function makeShell() {
