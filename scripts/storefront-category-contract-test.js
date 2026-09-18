@@ -28,12 +28,8 @@ for (const [file, universe] of pages) {
     console.log('✓ ' + file + ': catégories statiques absentes');
   }
 
-  if (universe !== 'EVASION' && html.includes('id="categories"')) {
-    console.error('✗ ' + file + ': section catégories visible interdite sur ' + universe);
-    failed++;
-  }
-  if (universe === 'EVASION' && !html.includes('href="#categories"')) {
-    console.error('✗ ' + file + ': accès direct aux catégories Évasion absent');
+  if (!html.includes('id="categories"')) {
+    console.error('✗ ' + file + ': hub catégories absent');
     failed++;
   }
 }
@@ -59,8 +55,8 @@ if (!header.includes('FEATURED_BY_UNIVERSE') || !header.includes('MARKET:') || !
   console.error('✗ category-header-nav.js: les trois univers ne disposent pas du nouveau hub catégories');
   failed++;
 }
-if (!header.includes('egonar-category-photo') || !header.includes('Afficher la liste')) {
-  console.error('✗ category-header-nav.js: liste Évasion avec images non détectée');
+if (!header.includes('egonar-featured-photo') || !header.includes('egonar-category-photo') || !header.includes('Toutes nos catégories')) {
+  console.error('✗ category-header-nav.js: hub catégories avec images non détecté');
   failed++;
 }
 const imageFallbacks = fs.readFileSync('apps/web/image-fallbacks.js', 'utf8');
