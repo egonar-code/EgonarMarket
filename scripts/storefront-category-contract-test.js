@@ -68,6 +68,10 @@ if (!imageFallbacks.includes('/assets/egonar-market-fallback.svg') || !imageFall
   console.error('✗ image-fallbacks.js: chemins de secours locaux incorrects');
   failed++;
 }
+if (!imageFallbacks.includes('function enhanceCategoryUi(){ return false; }')) {
+  console.error('✗ image-fallbacks.js: ancien panneau catégories encore actif');
+  failed++;
+}
 
 if (failed) {
   console.error('\n' + failed + ' contrôle(s) storefront ont échoué.');
