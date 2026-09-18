@@ -14,12 +14,12 @@
       ['Services','🤝','Services de nos partenaires']
     ],
     SAVEURS: [
-      ['Restaurants','🍽️','Restaurants et tables partenaires'],['Plats sénégalais','🇸🇳','Thiéboudienne, yassa, mafé…'],
+      ['Restaurants','🍽️','Restaurants et tables partenaires'],['Thiéboudienne','🇸🇳','Le plat national : riz au poisson, légumes et tradition sénégalaise'],['Plats sénégalais','🇸🇳','Thiéboudienne, yassa, mafé…'],
       ['Fast-Food','🍔','Burgers, tacos, pizzas et menus'],['Petit-déjeuner & Brunch','🥐','Petit-déjeuner et brunch'],
       ['Boissons','🥤','Jus, cafés et boissons fraîches'],['Desserts & Pâtisseries','🍰','Desserts et pâtisseries'],
       ['Épicerie','🛒','Produits d’épicerie'],['Fruits & Légumes','🥬','Produits frais et de saison'],
       ['Boucherie & Poissonnerie','🐟','Viandes et produits de la mer'],['Traiteur & Événementiel','🎉','Traiteurs et événements'],
-      ['Cuisine maison','👩🏾‍🍳','Plats préparés à la maison'],['Offres & Menus','🔥','Promotions, formules et menus'],
+      ['Cuisine maison','👩🏾‍🍳','Plats préparés à la maison'],['Plats & Menus','🍲','Plats, menus et formules à partager'],
       ['Se faire livrer','🛵','Commande et livraison de repas à domicile']
     ],
     EVASION: [
@@ -47,7 +47,7 @@
     'Plages & Resorts':'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=85',
     'Excursions':'https://location-quad-lacrose.com/wp-content/uploads/2019/07/3.jpg',
     'Activités & Expériences':'https://www.lac-rose-excursion.com/_next/image?q=75&url=%2Fexcursions%2Fchameaux.jpg&w=3840',
-    'Tourisme & Culture':'https://upload.wikimedia.org/wikipedia/commons/1/12/African_Renaissance_Monument_%285502494604%29.jpg',
+    'Tourisme & Culture':'/assets/user-evasion-monument.jpg',
     'Restaurants & Gastronomie':'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=85',
     'Transport & Mobilité':'https://cdn.generationvoyage.fr/2025/03/Aeroport-International-Blaise-Diagne-au-Senegal.jpeg',
     'Billetterie & Événements':'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=900&q=85',
@@ -57,9 +57,27 @@
     'Business & Séminaires':'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=85',
     'Bien-être':'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=900&q=85',
     'Destinations':'https://www.directtriphub.com/static/images/places/1676/chutes-de-dindefelo/main.jpg',
-    'Se faire livrer':'https://images.pexels.com/photos/8988503/pexels-photo-8988503.jpeg?cs=srgb&dl=pexels-artempodrez-8988503.jpg&fm=jpg'
+    'Se faire livrer':'/assets/user-saveurs-delivery.png'
   };
   const FALLBACK = '/assets/egonar-evasion-fallback.svg';
+
+  const USER_ASSETS = {
+    'Thiéboudienne':'/assets/user-saveurs-thieboudienne.jpg',
+    'Plats sénégalais':'/assets/user-saveurs-thieboudienne.jpg',
+    'Plats & Menus':'/assets/user-saveurs-plats-menus.jpg',
+    'Épicerie':'/assets/user-saveurs-epicerie.jpg',
+    'Se faire livrer':'/assets/user-saveurs-delivery.png',
+    'Tourisme & Culture':'/assets/user-evasion-monument.jpg'
+  };
+  const IMAGE_FALLBACKS = {
+    'Thiéboudienne':'https://upload.wikimedia.org/wikipedia/commons/5/51/Thieboudienne.JPG',
+    'Plats sénégalais':'https://upload.wikimedia.org/wikipedia/commons/5/51/Thieboudienne.JPG',
+    'Plats & Menus':'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=900&q=85',
+    'Épicerie':'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=900&q=85',
+    'Se faire livrer':'https://images.pexels.com/photos/8988463/pexels-photo-8988463.jpeg?auto=compress&cs=tinysrgb&w=900',
+    'Tourisme & Culture':'https://commons.wikimedia.org/wiki/Special:Redirect/file/African%20Renaissance%20Monument%20%285502494604%29.jpg'
+  };
+
 
   const currentUniverse = () => String(document.body?.dataset?.universe || 'MARKET').toUpperCase();
 
@@ -121,11 +139,11 @@
     item.className='egonar-category-item';
     const photo=document.createElement('img');
     photo.className='egonar-category-photo';
-    photo.src=FEATURED_IMAGES[label]||IMAGES[label]||FALLBACK;
+    photo.src=USER_ASSETS[label]||FEATURED_IMAGES[label]||IMAGES[label]||FALLBACK;
     photo.alt=label;
     photo.loading='lazy';
     photo.decoding='async';
-    photo.addEventListener('error',()=>{photo.onerror=null;photo.src=FALLBACK;},{once:true});
+    photo.addEventListener('error',()=>{photo.onerror=null;photo.src=IMAGE_FALLBACKS[label]||FALLBACK;},{once:true});
     const copy=document.createElement('span');
     copy.innerHTML='<span class="egonar-category-name">'+label+'</span><span class="egonar-category-desc">'+description+'</span>';
     const go=document.createElement('span');
@@ -153,7 +171,7 @@
       ['Fast-Food','🍔','Fast-Food','Burgers, tacos, pizzas, poulet et menus.'],
       ['Fruits & Légumes','🥬','Fruits & Légumes','Produits frais et paniers de saison.'],
       ['Se faire livrer','🛵','Se faire livrer','Commandez et recevez votre repas à domicile.'],
-      ['Offres & Menus','🍗','Menu familial','Box familial généreux, poulet et formules à partager.']
+      ['Plats & Menus','🍲','Plats & Menus','Formules, menus familiaux et plats à partager.']
     ],
     EVASION:[
       ['Hôtels','🏨','Hôtels au Sénégal','Hôtels et séjours sur la Petite Côte.'],
@@ -193,7 +211,7 @@
     'Boucherie & Poissonnerie':'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=900&q=85',
     'Traiteur & Événementiel':'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=900&q=85',
     'Cuisine maison':'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85',
-    'Offres & Menus':'https://storage.googleapis.com/skai-imagegen/_/2024/09/13/01J7PC4D3N07K9ACZB3MYQ1TV1',
+    'Plats & Menus':'https://storage.googleapis.com/skai-imagegen/_/2024/09/13/01J7PC4D3N07K9ACZB3MYQ1TV1',
     'Se faire livrer':'https://images.pexels.com/photos/8988463/pexels-photo-8988463.jpeg?auto=compress&cs=tinysrgb&w=900',
     'Hôtels':'https://static.fram.fr/photos/vacances-senegal/dakar/vue-panoramique-jumbo-le-saly_849040_tgmob.jpg',
     'Appartements & Locations':'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=85',
