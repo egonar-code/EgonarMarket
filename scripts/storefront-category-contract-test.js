@@ -10,7 +10,7 @@ let failed = 0;
 
 for (const [file, universe] of pages) {
   const html = fs.readFileSync(file, 'utf8');
-  const bodyStart = html.search(/<body\\b/i);
+  const bodyStart = html.search(/<body/i);
   const bodyEnd = bodyStart >= 0 ? html.indexOf('>', bodyStart) : -1;
   const body = bodyEnd >= 0 ? html.slice(bodyStart, bodyEnd + 1) : '';
 
