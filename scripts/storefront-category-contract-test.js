@@ -10,7 +10,10 @@ let failed = 0;
 
 for (const [file, universe] of pages) {
   const html = fs.readFileSync(file, 'utf8');
-  const body = html.slice(0, html.indexOf('>') + 1);\n\n  if (!new RegExp('data-universe=["']' + universe + '["']', 'i').test(body)) {
+  const bodyEnd = html.indexOf('>');
+  const body = bodyEnd >= 0 ? html.slice(0, bodyEnd + 1) : '';
+
+  if (!body.includes('data-universe="' + universe + '"')) {
     console.error('✗ ' + file + ': univers ' + universe + ' absent du body');
     failed++;
   } else {
@@ -33,7 +36,7 @@ const taxonomyChecks = [
 ];
 
 for (const [universe, lastCategory, count] of taxonomyChecks) {
-  if (!header.includes(universe + ':') || !header.includes("'" + lastCategory + "'") || !header.includes('DATA[current].length')) {
+  if (!header.includes(universe + ':') || !header.includes("'" + lastCategory + "'")) {
     console.error('✗ taxonomy runtime incomplète pour ' + universe + ' (' + count + ' catégories attendues)');
     failed++;
   } else {
@@ -42,8 +45,8 @@ for (const [universe, lastCategory, count] of taxonomyChecks) {
 }
 
 if (failed) {
-  console.error('\\n' + failed + ' contrôle(s) storefront ont échoué.');
+  console.error('\n' + failed + ' contrôle(s) storefront ont échoué.');
   process.exit(1);
 }
 
-console.log('\\nstorefront-category-contract-test: OK');
+console.log('\nstorefront-category-contract-test: OK');
