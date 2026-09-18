@@ -5,7 +5,7 @@ services:
     plan: free
     branch: fix/supplier-ai-coach-integration
     buildCommand: npm ci
-    startCommand: node -r ./apps/api/src/order-hardening-preload.js apps/api/src/server.js
+    startCommand: npm run db:init && node -r ./apps/api/src/order-hardening-preload.js apps/api/src/server.js
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
@@ -16,6 +16,8 @@ services:
         generateValue: true
       - key: ADMIN_EMAIL
         value: admin@egonarmarket.sn
+      - key: ADMIN_PASSWORD
+        generateValue: true
       - key: NODE_ENV
         value: production
       - key: SUPPLIER_API_URL
@@ -42,7 +44,10 @@ services:
           name: egonarmarket-preview-db
           property: connectionString
       - key: JWT_SECRET
-        generateValue: true
+        fromService:
+          type: web
+          name: egonarmarket-preview
+          envVarKey: JWT_SECRET
       - key: NODE_ENV
         value: production
 
