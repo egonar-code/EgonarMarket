@@ -184,28 +184,50 @@
     'International':'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=85'
   };
 
+  const FEATURED_IMAGES = {
+    'Mode & Vêtements':'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=85',
+    'Téléphones & Accessoires':'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=85',
+    'Informatique & Électronique':'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=900&q=85',
+    'Maison & Décoration':'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=85',
+    'Beauté & Soins':'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=900&q=85',
+    'Bébé & Enfant':'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=900&q=85',
+    'Sports & Loisirs':'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=900&q=85',
+    'Produits locaux & Artisanat':'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?auto=format&fit=crop&w=900&q=85',
+    'Restaurants':'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=85',
+    'Plats sénégalais':'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85',
+    'Fast-Food':'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=85',
+    'Petit-déjeuner & Brunch':'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=900&q=85',
+    'Boissons':'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=900&q=85',
+    'Desserts & Pâtisseries':'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=900&q=85',
+    'Fruits & Légumes':'https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=900&q=85',
+    'Offres & Menus':'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85',
+    'Hôtels':IMAGES['Hôtels'],'Transport & Mobilité':IMAGES['Transport & Mobilité'],'Activités & Expériences':IMAGES['Activités & Expériences'],'Plages & Resorts':IMAGES['Plages & Resorts'],'Voyages organisés':IMAGES['Voyages organisés'],'Tourisme & Culture':IMAGES['Tourisme & Culture'],'Destinations':'https://img.geocaching.com/cache/large/b4a78f15-ae41-4a97-9301-b06fdbb3d65d.jpg','International':'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=85'
+  };
+
   function makeFeaturedItem([key,icon,title,description]) {
-    const item=document.createElement('button');
-    item.type='button'; item.className='egonar-featured-category';
+    const item=document.createElement('button'); item.type='button'; item.className='egonar-featured-category';
     const photo=document.createElement('img'); photo.className='egonar-featured-photo'; photo.src=FEATURED_IMAGES[key]||FALLBACK; photo.alt=title; photo.loading='lazy'; photo.decoding='async';
     photo.addEventListener('error',()=>{photo.onerror=null;photo.src=FALLBACK;},{once:true});
     item.innerHTML='<span class="egonar-featured-overlay"></span><span class="egonar-featured-badge">'+icon+'</span><span class="egonar-featured-copy"><strong>'+title+'</strong><small>'+description+'</small></span><span class="egonar-featured-arrow">→</span>';
-    item.insertBefore(photo,item.firstChild);
-    item.addEventListener('click',()=>activate(key));
-    return item;
+    item.insertBefore(photo,item.firstChild); item.addEventListener('click',()=>activate(key)); return item;
   }
 
   function makeShell() {
+    const universe=currentUniverse();
+    const meta=META[universe]||META.MARKET;
+    const categories=DATA[universe]||[];
+    const featured=FEATURED_BY_UNIVERSE[universe]||[];
     const shell=document.createElement('div'); shell.className='egonar-category-shell';
-    shell.innerHTML='<div class="egonar-category-heading"><div><span class="egonar-category-kicker">'+title+'</span><h2>Toutes nos catégories</h2><p>'+intro+'</p></div><button type="button" class="egonar-category-all-link">Voir toutes les offres →</button></div>';
+    shell.innerHTML='<div class="egonar-category-heading"><div><span class="egonar-category-kicker">'+meta[1]+'</span><h2>Toutes nos catégories</h2><p>'+meta[3]+'</p></div><button type="button" class="egonar-category-all-link">Voir toutes les offres →</button></div>';
     const featuredGrid=document.createElement('div'); featuredGrid.className='egonar-featured-grid';
     featured.forEach(x=>featuredGrid.appendChild(makeFeaturedItem(x)));
     const allWrap=document.createElement('div'); allWrap.className='egonar-all-categories-wrap';
-    const allToggle=document.createElement('button'); allToggle.type='button'; allToggle.className='egonar-all-categories-toggle'; allToggle.setAttribute('aria-expanded','false'); allToggle.innerHTML='Explorer les 16 catégories Évasion <span>⌄</span>';
+    const allToggle=document.createElement('button'); allToggle.type='button'; allToggle.className='egonar-all-categories-toggle'; allToggle.setAttribute('aria-expanded','false'); allToggle.innerHTML='Explorer les '+categories.length+' catégories '+meta[1]+' <span>⌄</span>';
     const allPanel=document.createElement('div'); allPanel.className='egonar-all-categories-panel'; allPanel.hidden=true;
     const grid=document.createElement('div'); grid.className='egonar-category-grid'; grid.setAttribute('role','list');
-    DATA.EVASION.forEach(category=>{const item=makeItem(category);item.setAttribute('role','listitem');grid.appendChild(item);});
-    allPanel.appendChild(grid); allToggle.addEventListener('click',()=>{const open=allPanel.hidden;allPanel.hidden=!open;allToggle.setAttribute('aria-expanded',String(open));});
+    categories.forEach(category=>{const item=makeItem(category);item.setAttribute('role','listitem');grid.appendChild(item);});
+    allPanel.appendChild(grid);
+    allToggle.addEventListener('click',()=>{const open=allPanel.hidden;allPanel.hidden=!open;allToggle.setAttribute('aria-expanded',String(open));});
     allWrap.append(allToggle,allPanel); shell.append(featuredGrid,allWrap); return shell;
   }
 
