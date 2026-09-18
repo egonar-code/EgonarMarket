@@ -24,10 +24,10 @@
     EVASION: [
       ['Hôtels','🏨','Hébergements, hôtels et resorts'],['Appartements & Locations','🏡','Appartements, villas et locations'],
       ['Résidences & Maisons d’hôtes','🛏️','Maisons d’hôtes, résidences et lodges'],['Plages & Resorts','🏝️','Plages, resorts, piscines et détente'],
-      ['Excursions','🧭','Sorties, circuits et visites guidées'],['Activités & Expériences','🎟️','Quad, surf, kayak, culture et loisirs'],
+      ['Excursions','🧭','Sorties, quads, balades à dos de chameau et visites guidées'],['Activités & Expériences','🎟️','Quad, dromadaire, jet-ski, surf, kayak et loisirs'],
       ['Tourisme & Culture','🕌','Patrimoine, musées et découvertes'],['Restaurants & Gastronomie','🍴','Tables, dégustations et gastronomie'],
       ['Transport & Mobilité','🚐','Transferts, chauffeurs et location de voiture'],['Billetterie & Événements','🎫','Concerts, festivals et spectacles'],
-      ['Voyages organisés','🗺️','Circuits, packages et voyages accompagnés'],['Lune de miel & Romantique','💍','Escapades, couples et lune de miel'],
+      ['Voyages organisés','🗺️','Circuits Sénégal, nature, culture et itinéraires organisés'],['Lune de miel & Romantique','💍','Escapades, couples et lune de miel'],
       ['Famille','👨‍👩‍👧','Séjours et sorties pour toute la famille'],['Business & Séminaires','💼','Hôtels business, salles et séminaires'],
       ['Bien-être','🧘🏾','Spa, massages, hammam et détente'],['Destinations','🌍','Sénégal, sous-région et destinations internationales']
     ]
@@ -40,22 +40,22 @@
   };
 
   const IMAGES = {
-    'Hôtels':'https://static.service-voyages.com/photos/vacances-senegal/saly/piscine-lagoon-movenpick-resort-lamantin-saly_823513_panobd.jpg',
+    'Hôtels':'https://static.fram.fr/photos/vacances-senegal/dakar/vue-panoramique-jumbo-le-saly_849040_tgmob.jpg',
     'Appartements & Locations':'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=85',
     'Résidences & Maisons d’hôtes':'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=900&q=85',
     'Plages & Resorts':'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=85',
-    'Excursions':'https://www.au-senegal.com/local/cache-vignettes/L1200xH630/b3f2e790bf56a67dc7387f849428a2-5fcb9.png',
-    'Activités & Expériences':'https://www.au-senegal.com/local/cache-vignettes/L1200xH630/b3f2e790bf56a67dc7387f849428a2-5fcb9.png',
+    'Excursions':'https://samy-quad-lacrose.com/5.jpg',
+    'Activités & Expériences':'https://samy-quad-lacrose.com/7.jpg',
     'Tourisme & Culture':'https://images.locationscout.net/2024/04/monument-de-la-renaissance-africaine-dakar-senegal-senegal-p5yx.webp?h=1400&q=80',
     'Restaurants & Gastronomie':'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=85',
     'Transport & Mobilité':'https://cdn.generationvoyage.fr/2025/03/Aeroport-International-Blaise-Diagne-au-Senegal.jpeg',
     'Billetterie & Événements':'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=900&q=85',
-    'Voyages organisés':'https://cdn.explorecams.com/storage/photos/3sgYkZPowv_1600.jpg',
+    'Voyages organisés':'https://www.accro-baobab.com/local/cache-gd2/df/028329cc0b22b877909cc27b322e68.jpg?1788625736=',
     'Lune de miel & Romantique':'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=900&q=85',
     'Famille':'https://images.unsplash.com/photo-1472162072942-cd5147eb3902?auto=format&fit=crop&w=900&q=85',
     'Business & Séminaires':'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=85',
     'Bien-être':'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=900&q=85',
-    'Destinations':'https://images.unsplash.com/photo-1526772662000-3f88f10405ff?auto=format&fit=crop&w=900&q=85'
+    'Destinations':'https://www.directtriphub.com/static/images/places/1676/chutes-de-dindefelo/main.jpg'
   };
   const FALLBACK = '/assets/egonar-evasion-fallback.svg';
 
@@ -163,13 +163,13 @@
     ],
     EVASION:[
       ['Hôtels','🏨','Hôtels','Hôtels et séjours au Sénégal, notamment sur la Petite Côte.'],
-      ['Transport & Mobilité','🚐','Transferts AIBD & mobilité','Arrivez, partez et déplacez-vous facilement au Sénégal.'],
-      ['Activités & Expériences','🏜️','Activités & Excursions','Quads, balades à dos de chameau, visites et expériences locales.'],
-      ['Plages & Resorts','🏝️','Séjours & Plages','Soleil, plages, piscines et escapades au bord de l’Atlantique.'],
-      ['Voyages organisés','🧭','Circuits & découvertes','Agrobaobab, nature, culture et itinéraires organisés.'],
-      ['Tourisme & Culture','🇸🇳','Au Sénégal','Dakar, Saly, Petite Côte, Casamance, Saint-Louis et plus.'],
-      ['Destinations','🌿','Sous-région','Dindéfelo, Afrique de l’Ouest et grandes découvertes régionales.'],
-      ['International','🌍','International','Paris, Dubaï, Rome, New York et destinations du monde entier.']
+      ['Excursions','🏜️','Excursions','Quads, balades à dos de chameau, sorties et visites guidées.'],
+      ['Activités & Expériences','🎟️','Activités & Expériences','Quad, dromadaire, jet-ski, surf et expériences locales.'],
+      ['Voyages organisés','🗺️','Circuits','Circuits Sénégal, découvertes nature et itinéraires organisés.'],
+      ['Destinations','🌿','Sous-région','Chutes de Dindéfelo, Kédougou et découvertes d’Afrique de l’Ouest.'],
+      ['International','🌍','International','Paris, Rome, Dubaï, New York et grandes destinations du monde.'],
+      ['Plages & Resorts','🏝️','Plages & Resorts','Soleil, plages, piscines et séjours au bord de l’Atlantique.'],
+      ['Restaurants & Gastronomie','🍴','Restaurants & Gastronomie','Tables, dégustations et expériences culinaires.']
     ]
   };
 
@@ -190,7 +190,7 @@
     'Desserts & Pâtisseries':'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=900&q=85',
     'Fruits & Légumes':'https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=900&q=85',
     'Offres & Menus':'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85',
-    'Hôtels':IMAGES['Hôtels'],'Transport & Mobilité':IMAGES['Transport & Mobilité'],'Activités & Expériences':IMAGES['Activités & Expériences'],'Plages & Resorts':IMAGES['Plages & Resorts'],'Voyages organisés':IMAGES['Voyages organisés'],'Tourisme & Culture':IMAGES['Tourisme & Culture'],'Destinations':'https://img.geocaching.com/cache/large/b4a78f15-ae41-4a97-9301-b06fdbb3d65d.jpg','International':'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=85'
+    'Hôtels':IMAGES['Hôtels'],'Transport & Mobilité':IMAGES['Transport & Mobilité'],'Activités & Expériences':IMAGES['Activités & Expériences'],'Plages & Resorts':IMAGES['Plages & Resorts'],'Voyages organisés':IMAGES['Voyages organisés'],'Tourisme & Culture':IMAGES['Tourisme & Culture'],'Destinations':'https://img.geocaching.com/cache/large/b4a78f15-ae41-4a97-9301-b06fdbb3d65d.jpg','International':'https://images.unsplash.com/photo-1752886355870-17e8ebe79a05?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=85&w=1200'
   };
 
   function makeFeaturedItem([key,icon,title,description]) {
