@@ -38,7 +38,7 @@ const header = fs.readFileSync('apps/web/category-header-nav.js', 'utf8');
 
 const taxonomyChecks = [
   ['MARKET', 'Services', 17],
-  ['SAVEURS', 'Offres & Menus', 12],
+  ['SAVEURS', 'Se faire livrer', 13],
   ['EVASION', 'Destinations', 16]
 ];
 
@@ -55,7 +55,7 @@ if (!header.includes('FEATURED_BY_UNIVERSE') || !header.includes('MARKET:') || !
   console.error('✗ category-header-nav.js: les trois univers ne disposent pas du nouveau hub catégories');
   failed++;
 }
-if (!header.includes('egonar-featured-photo') || !header.includes('egonar-category-item') || !header.includes('Toutes nos catégories')) {
+if (!header.includes('egonar-category-photo') || !header.includes('egonar-category-item') || !header.includes('Toutes nos catégories')) {
   console.error('✗ category-header-nav.js: hub catégories/miniatures non détecté');
   failed++;
 }
