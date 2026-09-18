@@ -10,9 +10,7 @@ let failed = 0;
 
 for (const [file, universe] of pages) {
   const html = fs.readFileSync(file, 'utf8');
-  const body = html.match(/<body\\b[^>]*>/i)?.[0] || '';
-
-  if (!new RegExp('data-universe=["']' + universe + '["']', 'i').test(body)) {
+  const body = html.slice(0, html.indexOf('>') + 1);\n\n  if (!new RegExp('data-universe=["']' + universe + '["']', 'i').test(body)) {
     console.error('✗ ' + file + ': univers ' + universe + ' absent du body');
     failed++;
   } else {
