@@ -47,7 +47,7 @@
     'Plages & Resorts':'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=85',
     'Excursions':'https://location-quad-lacrose.com/wp-content/uploads/2019/07/3.jpg',
     'Activités & Expériences':'https://www.lac-rose-excursion.com/_next/image?q=75&url=%2Fexcursions%2Fchameaux.jpg&w=3840',
-    'Tourisme & Culture':'/assets/user-evasion-monument.jpg',
+    'Tourisme & Culture':'https://commons.wikimedia.org/wiki/Special:Redirect/file/African%20Renaissance%20Monument%20%285502494604%29.jpg',
     'Restaurants & Gastronomie':'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=85',
     'Transport & Mobilité':'https://cdn.generationvoyage.fr/2025/03/Aeroport-International-Blaise-Diagne-au-Senegal.jpeg',
     'Billetterie & Événements':'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=900&q=85',
@@ -57,17 +57,17 @@
     'Business & Séminaires':'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=85',
     'Bien-être':'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=900&q=85',
     'Destinations':'https://www.directtriphub.com/static/images/places/1676/chutes-de-dindefelo/main.jpg',
-    'Se faire livrer':'/assets/user-saveurs-delivery.png'
+    'Se faire livrer':'https://images.pexels.com/photos/8988463/pexels-photo-8988463.jpeg?auto=compress&cs=tinysrgb&w=900'
   };
   const FALLBACK = '/assets/egonar-evasion-fallback.svg';
 
   const USER_ASSETS = {
-    'Thiéboudienne':'/assets/user-saveurs-thieboudienne.jpg',
-    'Plats sénégalais':'/assets/user-saveurs-thieboudienne.jpg',
-    'Plats & Menus':'/assets/user-saveurs-plats-menus.jpg',
-    'Épicerie':'/assets/user-saveurs-epicerie.jpg',
+    'Thiéboudienne':'/assets/user-saveurs-thieboudienne.webp',
+    'Plats sénégalais':'/assets/user-saveurs-thieboudienne.webp',
+    'Plats & Menus':'/assets/user-saveurs-plats-menus.webp',
+    'Épicerie':'https://www.intracen.org/sites/default/files/styles/content_100/public/media/image/media_image/2023/08/08/Supermarket%20in%20Dakar%20features%20local%20brands.jpg?itok=b6fzUMbo',
     'Se faire livrer':'/assets/user-saveurs-delivery.png',
-    'Tourisme & Culture':'/assets/user-evasion-monument.jpg'
+    'Tourisme & Culture':'/assets/user-evasion-monument.webp'
   };
   const IMAGE_FALLBACKS = {
     'Thiéboudienne':'https://upload.wikimedia.org/wikipedia/commons/5/51/Thieboudienne.JPG',
@@ -108,7 +108,7 @@
       .egonar-category-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
       .egonar-category-item{appearance:none;border:1px solid #e8e8ea;background:#fff;color:#171717;border-radius:15px;min-height:78px;padding:10px 12px;text-align:left;cursor:pointer;display:grid;grid-template-columns:78px 1fr auto;gap:12px;align-items:center;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
       .egonar-category-item:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,.06);border-color:#cfe0ea}
-      .egonar-category-photo{width:78px;height:64px;border-radius:11px;object-fit:cover;display:block;background:#eef3f6}
+      .egonar-category-photo{width:78px;height:64px;border-radius:11px;object-fit:cover;display:block;background:#eef3f6}.egonar-delivery-category .egonar-category-photo{object-fit:contain;padding:4px;background:linear-gradient(135deg,#fff7ed,#eef7ff)}
       .egonar-category-name{display:block;font-size:14px;font-weight:900;line-height:1.2}
       .egonar-category-desc{display:block;color:#777;font-size:11px;line-height:1.35;margin-top:4px}
       .egonar-category-go{font-size:21px;color:#8a8a8a;padding:0 3px}
@@ -136,7 +136,7 @@
   function makeItem([label,icon,description]) {
     const item=document.createElement('button');
     item.type='button';
-    item.className='egonar-category-item';
+    item.className='egonar-category-item'+(label==='Se faire livrer'?' egonar-delivery-category':'');
     const photo=document.createElement('img');
     photo.className='egonar-category-photo';
     photo.src=USER_ASSETS[label]||FEATURED_IMAGES[label]||IMAGES[label]||FALLBACK;
