@@ -25,11 +25,19 @@ for (const [file, universe] of pages) {
     console.error('✗ ' + file + ': catégories statiques encore présentes');
     failed++;
   } else {
-    console.log('✓ ' + file + ': catégories construites dynamiquement');
+    console.log('✓ ' + file + ': catégories statiques absentes');
+  }
+
+  if (universe !== 'EVASION' && html.includes('id="categories"')) {
+    console.error('✗ ' + file + ': section catégories visible interdite sur ' + universe);
+    failed++;
+  }
+  if (universe === 'EVASION' && !html.includes('href="#categories"')) {
+    console.error('✗ ' + file + ': accès direct aux catégories Évasion absent');
+    failed++;
   }
 }
 
-const header = fs.readFileSync('apps/web/category-header-nav.js', 'utf8');
 const taxonomyChecks = [
   ['MARKET', 'Services', 17],
   ['SAVEURS', 'Offres & Menus', 12],
@@ -43,6 +51,21 @@ for (const [universe, lastCategory, count] of taxonomyChecks) {
   } else {
     console.log('✓ taxonomy runtime présente pour ' + universe + ' (' + count + ' catégories attendues)');
   }
+}
+
+const header = fs.readFileSync('apps/web/category-header-nav.js', 'utf8');
+if (!header.includes("currentUniverse() !== 'EVASION'")) {
+  console.error('✗ category-header-nav.js: le hub catégories doit être limité à Évasion');
+  failed++;
+}
+if (!header.includes('egonar-category-photo') || !header.includes('Afficher la liste')) {
+  console.error('✗ category-header-nav.js: liste Évasion avec images non détectée');
+  failed++;
+}
+const imageFallbacks = fs.readFileSync('apps/web/image-fallbacks.js', 'utf8');
+if (!imageFallbacks.includes('/assets/egonar-market-fallback.svg') || !imageFallbacks.includes('/assets/egonar-saveurs-fallback.svg') || !imageFallbacks.includes('/assets/egonar-evasion-fallback.svg')) {
+  console.error('✗ image-fallbacks.js: chemins de secours locaux incorrects');
+  failed++;
 }
 
 if (failed) {
