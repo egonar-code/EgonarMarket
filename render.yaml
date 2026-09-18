@@ -1,11 +1,11 @@
 services:
   - type: web
-    name: egonarmarket-preview-web
+    name: egonarmarket-preview-live
     runtime: node
     plan: free
     branch: fix/supplier-ai-coach-integration
     buildCommand: npm ci
-    startCommand: npm run db:init && node -r ./apps/api/src/order-hardening-preload.js apps/api/src/server.js
+    startCommand: npm run db:init && npm start
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
@@ -20,36 +20,10 @@ services:
         generateValue: true
       - key: NODE_ENV
         value: production
-      - key: SUPPLIER_API_URL
-        fromService:
-          type: web
-          name: egonarmarket-preview-supplier
-          envVarKey: RENDER_EXTERNAL_URL
       - key: DELIVERY_DAKAR_FCFA
         value: "1500"
       - key: DELIVERY_OTHER_FCFA
         value: "3000"
-
-  - type: web
-    name: egonarmarket-preview-supplier
-    runtime: node
-    plan: free
-    branch: fix/supplier-ai-coach-integration
-    buildCommand: npm ci
-    startCommand: node apps/api/src/supplier-server.js
-    healthCheckPath: /api/health
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: egonarmarket-preview-db
-          property: connectionString
-      - key: JWT_SECRET
-        fromService:
-          type: web
-          name: egonarmarket-preview-web
-          envVarKey: JWT_SECRET
-      - key: NODE_ENV
-        value: production
 
 databases:
   - name: egonarmarket-preview-db
