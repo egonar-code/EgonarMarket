@@ -13,7 +13,7 @@ if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL manquant.");
 if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET manquant.");
 
 const app = express();
-const PORT = Number(process.env.SUPPLIER_PORT || 3001);
+const PORT = Number(process.env.SUPPLIER_PORT || process.env.PORT || 3001);
 const webDir = path.join(__dirname, "../../web");
 const secure = process.env.NODE_ENV === "production";
 app.disable("x-powered-by");
