@@ -47,7 +47,7 @@
     'Plages & Resorts':'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=85',
     'Excursions':'https://location-quad-lacrose.com/wp-content/uploads/2019/07/3.jpg',
     'Activités & Expériences':'https://www.lac-rose-excursion.com/_next/image?q=75&url=%2Fexcursions%2Fchameaux.jpg&w=3840',
-    'Tourisme & Culture':'https://images.locationscout.net/2024/04/monument-de-la-renaissance-africaine-dakar-senegal-senegal-p5yx.webp?h=1400&q=80',
+    'Tourisme & Culture':'https://upload.wikimedia.org/wikipedia/commons/1/12/African_Renaissance_Monument_%285502494604%29.jpg',
     'Restaurants & Gastronomie':'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=85',
     'Transport & Mobilité':'https://cdn.generationvoyage.fr/2025/03/Aeroport-International-Blaise-Diagne-au-Senegal.jpeg',
     'Billetterie & Événements':'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=900&q=85',
@@ -57,7 +57,7 @@
     'Business & Séminaires':'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=85',
     'Bien-être':'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=900&q=85',
     'Destinations':'https://www.directtriphub.com/static/images/places/1676/chutes-de-dindefelo/main.jpg',
-    'Se faire livrer':'https://st5.depositphotos.com/1683796/62033/i/450/depositphotos_620339650-stock-photo-woman-paying-food-order-credit.jpg'
+    'Se faire livrer':'https://images.pexels.com/photos/8988503/pexels-photo-8988503.jpeg?cs=srgb&dl=pexels-artempodrez-8988503.jpg&fm=jpg'
   };
   const FALLBACK = '/assets/egonar-evasion-fallback.svg';
 
@@ -153,7 +153,7 @@
       ['Fast-Food','🍔','Fast-Food','Burgers, tacos, pizzas, poulet et menus.'],
       ['Fruits & Légumes','🥬','Fruits & Légumes','Produits frais et paniers de saison.'],
       ['Se faire livrer','🛵','Se faire livrer','Commandez et recevez votre repas à domicile.'],
-      ['Offres & Menus','🔥','Offres & Menus','Promotions, menus du jour et formules.']
+      ['Offres & Menus','🍗','Menu familial','Box familial généreux, poulet et formules à partager.']
     ],
     EVASION:[
       ['Hôtels','🏨','Hôtels au Sénégal','Hôtels et séjours sur la Petite Côte.'],
@@ -182,18 +182,18 @@
     'Produits locaux & Artisanat':'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?auto=format&fit=crop&w=900&q=85',
     'Services':'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=85',
     'Restaurants':'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=85',
-    'Thiéboudienne':'https://upload.wikimedia.org/wikipedia/commons/5/51/Thieboudienne.JPG',
-    'Plats sénégalais':'https://upload.wikimedia.org/wikipedia/commons/5/51/Thieboudienne.JPG',
+    'Thiéboudienne':'https://commons.wikimedia.org/wiki/Special:Redirect/file/Senegalese%20Thieboudienne.JPG',
+    'Plats sénégalais':'https://commons.wikimedia.org/wiki/Special:Redirect/file/Senegalese%20Thieboudienne.JPG',
     'Fast-Food':'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=85',
     'Petit-déjeuner & Brunch':'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=900&q=85',
     'Boissons':'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=900&q=85',
     'Desserts & Pâtisseries':'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=900&q=85',
-    'Épicerie':'https://cloudfront-eu-central-1.images.arcpublishing.com/le360/S2T4CJSHYBDVPPYWTMJIJSALVI.jpeg',
+    'Épicerie':'https://commons.wikimedia.org/wiki/Special:Redirect/file/Senegalese%20Thieboudienne.JPG',
     'Fruits & Légumes':'https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=900&q=85',
     'Boucherie & Poissonnerie':'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=900&q=85',
     'Traiteur & Événementiel':'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=900&q=85',
     'Cuisine maison':'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85',
-    'Offres & Menus':'https://images.pexels.com/photos/15029878/pexels-photo-15029878.jpeg?auto=compress&cs=tinysrgb&w=900',
+    'Offres & Menus':'https://storage.googleapis.com/skai-imagegen/_/2024/09/13/01J7PC4D3N07K9ACZB3MYQ1TV1',
     'Se faire livrer':'https://images.pexels.com/photos/8988463/pexels-photo-8988463.jpeg?auto=compress&cs=tinysrgb&w=900',
     'Hôtels':'https://static.fram.fr/photos/vacances-senegal/dakar/vue-panoramique-jumbo-le-saly_849040_tgmob.jpg',
     'Appartements & Locations':'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=85',
