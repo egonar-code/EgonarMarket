@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   slug TEXT UNIQUE NOT NULL,
+  universe TEXT NOT NULL DEFAULT 'MARKET' CHECK (universe IN ('MARKET','SAVEURS','EVASION')),
   category TEXT NOT NULL,
   subcategory TEXT NOT NULL DEFAULT '',
   description TEXT NOT NULL DEFAULT '',
@@ -87,18 +88,22 @@ CREATE TABLE IF NOT EXISTS suppliers (
   contact_name TEXT NOT NULL DEFAULT '',
   phone TEXT NOT NULL DEFAULT '',
   email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'PENDING',
   commission_percent NUMERIC(5,2) NOT NULL DEFAULT 10 CHECK (commission_percent >= 0 AND commission_percent <= 100),
   verification_level TEXT NOT NULL DEFAULT 'STANDARD',
-  rating_average NUMERIC(3,2) NOT NULL DEFAULT 0 CHECK (rating_average >= 0 AND rating_average <= 5),
-  rating_count INTEGER NOT NULL DEFAULT 0 CHECK (rating_count >= 0),
-  orders_count INTEGER NOT NULL DEFAULT 0 CHECK (orders_count >= 0),
-  cancellation_rate NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (cancellation_rate >= 0 AND cancellation_rate <= 100),
+  rating_average NUMERIC(3,2) NOT NULL DEFAULT 0,
+  rating_count INTEGER NOT NULL DEFAULT 0,
+  orders_count INTEGER NOT NULL DEFAULT 0,
+  cancellation_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
   verified_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE products ADD COLUMN IF NOT EXISTS universe TEXT NOT NULL DEFAULT 'MARKET';
+ALTER TABLE products DROP CONSTRAINT IF EXISTS products_universe_check;
+ALTER TABLE products ADD CONSTRAINT products_universe_check CHECK (universe IN ('MARKET','SAVEURS','EVASION'));
 ALTER TABLE products ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'APPROVED';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_id UUID;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS verified_level TEXT NOT NULL DEFAULT 'STANDARD';
@@ -119,6 +124,8 @@ ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS orders_count INTEGER NOT NULL DEF
 ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS cancellation_rate NUMERIC(5,2) NOT NULL DEFAULT 0;
 ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
 
+CREATE INDEX IF NOT EXISTS idx_products_universe ON products(universe);
+CREATE INDEX IF NOT EXISTS idx_products_universe_active ON products(universe,active,created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_active ON products(active);
 CREATE INDEX IF NOT EXISTS idx_products_stock ON products(stock);
@@ -135,3 +142,32 @@ CREATE INDEX IF NOT EXISTS idx_suppliers_verification_level ON suppliers(verific
 CREATE INDEX IF NOT EXISTS idx_reviews_product ON product_reviews(product_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_reviews_customer ON product_reviews(customer_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_reviews_order ON product_reviews(order_id);
+
+-- Publication safety: any non-approved product is always inactive.
+UPDATE products
+SET active = FALSE,
+    updated_at = NOW()
+WHERE approval_status IS DISTINCT FROM 'APPROVED';
+
+CREATE OR REPLACE FUNCTION egonar_enforce_product_publication_state()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.approval_status IS DISTINCT FROM 'APPROVED' THEN
+    NEW.active := FALSE;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_products_publication_state ON products;
+
+CREATE TRIGGER trg_products_publication_state
+BEFORE INSERT OR UPDATE OF approval_status, active
+ON products
+FOR EACH ROW
+EXECUTE FUNCTION egonar_enforce_product_publication_state();
+
+CREATE INDEX IF NOT EXISTS idx_products_public_approval
+  ON products(universe, active, approval_status, created_at DESC);

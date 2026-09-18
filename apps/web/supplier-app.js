@@ -1,58 +1,15 @@
-const SUPPLIER_API = "";
-const $ = id => document.getElementById(id);
-const money = n => new Intl.NumberFormat("fr-FR").format(Number(n) || 0) + " FCFA";
-const call = (path, options = {}) => fetch(SUPPLIER_API + path, { credentials: "include", ...options }).then(async r => ({ ok: r.ok, data: await r.json().catch(() => ({})) }));
-
-function message(id, text, ok = false) {
-  const el = $(id); if (!el) return;
-  el.textContent = text || "";
-  el.className = text ? `state ${ok ? "success" : "error"}` : "";
-}
-
-async function boot() {
-  const me = await call("/api/supplier/me");
-  if (me.ok) {
-    $("auth").hidden = true; $("panel").hidden = false; $("logout").hidden = false;
-    await refresh();
-  }
-}
-
-$("register")?.addEventListener("submit", async e => {
-  e.preventDefault();
-  const body = Object.fromEntries(new FormData(e.currentTarget));
-  const r = await call("/api/supplier/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  message("register-msg", r.data.error || r.data.message || "Demande envoyée.", r.ok);
-  if (r.ok) e.currentTarget.reset();
-});
-
-$("login")?.addEventListener("submit", async e => {
-  e.preventDefault();
-  const body = Object.fromEntries(new FormData(e.currentTarget));
-  const r = await call("/api/supplier/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!r.ok) return message("login-msg", r.data.error || "Connexion impossible.");
-  location.reload();
-});
-
-$("logout")?.addEventListener("click", async () => { await call("/api/supplier/logout", { method: "POST" }); location.reload(); });
-
-$("product-form")?.addEventListener("submit", async e => {
-  e.preventDefault();
-  const b = Object.fromEntries(new FormData(e.currentTarget));
-  ["price_fcfa", "old_price_fcfa", "stock"].forEach(k => b[k] = b[k] === "" ? null : Number(b[k]));
-  const r = await call("/api/supplier/products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) });
-  message("product-msg", r.data.error || "Produit soumis pour validation.", r.ok);
-  if (r.ok) { e.currentTarget.reset(); await refresh(); }
-});
-
-async function refresh() {
-  const [me, stats, products] = await Promise.all([call("/api/supplier/me"), call("/api/supplier/stats"), call("/api/supplier/products")]);
-  if (!me.ok || !stats.ok || !products.ok) return;
-  $("active-count").textContent = stats.data.active_products;
-  $("pending-count").textContent = stats.data.pending_products;
-  $("stock-count").textContent = stats.data.total_stock;
-  const list = products.data || [];
-  $("products").innerHTML = list.map(p => `<div class="admin-row"><span><b>${escapeHtml(p.name)}</b><small>${money(p.price_fcfa)} · stock ${p.stock} · ${p.approval_status === "APPROVED" ? "Publié" : p.approval_status === "REJECTED" ? "Refusé" : "En validation"}</small></span></div>`).join("") || '<p class="muted">Aucun produit soumis.</p>';
-}
-function escapeHtml(s) { return String(s ?? "").replace(/[&<>\"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
-
+const SUPPLIER_API=window.EGONAR_SUPPLIER_API || "/supplier-api";const $=id=>document.getElementById(id);const L=()=>localStorage.getItem("egonar_language")==="en";const T=(fr,en)=>L()?en:fr;const money=n=>new Intl.NumberFormat("fr-FR").format(Number(n)||0)+" FCFA";const call=(path,options={})=>fetch(SUPPLIER_API+path,{credentials:"include",...options}).then(async r=>({ok:r.ok,data:await r.json().catch(()=>({}))}));const esc=s=>String(s??"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));const U={MARKET:"MARKET",SAVEURS:"SAVEURS",EVASION:"ÉVASION"};const PS={APPROVED:["Publié","Published"],PENDING:["En validation","Pending approval"],REJECTED:["Refusé","Rejected"]};const OS={EN_ATTENTE_PAIEMENT:"En attente de paiement",CONFIRMEE:"Confirmée",PREPARATION:"En préparation",EXPEDIEE:"Expédiée",EN_LIVRAISON:"En livraison",LIVREE:"Livrée",ANNULEE:"Annulée"};let products=[],orders=[];
+function message(id,text,ok=false){const el=$(id);if(!el)return;el.textContent=text||"";el.className=text?`state ${ok?"success":"error"}`:"";}
+async function boot(){const me=await call("/api/supplier/me");if(me.ok){$("auth").hidden=true;$("panel").hidden=false;$("logout").hidden=false;await refresh();}}
+$("register")?.addEventListener("submit",async e=>{e.preventDefault();const body=Object.fromEntries(new FormData(e.currentTarget));const r=await call("/api/supplier/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});message("register-msg",r.data.error||r.data.message||T("Demande envoyée.","Request sent."),r.ok);if(r.ok)e.currentTarget.reset();});
+$("login")?.addEventListener("submit",async e=>{e.preventDefault();const r=await call("/api/supplier/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});if(!r.ok)return message("login-msg",r.data.error||T("Connexion impossible.","Unable to sign in."));location.reload();});
+$("logout")?.addEventListener("click",async()=>{await call("/api/supplier/logout",{method:"POST"});location.reload();});
+$("product-form")?.addEventListener("submit",async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));["price_fcfa","old_price_fcfa","stock"].forEach(k=>b[k]=b[k]===""?null:Number(b[k]));const id=b.id;delete b.id;const r=await call(id?`/api/supplier/products/${encodeURIComponent(id)}`:"/api/supplier/products",{method:id?"PATCH":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)});message("product-msg",r.data.error||T(id?"Produit renvoyé en validation.":"Produit soumis pour validation.",id?"Product resubmitted for approval.":"Product submitted for approval."),r.ok);if(r.ok){resetProductForm();await refresh();}});
+$("cancel-edit")?.addEventListener("click",resetProductForm);$("universe-filter")?.addEventListener("change",drawProducts);$("refresh-orders")?.addEventListener("click",refresh);
+function resetProductForm(){const f=$("product-form");if(!f)return;f.reset();f.elements.id.value="";f.elements.universe.value="MARKET";$("form-title").textContent=T("Soumettre un produit","Submit a product");$("submit-product").textContent=T("Soumettre pour validation","Submit for approval");$("cancel-edit").hidden=true;}
+function editProduct(id){const p=products.find(x=>x.id===id);if(!p)return;const f=$("product-form");Object.entries({id:p.id,universe:p.universe||"MARKET",name:p.name||"",category:p.category||"",subcategory:p.subcategory||"",price_fcfa:p.price_fcfa??"",old_price_fcfa:p.old_price_fcfa??"",stock:p.stock??0,sku:p.sku||"",image_url:p.image_url||"",description:p.description||""}).forEach(([k,v])=>f.elements[k].value=v);$("form-title").textContent=T("Modifier et resoumettre","Edit and resubmit");$("submit-product").textContent=T("Renvoyer en validation","Resubmit for approval");$("cancel-edit").hidden=false;f.scrollIntoView({behavior:"smooth",block:"start"});}
+async function deactivateProduct(id){if(!confirm(T("Désactiver ce produit ?","Deactivate this product?")))return;const r=await call(`/api/supplier/products/${encodeURIComponent(id)}`,{method:"DELETE"});if(!r.ok)return message("product-msg",r.data.error||T("Opération impossible.","Operation failed."));await refresh();}
+function drawProducts(){const q=$("universe-filter")?.value||"";const list=products.filter(p=>!q||p.universe===q);$("product-summary").textContent=`${list.length} ${T(list.length>1?"produits":"produit",list.length>1?"products":"product")}`;$("products").innerHTML=list.map(p=>{const st=PS[p.approval_status]||[p.approval_status,p.approval_status];return `<article class="admin-order-card"><div class="admin-order-top"><div><p class="eyebrow">${esc(U[p.universe]||p.universe||"UNIVERS")}</p><h3>${esc(p.name)}</h3><p class="muted">${esc(p.category||"")} ${p.subcategory?"· "+esc(p.subcategory):""} · ${money(p.price_fcfa)} · stock ${Number(p.stock)||0}</p></div><span class="admin-order-badge">${esc(L()?st[1]:st[0])}</span></div><div class="admin-order-grid"><div><p class="small muted">${esc(p.sku||"SKU non renseigné")}</p><p class="small">${p.active?T("Actuellement actif","Currently active"):T("Non publié","Not published")}</p></div><div class="admin-order-actions"><button class="btn secondary" type="button" onclick="editProduct('${esc(p.id)}')">${T("Modifier","Edit")}</button><button class="btn secondary" type="button" onclick="deactivateProduct('${esc(p.id)}')">${T("Désactiver","Deactivate")}</button></div></div></article>`}).join("")||`<p class="muted">${T("Aucun produit dans cet univers.","No products in this universe.")}</p>`;}
+function drawOrders(){$("orders").innerHTML=orders.map(o=>{const items=Array.isArray(o.items)?o.items:[];return `<article class="admin-order-card ${o.status==="ANNULEE"?"is-cancelled":""}"><div class="admin-order-top"><div><p class="eyebrow">COMMANDE</p><h3>${esc(o.order_number)}</h3><p class="muted">${esc(o.customer_name||"Client")} · ${esc(o.customer_phone||"")} · ${money(o.supplier_total_fcfa)}</p></div><span class="admin-order-badge">${esc(OS[o.status]||o.status||"Inconnu")}</span></div><div class="admin-order-grid"><div><h4>Livraison</h4><p>${esc(o.customer_address||"Adresse non renseignée")}</p><p>${esc(o.customer_city||"")}</p><p class="small muted">Paiement : ${esc(o.payment_method||"Non renseigné")} ${o.payment_status?"· "+esc(o.payment_status):""}</p></div><div><h4>Vos articles</h4><ul class="admin-order-items">${items.map(i=>`<li><span>${esc(i.name)} × ${Number(i.quantity)||1}</span><strong>${money((Number(i.unit_price_fcfa)||0)*(Number(i.quantity)||1))}</strong></li>`).join("")}</ul></div></div></article>`}).join("")||`<p class="muted">${T("Aucune commande pour le moment.","No orders yet.")}</p>`;}
+async function refresh(){const [me,stats,sales,pr,or]=await Promise.all([call("/api/supplier/me"),call("/api/supplier/stats"),call("/api/supplier/sales-stats"),call("/api/supplier/products"),call("/api/supplier/orders")]);if(!me.ok||!stats.ok||!sales.ok||!pr.ok||!or.ok)return;products=pr.data||[];orders=or.data||[];$("active-count").textContent=stats.data.active_products??0;$("pending-count").textContent=stats.data.pending_products??0;$("stock-count").textContent=stats.data.total_stock??0;$("sales-count").textContent=money(sales.data.gross_sales_fcfa);$("orders-count").textContent=sales.data.orders_count??0;$("units-count").textContent=sales.data.units_sold??0;$("commission-count").textContent=money(sales.data.estimated_commission_fcfa);drawProducts();drawOrders();}
 boot();

@@ -8,6 +8,15 @@ async function main() {
   const schema = fs.readFileSync(path.join(__dirname, "../../../db/schema.sql"), "utf8");
   await db.query(schema);
 
+  for (const migration of [
+    "20260916_category_taxonomy.sql",
+    "20260916_category_taxonomy_fix.sql",
+    "20260917_supplier_password.sql"
+  ]) {
+    const sql = fs.readFileSync(path.join(__dirname, "../../../db/migrations", migration), "utf8");
+    await db.query(sql);
+  }
+
   const email = process.env.ADMIN_EMAIL || "admin@egonarmarket.sn";
   const password = process.env.ADMIN_PASSWORD;
   if (!password || password === "replace-this-password") {
@@ -26,12 +35,13 @@ async function main() {
     await db.query(
       `INSERT INTO products(name,slug,category,description,price_fcfa,stock,image_url,verified_level,verification_score,rating_average,rating_count,delivery_min_minutes,delivery_max_minutes,delivery_city,verified_at)
        VALUES
-       ('T-shirt Premium','t-shirt-premium','MODE','T-shirt qualité premium.',10000,20,'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80','VERIFIED',92,4.8,37,45,90,'Dakar',NOW()),
-       ('Sac Élégance','sac-elegance','ACCESSOIRES','Sac moderne et élégant.',18000,12,'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=900&q=80','PREMIUM',97,4.9,61,30,75,'Dakar',NOW()),
-       ('Montre Classique','montre-classique','MODE','Montre au design intemporel.',25000,8,'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80','VERIFIED',89,4.7,24,60,120,'Dakar',NOW())`
+       ('T-shirt Premium','t-shirt-premium','MODE','T-shirt qualité premium.',10000,20,'/images/product-cover.svg','VERIFIED',92,4.8,37,45,90,'Dakar',NOW()),
+       ('Sac Élégance','sac-elegance','ACCESSOIRES','Sac moderne et élégant.',18000,12,'/images/product-cover.svg','PREMIUM',97,4.9,61,30,75,'Dakar',NOW()),
+       ('Montre Classique','montre-classique','MODE','Montre au design intemporel.',25000,8,'/images/product-cover.svg','VERIFIED',89,4.7,24,60,120,'Dakar',NOW())`
     );
   }
 
+  await db.query(`UPDATE products SET image_url='/images/product-cover.svg' WHERE image_url IS NULL OR image_url='';`);
   await db.query(
     `UPDATE products SET verified_level='VERIFIED', verification_score=92, rating_average=4.8, rating_count=37, delivery_min_minutes=45, delivery_max_minutes=90, delivery_city='Dakar', verified_at=COALESCE(verified_at,NOW()) WHERE slug='t-shirt-premium'`);
   await db.query(
@@ -39,7 +49,7 @@ async function main() {
   await db.query(
     `UPDATE products SET verified_level='VERIFIED', verification_score=89, rating_average=4.7, rating_count=24, delivery_min_minutes=60, delivery_max_minutes=120, delivery_city='Dakar', verified_at=COALESCE(verified_at,NOW()) WHERE slug='montre-classique'`);
 
-  console.log("Base EgonarMarket initialisée.");
+  console.log("Base EgonarMarket initialisée avec la taxonomie des catégories.");
   await db.pool.end();
 }
 

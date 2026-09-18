@@ -1,21 +1,15 @@
 {
   "name": "EgonarMarket",
-  "forwardPorts": [3000, 3001, 8080],
+  "forwardPorts": [3000, 3001],
   "portsAttributes": {
     "3000": {
-      "label": "EgonarMarket API + boutique",
+      "label": "EgonarMarket — boutique + API",
       "protocol": "http",
       "onAutoForward": "openBrowser",
       "visibility": "private"
     },
     "3001": {
-      "label": "EgonarMarket fournisseurs",
-      "protocol": "http",
-      "onAutoForward": "openBrowser",
-      "visibility": "private"
-    },
-    "8080": {
-      "label": "EgonarMarket aperçu",
+      "label": "EgonarMarket — espace fournisseurs",
       "protocol": "http",
       "onAutoForward": "openBrowser",
       "visibility": "private"

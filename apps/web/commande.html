@@ -1,5 +1,81 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Finaliser une commande EgonarMarket au Sénégal"><title>Commande — EgonarMarket</title><link rel="stylesheet" href="style.css"></head><body><header class="header"><div class="nav wrap"><a class="logo" href="index.html">Egonar<span>Market</span></a><a href="panier.html">← Panier</a></div></header><main class="wrap section"><div class="checkout"><section><p class="eyebrow">CHECKOUT</p><h1>Finaliser ma commande</h1><p class="muted">Quelques informations suffisent. Le serveur revérifie toujours les produits, les prix et le stock.</p><form id="form" class="form"><input required name="name" maxlength="100" placeholder="Nom complet"><input required name="phone" maxlength="30" inputmode="tel" placeholder="Téléphone / WhatsApp"><input name="email" type="email" maxlength="160" placeholder="Email (facultatif)"><input required name="address" maxlength="250" placeholder="Adresse, quartier, repère"><input name="city" value="Dakar" maxlength="80" placeholder="Ville"><select name="delivery_zone"><option value="DAKAR">Dakar</option><option value="AUTRE">Autre zone</option></select><select name="payment_method"><option value="A_PAYER">Paiement à confirmer</option><option value="LIVRAISON">Paiement à la livraison</option><option value="WAVE">Wave</option><option value="ORANGE_MONEY">Orange Money</option></select><p class="muted small">Les paiements Wave/Orange Money restent à confirmer par leur prestataire tant que leurs clés et webhooks de production ne sont pas configurés.</p><button class="btn primary" type="submit" id="submit-btn">Confirmer la commande</button></form><div id="msg"></div></section><aside class="summary-card"><h2>Votre commande</h2><div id="summary"><p class="muted">Chargement…</p></div></aside></div></main><script>
-const API='/api';const money=n=>new Intl.NumberFormat('fr-FR').format(Number(n)||0)+' FCFA';const form=document.getElementById('form');const summaryBox=document.getElementById('summary');const messageBox=document.getElementById('msg');const read=()=>{try{return JSON.parse(localStorage.getItem('egonarCart')||'[]')}catch{return[]}};
-async function loadSummary(){const items=read();if(!items.length){summaryBox.innerHTML='<div class="empty-state"><h3>Panier vide</h3><a class="btn primary" href="index.html#produits">Retour à la boutique</a></div>';form.style.display='none';return}summaryBox.innerHTML=items.map(i=>`<div class="summary-line"><span>${i.name} × ${i.quantity}</span><strong>${money(Number(i.price_fcfa)*Number(i.quantity))}</strong></div>`).join('')+'<hr><p class="muted">Le total final est recalculé côté serveur.</p>'}
-loadSummary();form.onsubmit=async e=>{e.preventDefault();const items=read().filter(i=>i.product_id&&Number(i.quantity)>0).map(i=>({product_id:i.product_id,quantity:Number(i.quantity)}));if(!items.length)return(messageBox.innerHTML='<div class="state error">Votre panier est vide.</div>');const customer=Object.fromEntries(new FormData(form));const delivery=customer.delivery_zone==='DAKAR'?0:0;delete customer.delivery_zone;document.getElementById('submit-btn').disabled=true;document.getElementById('submit-btn').textContent='Création de la commande…';try{const r=await fetch(API+'/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer,items,payment_method:customer.payment_method,delivery_fcfa:delivery})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Commande impossible.');localStorage.removeItem('egonarCart');form.style.display='none';summaryBox.innerHTML='<div class="success"><h3>Commande confirmée</h3><p>Total : <strong>'+money(d.total_fcfa)+'</strong></p></div>';messageBox.innerHTML='<div class="success"><h2>Commande '+d.order_number+'</h2><p>Votre commande est enregistrée. Conservez ce numéro pour le suivi.</p><p class="muted">Le paiement indiqué est enregistré comme choix de paiement et n’est pas présenté comme encaissé.</p><a class="btn primary" href="suivi.html?order='+encodeURIComponent(d.order_number)+'">Suivre ma commande</a><a class="btn secondary" href="index.html">Retour à la boutique</a></div>'}catch(err){messageBox.innerHTML='<div class="state error">'+err.message+'</div>';document.getElementById('submit-btn').disabled=false;document.getElementById('submit-btn').textContent='Confirmer la commande'}};
-</script></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Finaliser une commande EgonarMarket au Sénégal">
+<title>Commande — EgonarMarket</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="header"><div class="nav wrap"><a class="logo" href="index.html">Egonar<span>Market</span></a><a href="panier.html">← Panier</a></div></header>
+<main class="wrap section">
+<div class="checkout">
+<section>
+<p class="eyebrow">CHECKOUT</p>
+<h1>Finaliser ma commande</h1>
+<p class="muted">Quelques informations suffisent. Le serveur revérifie toujours les produits, les prix, le stock et les frais de livraison.</p>
+<form id="form" class="form">
+<input required name="name" maxlength="100" placeholder="Nom complet">
+<input required name="phone" maxlength="30" inputmode="tel" placeholder="Téléphone / WhatsApp">
+<input name="email" type="email" maxlength="160" placeholder="Email (facultatif)">
+<input required name="address" maxlength="250" placeholder="Adresse, quartier, repère">
+<input name="city" value="Dakar" maxlength="80" placeholder="Ville">
+<select name="delivery_zone" id="delivery-zone"><option value="DAKAR">Dakar</option><option value="AUTRE">Autre zone</option></select>
+<select name="payment_method"><option value="A_PAYER">Paiement à confirmer</option><option value="LIVRAISON">Paiement à la livraison</option><option value="WAVE">Wave</option><option value="ORANGE_MONEY">Orange Money</option></select>
+<p class="muted small">Les paiements Wave/Orange Money restent à confirmer par leur prestataire tant que leurs clés et webhooks de production ne sont pas configurés.</p>
+<button class="btn primary" type="submit" id="submit-btn">Confirmer la commande</button>
+</form>
+<div id="msg"></div>
+</section>
+<aside class="summary-card"><h2>Votre commande</h2><div id="summary"><p class="muted">Chargement…</p></div></aside>
+</div>
+</main>
+<script>
+const API='/api';
+const L=()=>localStorage.getItem('egonar_language')==='en';
+const T=(fr,en)=>L()?en:fr;
+const money=n=>new Intl.NumberFormat('fr-FR').format(Number(n)||0)+' FCFA';
+const form=document.getElementById('form');
+const summaryBox=document.getElementById('summary');
+const messageBox=document.getElementById('msg');
+const zoneSelect=document.getElementById('delivery-zone');
+const read=()=>{try{const value=JSON.parse(localStorage.getItem('egonarCart')||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
+let config={delivery:{dakar_fcfa:0,other_fcfa:0}};
+
+async function loadConfig(){try{const r=await fetch(API+'/config');if(r.ok)config=await r.json()}catch{}}
+function deliveryFee(){return zoneSelect.value==='DAKAR'?Number(config.delivery?.dakar_fcfa||0):Number(config.delivery?.other_fcfa||0)}
+
+async function loadSummary(){
+  const items=read();
+  if(!items.length){summaryBox.innerHTML=`<div class="empty-state"><h3>${T('Panier vide','Empty cart')}</h3><a class="btn primary" href="index.html#produits">${T('Retour à la boutique','Back to shop')}</a></div>`;form.style.display='none';return;}
+  const subtotal=items.reduce((sum,item)=>sum+Number(item.price_fcfa||0)*Number(item.quantity||0),0);
+  const delivery=deliveryFee();
+  summaryBox.innerHTML=items.map(i=>`<div class="summary-line"><span>${i.name} × ${i.quantity}</span><strong>${money(Number(i.price_fcfa)*Number(i.quantity))}</strong></div>`).join('')+`<hr><div class="summary-line"><span>${T('Sous-total','Subtotal')}</span><strong>${money(subtotal)}</strong></div><div class="summary-line"><span>${T('Livraison','Delivery')}</span><strong>${delivery?money(delivery):T('Gratuite','Free')}</strong></div><div class="cart-summary"><strong>${T('Total estimé','Estimated total')}</strong><strong>${money(subtotal+delivery)}</strong></div><p class="muted small">${T('Le montant définitif est recalculé côté serveur au moment de la commande.','The final amount is recalculated by the server when the order is placed.')}</p>`;
+}
+
+zoneSelect.addEventListener('change',loadSummary);
+(async()=>{await loadConfig();await loadSummary()})();
+
+form.onsubmit=async e=>{
+  e.preventDefault();
+  const items=read().filter(i=>i.product_id&&Number(i.quantity)>0).map(i=>({product_id:i.product_id,quantity:Number(i.quantity)}));
+  if(!items.length){messageBox.innerHTML=`<div class="state error">${T('Votre panier est vide.','Your cart is empty.')}</div>`;return;}
+  const values=Object.fromEntries(new FormData(form));
+  const delivery_zone=values.delivery_zone;
+  const payment_method=values.payment_method;
+  delete values.delivery_zone;delete values.payment_method;
+  const button=document.getElementById('submit-btn');
+  button.disabled=true;button.textContent=T('Création de la commande…','Creating order…');
+  try{
+    const r=await fetch(API+'/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer:values,items,payment_method,delivery_zone,delivery_fcfa:deliveryFee()})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.error||T('Commande impossible.','Order could not be created.'));
+    localStorage.removeItem('egonarCart');form.style.display='none';
+    summaryBox.innerHTML=`<div class="success"><h3>${T('Commande enregistrée','Order registered')}</h3><p>${T('Total','Total')} : <strong>${money(d.total_fcfa)}</strong></p><p class="muted">${d.delivery_fcfa?T('Livraison','Delivery')+' : '+money(d.delivery_fcfa):T('Livraison gratuite','Free delivery')}</p></div>`;
+    messageBox.innerHTML=`<div class="success"><h2>${T('Commande','Order')} ${d.order_number}</h2><p>${T('Votre commande est enregistrée. Conservez ce numéro pour le suivi.','Your order is registered. Keep this number for tracking.')}</p><p class="muted">${T('Le paiement indiqué est enregistré comme choix de paiement et n’est pas présenté comme encaissé.','The selected payment method is recorded as a payment choice and is not presented as collected.')}</p><a class="btn primary" href="suivi.html?order=${encodeURIComponent(d.order_number)}">${T('Suivre ma commande','Track my order')}</a><a class="btn secondary" href="index.html">${T('Retour à la boutique','Back to shop')}</a></div>`;
+  }catch(err){messageBox.innerHTML=`<div class="state error">${err.message}</div>`;button.disabled=false;button.textContent=T('Confirmer la commande','Confirm order');}
+};
+</script>
+<script src="secondary-i18n.js"></script>
+</body>
+</html>
