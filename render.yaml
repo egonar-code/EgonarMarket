@@ -1,11 +1,13 @@
 services:
   - type: web
     name: egonarmarket-preview
-    runtime: node
+    runtime: docker
     plan: free
     branch: fix/supplier-ai-coach-integration
-    buildCommand: npm ci
-    startCommand: npm run db:init && node -r ./apps/api/src/order-hardening-preload.js apps/api/src/server.js
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: >-
+      sh -c "npm run db:init && node -r ./apps/api/src/order-hardening-preload.js apps/api/src/server.js"
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
@@ -32,11 +34,12 @@ services:
 
   - type: web
     name: egonarmarket-supplier
-    runtime: node
+    runtime: docker
     plan: free
     branch: fix/supplier-ai-coach-integration
-    buildCommand: npm ci
-    startCommand: node apps/api/src/supplier-server.js
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: node apps/api/src/supplier-server.js
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
