@@ -34,6 +34,8 @@
   };
 
   const META = {
+    MARKET:['🛍️','MARKET','TOUTES NOS CATÉGORIES','Trouvez rapidement les produits du quotidien, de la mode, de la maison et de la technologie.'],
+    SAVEURS:['🍽️','SAVEURS','TOUTES NOS CATÉGORIES','Restaurants, plats, produits frais et gourmandises réunis dans un même univers.'],
     EVASION:['✈️','ÉVASION','TOUTES NOS CATÉGORIES','Explorez chaque univers du voyage et trouvez rapidement le séjour, l’activité ou le service qui vous correspond.']
   };
 
@@ -138,16 +140,39 @@
     return item;
   }
 
-  const FEATURED = [
-    ['Hôtels','🏨','Hôtels et séjours au Sénégal','Découvrez des adresses au Sénégal, notamment sur la Petite Côte.'],
-    ['Transport & Mobilité','🚐','Transferts AIBD & mobilité','Arrivez, partez et déplacez-vous facilement au Sénégal.'],
-    ['Activités & Expériences','🏜️','Activités & Excursions','Quads, balades à dos de chameau, visites et expériences locales.'],
-    ['Plages & Resorts','🏝️','Séjours & Plages','Soleil, plages, piscines et escapades au bord de l’Atlantique.'],
-    ['Voyages organisés','🧭','Circuits & découvertes','Agrobaobab, nature, culture et itinéraires organisés.'],
-    ['Tourisme & Culture','🇸🇳','Au Sénégal','Dakar, Saly, Petite Côte, Casamance, Saint-Louis et plus.'],
-    ['Destinations','🌿','Sous-région','Dindéfelo, Afrique de l’Ouest et grandes découvertes régionales.'],
-    ['International','🌍','International','Paris, Dubaï, Rome, New York et destinations du monde entier.']
-  ];
+  const FEATURED_BY_UNIVERSE = {
+    MARKET:[
+      ['Mode & Vêtements','👕','Mode & Vêtements','Tenues, chaussures et style pour toute la famille.'],
+      ['Téléphones & Accessoires','📱','Téléphones & Accessoires','Smartphones, coques, chargeurs et accessoires.'],
+      ['Informatique & Électronique','💻','Informatique & Électronique','Ordinateurs, audio, TV et équipements connectés.'],
+      ['Maison & Décoration','🏠','Maison & Décoration','Meubles, décoration et essentiels de la maison.'],
+      ['Beauté & Soins','✨','Beauté & Soins','Parfums, maquillage, soins et cheveux.'],
+      ['Bébé & Enfant','🧸','Bébé & Enfant','Puériculture, vêtements, jouets et essentiels.'],
+      ['Sports & Loisirs','⚽','Sports & Loisirs','Fitness, football, jeux et loisirs.'],
+      ['Produits locaux & Artisanat','🎨','Produits locaux & Artisanat','Créations sénégalaises et savoir-faire local.']
+    ],
+    SAVEURS:[
+      ['Restaurants','🍽️','Restaurants','Adresses, menus et spécialités à découvrir.'],
+      ['Plats sénégalais','🇸🇳','Plats sénégalais','Thiéboudienne, yassa, mafé et cuisine locale.'],
+      ['Fast-Food','🍔','Fast-Food','Burgers, tacos, pizzas, poulet et menus.'],
+      ['Petit-déjeuner & Brunch','🥐','Petit-déjeuner & Brunch','Viennoiseries, brunchs et petits-déjeuners.'],
+      ['Boissons','🥤','Boissons','Jus naturels, bissap, bouye, café et thé.'],
+      ['Desserts & Pâtisseries','🍰','Desserts & Pâtisseries','Gâteaux, glaces, pâtisseries et douceurs.'],
+      ['Fruits & Légumes','🥬','Fruits & Légumes','Produits frais et paniers de saison.'],
+      ['Offres & Menus','🔥','Offres & Menus','Promotions, menus du jour et formules.']
+    ],
+    EVASION:[
+      ['Hôtels','🏨','Hôtels','Hôtels et séjours au Sénégal, notamment sur la Petite Côte.'],
+      ['Transport & Mobilité','🚐','Transferts AIBD & mobilité','Arrivez, partez et déplacez-vous facilement au Sénégal.'],
+      ['Activités & Expériences','🏜️','Activités & Excursions','Quads, balades à dos de chameau, visites et expériences locales.'],
+      ['Plages & Resorts','🏝️','Séjours & Plages','Soleil, plages, piscines et escapades au bord de l’Atlantique.'],
+      ['Voyages organisés','🧭','Circuits & découvertes','Agrobaobab, nature, culture et itinéraires organisés.'],
+      ['Tourisme & Culture','🇸🇳','Au Sénégal','Dakar, Saly, Petite Côte, Casamance, Saint-Louis et plus.'],
+      ['Destinations','🌿','Sous-région','Dindéfelo, Afrique de l’Ouest et grandes découvertes régionales.'],
+      ['International','🌍','International','Paris, Dubaï, Rome, New York et destinations du monde entier.']
+    ]
+  };
+
   const FEATURED_IMAGES = {
     'Hôtels':IMAGES['Hôtels'],
     'Transport & Mobilité':IMAGES['Transport & Mobilité'],
@@ -172,16 +197,16 @@
 
   function makeShell() {
     const shell=document.createElement('div'); shell.className='egonar-category-shell';
-    shell.innerHTML='<div class="egonar-category-heading"><div><span class="egonar-category-kicker">ÉVASION</span><h2>Toutes nos catégories</h2><p>Trouvez l’inspiration pour votre prochaine aventure parmi nos univers de voyage.</p></div><button type="button" class="egonar-category-all-link">Voir toutes les offres →</button></div>';
-    const featured=document.createElement('div'); featured.className='egonar-featured-grid';
-    FEATURED.forEach(x=>featured.appendChild(makeFeaturedItem(x)));
+    shell.innerHTML='<div class="egonar-category-heading"><div><span class="egonar-category-kicker">'+title+'</span><h2>Toutes nos catégories</h2><p>'+intro+'</p></div><button type="button" class="egonar-category-all-link">Voir toutes les offres →</button></div>';
+    const featuredGrid=document.createElement('div'); featuredGrid.className='egonar-featured-grid';
+    featured.forEach(x=>featuredGrid.appendChild(makeFeaturedItem(x)));
     const allWrap=document.createElement('div'); allWrap.className='egonar-all-categories-wrap';
     const allToggle=document.createElement('button'); allToggle.type='button'; allToggle.className='egonar-all-categories-toggle'; allToggle.setAttribute('aria-expanded','false'); allToggle.innerHTML='Explorer les 16 catégories Évasion <span>⌄</span>';
     const allPanel=document.createElement('div'); allPanel.className='egonar-all-categories-panel'; allPanel.hidden=true;
     const grid=document.createElement('div'); grid.className='egonar-category-grid'; grid.setAttribute('role','list');
     DATA.EVASION.forEach(category=>{const item=makeItem(category);item.setAttribute('role','listitem');grid.appendChild(item);});
     allPanel.appendChild(grid); allToggle.addEventListener('click',()=>{const open=allPanel.hidden;allPanel.hidden=!open;allToggle.setAttribute('aria-expanded',String(open));});
-    allWrap.append(allToggle,allPanel); shell.append(featured,allWrap); return shell;
+    allWrap.append(allToggle,allPanel); shell.append(featuredGrid,allWrap); return shell;
   }
 
   function ensureSection() {
@@ -205,10 +230,6 @@
 
   function start() {
     cleanupLegacy();
-    if(currentUniverse() !== 'EVASION') {
-      document.getElementById('categories')?.remove();
-      return;
-    }
     const build=()=>{const section=ensureSection();if(!section)return false;injectStyles();section.classList.add('egonar-category-hub');section.querySelector('.egonar-category-shell')?.remove();section.appendChild(makeShell());return true;};
     if(build())return;
     const observer=new MutationObserver(()=>{if(build())observer.disconnect();});
