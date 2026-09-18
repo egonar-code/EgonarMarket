@@ -174,17 +174,6 @@
   };
 
   const FEATURED_IMAGES = {
-    'Hôtels':IMAGES['Hôtels'],
-    'Transport & Mobilité':IMAGES['Transport & Mobilité'],
-    'Activités & Expériences':IMAGES['Activités & Expériences'],
-    'Plages & Resorts':IMAGES['Plages & Resorts'],
-    'Voyages organisés':IMAGES['Voyages organisés'],
-    'Tourisme & Culture':IMAGES['Tourisme & Culture'],
-    'Destinations':'https://img.geocaching.com/cache/large/b4a78f15-ae41-4a97-9301-b06fdbb3d65d.jpg',
-    'International':'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=85'
-  };
-
-  const FEATURED_IMAGES = {
     'Mode & Vêtements':'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=85',
     'Téléphones & Accessoires':'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=85',
     'Informatique & Électronique':'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=900&q=85',
