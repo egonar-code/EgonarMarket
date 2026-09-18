@@ -13,7 +13,7 @@
       const original=node.style.backgroundImage;
       if(!original) return;
       const match=original.match(/url\\(["']?([^"')]+)["']?\\)/i);
-      if(!match || !/^https?:\\/\\//i.test(match[1])) return;
+      if(!match || !/^https?:\/\//i.test(match[1])) return;
       const probe=new Image();
       probe.onload=()=>{};
       probe.onerror=()=>{node.style.backgroundImage='url("'+fallback({universe})+'")';};
