@@ -1,13 +1,11 @@
 services:
   - type: web
-    name: egonarmarket-preview
-    runtime: docker
+    name: egonarmarket-preview-web
+    runtime: node
     plan: free
     branch: fix/supplier-ai-coach-integration
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-    dockerCommand: >-
-      sh -c "npm run db:init && node -r ./apps/api/src/order-hardening-preload.js apps/api/src/server.js"
+    buildCommand: npm ci
+    startCommand: npm run db:init && node -r ./apps/api/src/order-hardening-preload.js apps/api/src/server.js
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
@@ -25,7 +23,7 @@ services:
       - key: SUPPLIER_API_URL
         fromService:
           type: web
-          name: egonarmarket-supplier
+          name: egonarmarket-preview-supplier
           envVarKey: RENDER_EXTERNAL_URL
       - key: DELIVERY_DAKAR_FCFA
         value: "1500"
@@ -33,13 +31,12 @@ services:
         value: "3000"
 
   - type: web
-    name: egonarmarket-supplier
-    runtime: docker
+    name: egonarmarket-preview-supplier
+    runtime: node
     plan: free
     branch: fix/supplier-ai-coach-integration
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-    dockerCommand: node apps/api/src/supplier-server.js
+    buildCommand: npm ci
+    startCommand: node apps/api/src/supplier-server.js
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
@@ -49,7 +46,7 @@ services:
       - key: JWT_SECRET
         fromService:
           type: web
-          name: egonarmarket-preview
+          name: egonarmarket-preview-web
           envVarKey: JWT_SECRET
       - key: NODE_ENV
         value: production
