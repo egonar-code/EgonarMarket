@@ -22,8 +22,8 @@ services:
         value: production
       - key: DATA_BACKEND
         value: postgres
-      - key: FIREBASE_SERVICE_ACCOUNT_JSON
-        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_FILE
+        value: /etc/secrets/firebase-service-account.json
       - key: DELIVERY_DAKAR_FCFA
         value: "1500"
       - key: DELIVERY_OTHER_FCFA
