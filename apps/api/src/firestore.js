@@ -1,9 +1,14 @@
+const fs = require("fs");
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 require("dotenv").config();
 
 function getServiceAccount() {
-  const raw = String(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "").trim();
+  let raw = String(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "").trim();
+  const file = String(process.env.FIREBASE_SERVICE_ACCOUNT_FILE || "").trim();
+  if (!raw && file) {
+    raw = fs.readFileSync(file, "utf8").trim();
+  }
   if (!raw) {
     throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON manquant.");
   }
