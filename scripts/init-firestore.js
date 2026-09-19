@@ -8,7 +8,8 @@ async function main() {
   if (!password || password === "replace-this-password") throw new Error("ADMIN_PASSWORD doit être défini pour Firestore.");
 
   const firestore = getDb();
-  const ref = firestore.collection("admins").doc(email.replace(/[^a-z0-9._-]/g, "_"));
+  const query = await firestore.collection("admins").where("email", "==", email).limit(1).get();
+  const ref = query.empty ? firestore.collection("admins").doc(email.replace(/[^a-z0-9._-]/g, "_")) : query.docs[0].ref;
   const existing = await ref.get();
   const now = new Date();
   const data = {
