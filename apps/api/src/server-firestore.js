@@ -315,7 +315,8 @@ app.post("/api/orders", orderLimiter, async (req, res) => {
   try {
     const result = await firestore.runTransaction(async transaction => {
       const refs = productIds.map(id => firestore.collection("products").doc(id));
-      const docs = await Promise.all(refs.map(ref => transaction.get(ref)));
+      const docs = [];
+      for (const ref of refs) docs.push(await transaction.get(ref));
       const byId = new Map(docs.map(doc => [doc.id, doc]));
       const totals = new Map();
       for (const item of normalizedItems) {
@@ -395,7 +396,8 @@ app.post("/api/reviews", reviewLimiter, async (req, res) => {
     const reviewRef = firestore.collection("reviews").doc(reviewId);
     const productRef = firestore.collection("products").doc(String(product_id));
     const result = await firestore.runTransaction(async transaction => {
-      const [reviewDoc, productDoc] = await Promise.all([transaction.get(reviewRef), transaction.get(productRef)]);
+      const reviewDoc = await transaction.get(reviewRef);
+      const productDoc = await transaction.get(productRef);
       if (reviewDoc.exists) throw new Error("Vous avez déjà évalué ce produit pour cette commande.");
       if (!productDoc.exists) throw new Error("Produit introuvable.");
       const old = productDoc.data();
