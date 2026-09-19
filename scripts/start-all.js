@@ -1,7 +1,9 @@
 const { spawn } = require("child_process");
 
 const commonEnv = { ...process.env };
-const main = spawn(process.execPath, ["-r", "./apps/api/src/order-hardening-preload.js", "apps/api/src/server.js"], {
+const mainEntry = String(process.env.DATA_BACKEND || "postgres").toLowerCase() === "firestore" ? "apps/api/src/server-firestore.js" : "apps/api/src/server.js";
+const mainArgs = mainEntry.endsWith("server.js") ? ["-r", "./apps/api/src/order-hardening-preload.js", mainEntry] : [mainEntry];
+const main = spawn(process.execPath, mainArgs, {
   env: { ...commonEnv, PORT: process.env.PORT || "3000" },
   stdio: "inherit"
 });
