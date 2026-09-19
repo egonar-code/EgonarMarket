@@ -20,6 +20,8 @@ services:
         generateValue: true
       - key: NODE_ENV
         value: production
+      - key: DATA_BACKEND
+        value: postgres
       - key: DELIVERY_DAKAR_FCFA
         value: "1500"
       - key: DELIVERY_OTHER_FCFA
