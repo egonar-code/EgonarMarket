@@ -25,7 +25,7 @@ Cette branche ajoute un backend Firestore parallèle au backend PostgreSQL actue
 Ajouter dans le service Web :
 
 - DATA_BACKEND=firestore
-- FIREBASE_SERVICE_ACCOUNT_JSON=<JSON du compte de service Firebase>
+- `FIREBASE_SERVICE_ACCOUNT_FILE=/etc/secrets/firebase-service-account.json`
 - ADMIN_EMAIL=admin@egonarmarket.sn
 - ADMIN_PASSWORD=<nouveau mot de passe>
 - JWT_SECRET=<secret JWT>
@@ -37,7 +37,7 @@ Ne jamais committer FIREBASE_SERVICE_ACCOUNT_JSON dans GitHub.
 1. Créer le projet Firebase.
 2. Créer la base Cloud Firestore en mode production.
 3. Créer un compte de service et générer sa clé privée.
-4. Placer le JSON du compte de service uniquement dans Render.
+4. Dans Render → Environment → Secret Files, ajouter `firebase-service-account.json` et y placer le JSON du compte de service. Ne jamais le mettre dans GitHub.
 5. Conserver PostgreSQL actif pendant la migration.
 6. Exécuter npm run firestore:migrate une seule fois pour copier les données.
 7. Exécuter npm run firestore:verify.
