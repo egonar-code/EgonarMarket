@@ -10,7 +10,9 @@ const { signAdmin, requireAdmin } = require("./auth");
 require("dotenv").config();
 
 if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET manquant.");
-if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON manquant.");
+if (!process.env.FIREBASE_SERVICE_ACCOUNT_FILE && !process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+  throw new Error("Credentials Firebase manquants.");
+}
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
