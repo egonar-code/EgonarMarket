@@ -14,6 +14,8 @@ const supplier = spawn(process.execPath, [supplierEntry], {
 });
 
 let stopping = false;
+process.on("uncaughtException", error => console.error("EgonarMarket uncaughtException:", error?.stack || error));
+process.on("unhandledRejection", error => console.error("EgonarMarket unhandledRejection:", error?.stack || error));
 const stop = code => {
   if (stopping) return;
   stopping = true;
@@ -22,7 +24,9 @@ const stop = code => {
   }
   setTimeout(() => process.exit(code), 5000).unref();
 };
-main.on("exit", (code, signal) => { if (!stopping) stop(typeof code === "number" ? code : 1); });
-supplier.on("exit", (code, signal) => { if (!stopping) stop(typeof code === "number" ? code : 1); });
+main.on("error", error => console.error("Main process spawn error:", error?.stack || error));
+supplier.on("error", error => console.error("Supplier process spawn error:", error?.stack || error));
+main.on("exit", (code, signal) => { console.error(`Main process exited code=${code} signal=${signal || "none"}`); if (!stopping) stop(typeof code === "number" ? code : 1); });
+supplier.on("exit", (code, signal) => { console.error(`Supplier process exited code=${code} signal=${signal || "none"}`); if (!stopping) stop(typeof code === "number" ? code : 1); });
 process.on("SIGINT", () => stop(0));
 process.on("SIGTERM", () => stop(0));
