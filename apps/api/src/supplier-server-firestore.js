@@ -5,6 +5,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { getDb, docToData } = require("./firestore");
 const { requireAdmin } = require("./auth");
 require("dotenv").config();
