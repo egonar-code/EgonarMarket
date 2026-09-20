@@ -7,7 +7,8 @@ const main = spawn(process.execPath, mainArgs, {
   env: { ...commonEnv, PORT: process.env.PORT || "3000" },
   stdio: "inherit"
 });
-const supplier = spawn(process.execPath, ["apps/api/src/supplier-server.js"], {
+const supplierEntry = String(process.env.DATA_BACKEND || "postgres").toLowerCase() === "firestore" ? "apps/api/src/supplier-server-firestore.js" : "apps/api/src/supplier-server.js";
+const supplier = spawn(process.execPath, [supplierEntry], {
   env: { ...commonEnv, SUPPLIER_PORT: process.env.SUPPLIER_PORT || "3001" },
   stdio: "inherit"
 });
