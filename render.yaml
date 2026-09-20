@@ -21,7 +21,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATA_BACKEND
-        value: postgres
+        value: firestore
       - key: FIREBASE_SERVICE_ACCOUNT_FILE
         value: /etc/secrets/firebase-service-account.json
       - key: FIRESTORE_MIGRATE_ON_START
