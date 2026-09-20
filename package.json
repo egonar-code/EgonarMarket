@@ -12,7 +12,8 @@
     "firestore:migrate": "node scripts/migrate-pg-to-firestore.js",
     "firestore:verify": "node scripts/verify-firestore.js",
     "firestore:init": "node scripts/init-firestore.js",
-    "firestore:migrate-if-enabled": "node scripts/migrate-if-enabled.js"
+    "firestore:migrate-if-enabled": "node scripts/migrate-if-enabled.js",
+    "prepare": "node scripts/prepare-start.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
