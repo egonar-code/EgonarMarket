@@ -22,6 +22,21 @@
 <div class="section-head"><div><h2>Commandes</h2><p id="order-filter-summary" class="muted"></p></div><div class="admin-order-tools"><input id="order-filter" class="admin-filter" placeholder="N° commande, client…"><button id="refresh-orders" class="btn secondary" type="button">Actualiser</button></div></div>
 <div id="orders-admin"></div>
 </section>
+<section class="admin-orders-section">
+<div class="section-head"><div><h2>Services & validations</h2><p class="muted">Créez les comptes qui confirment chaque étape. Le statut de la commande se met à jour automatiquement.</p></div></div>
+<div class="admin-grid">
+<section><h3>Créer un compte service</h3><form id="service-user-form" class="form">
+<select name="role" required><option value="PAYMENT">Paiement</option><option value="LOGISTICS">Logistique</option><option value="COURIER">Livreur</option></select>
+<input name="email" type="email" placeholder="Email du service" required>
+<input name="password" type="password" minlength="8" placeholder="Mot de passe (8 caractères min.)" required>
+<button class="btn primary">Créer le compte service</button>
+<div id="service-user-msg"></div>
+</form>
+<div class="service-links"><strong>Portails :</strong> <a href="service.html?service=PAYMENT" target="_blank">Paiement</a> <a href="service.html?service=LOGISTICS" target="_blank">Logistique</a> <a href="service.html?service=COURIER" target="_blank">Livreur</a></div>
+</section>
+<section><h3>Comptes service</h3><div id="service-users"></div></section>
+</div>
+</section>
 </section>
 </main>
 <script>
@@ -32,7 +47,7 @@ const STATUSES=['EN_ATTENTE_PAIEMENT','CONFIRMEE','PREPARATION','EXPEDIEE','EN_L
 const LABELS={EN_ATTENTE_PAIEMENT:'En attente de paiement',CONFIRMEE:'Confirmée',PREPARATION:'En préparation',EXPEDIEE:'Expédiée',EN_LIVRAISON:'En livraison',LIVREE:'Livrée',ANNULEE:'Annulée'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const j=(u,o={})=>fetch(API+u,{credentials:'include',...o}).then(async r=>({ok:r.ok,data:await r.json().catch(()=>({}))}));
-async function boot(){try{const r=await j('/admin/me');if(r.ok){$('login').style.display='none';$('panel').style.display='block';$('logout').style.display='inline-block';await refresh()}else{ $('login').style.display='block';$('panel').style.display='none';$('logout').style.display='none'; }}catch(error){$('login').style.display='block';$('panel').style.display='none';$('logout').style.display='none';$('login-msg').textContent='Impossible de joindre le serveur administrateur.';$('login-msg').hidden=false;}}boot();
+async function boot(){try{const r=await j('/admin/me');if(r.ok){$('login').style.display='none';$('panel').style.display='block';$('logout').style.display='inline-block';await refresh();await loadServiceUsers()}else{ $('login').style.display='block';$('panel').style.display='none';$('logout').style.display='none'; }}catch(error){$('login').style.display='block';$('panel').style.display='none';$('logout').style.display='none';$('login-msg').textContent='Impossible de joindre le serveur administrateur.';$('login-msg').hidden=false;}}boot();
 $('lf').onsubmit=async e=>{e.preventDefault();const button=$('lf').querySelector('button');button.disabled=true;button.textContent='Connexion…';$('login-msg').hidden=true;try{const r=await j('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(new FormData($('lf'))))});if(!r.ok){$('login-msg').textContent=r.data.error||'Connexion impossible';$('login-msg').hidden=false;button.disabled=false;button.textContent='Connexion';return}window.location.href='/admin.html?auth=ok'}catch(error){$('login-msg').textContent='Impossible de joindre le serveur administrateur.';$('login-msg').hidden=false;button.disabled=false;button.textContent='Connexion'}};
 $('logout').onclick=async()=>{await j('/admin/logout',{method:'POST'});location.reload()};
 $('pf').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData($('pf')));for(const k of ['price_fcfa','old_price_fcfa','stock'])b[k]=b[k]===''?null:Number(b[k]);const r=await j('/admin/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});if(!r.ok){$('product-msg').textContent=r.data.error||'Erreur';$('product-msg').className='state error';return}$('product-msg').textContent='Produit ajouté.';$('product-msg').className='state success';$('pf').reset();refresh()};
@@ -44,6 +59,9 @@ async function refresh(){const [p,o]=await Promise.all([j('/admin/products'),j('
 async function editProduct(id){const p=products.find(x=>x.id===id);if(!p)return;const name=prompt('Nom',p.name);if(name===null)return;const price=prompt('Prix FCFA',p.price_fcfa);if(price===null)return;const stock=prompt('Stock',p.stock);if(stock===null)return;const category=prompt('Catégorie',p.category);if(category===null)return;const universe=prompt('Plateforme (MARKET, SAVEURS ou EVASION)',p.universe||'MARKET');if(universe===null)return;const normalizedUniverse=String(universe).trim().toUpperCase();if(!['MARKET','SAVEURS','EVASION'].includes(normalizedUniverse))return alert('Plateforme invalide.');const r=await j('/admin/products/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim(),price_fcfa:Number(price),stock:Math.max(0,Number(stock)),category:category.trim(),universe:normalizedUniverse})});if(!r.ok)return alert(r.data.error||'Modification impossible.');refresh()}
 async function toggleProduct(id,active){const r=active?await j('/admin/products/'+id,{method:'DELETE'}):await j('/admin/products/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({active:true})});if(!r.ok)return alert(r.data.error||'Opération impossible.');refresh()}
 async function setStatus(id,status){const r=await j('/admin/orders/'+id+'/status',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});if(!r.ok)alert(r.data.error||'Statut impossible.');await refresh()}
+async function loadServiceUsers(){const r=await j('/admin/service-users');if(!r.ok){$('service-users').innerHTML='<p class="muted">Impossible de charger les comptes.</p>';return;}$('service-users').innerHTML=(r.data||[]).map(u=>`<div class="admin-row"><span><b>${esc(u.role_label||u.role)}</b><small>${esc(u.email)} · ${u.active?'actif':'désactivé'}</small></span><button type="button" onclick="toggleServiceUser('${esc(u.id)}',${!!u.active})">${u.active?'Désactiver':'Activer'}</button></div>`).join('')||'<p class="muted">Aucun compte service.</p>';}
+async function toggleServiceUser(id,active){const r=await j('/admin/service-users/'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({active:!active})});if(!r.ok)return alert(r.data.error||'Opération impossible.');await loadServiceUsers();}
+$('service-user-form')?.addEventListener('submit',async e=>{e.preventDefault();const r=await j('/admin/service-users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});$('service-user-msg').textContent=r.data.error||'Compte service créé.';$('service-user-msg').className=r.ok?'state success':'state error';if(r.ok){e.currentTarget.reset();await loadServiceUsers();}});
 $('product-filter').oninput=drawProducts;$('product-universe-filter').onchange=drawProducts;$('order-filter').oninput=drawOrders;$('refresh-orders').onclick=refresh;
 </script>
 <script src="secondary-i18n.js"></script>
