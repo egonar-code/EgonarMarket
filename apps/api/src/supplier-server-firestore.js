@@ -251,10 +251,39 @@ app.get("/api/supplier/me", requireSupplier, async (req, res) => {
     contact_name: supplier.contact_name,
     phone: supplier.phone,
     email: supplier.email,
+    address: supplier.address || "",
+    city: supplier.city || "",
+    website: supplier.website || "",
+    logo_url: supplier.logo_url || "",
     status: supplier.status,
     commission_percent: supplier.commission_percent,
     created_at: supplier.created_at
   }));
+});
+
+app.patch("/api/supplier/profile", requireSupplier, async (req, res) => {
+  try {
+    const ref = firestore.collection("suppliers").doc(String(req.supplier.sub));
+    const snap = await ref.get();
+    if (!snap.exists) return res.status(404).json({ error: "Fournisseur introuvable." });
+    const allowed = ["business_name","contact_name","phone","address","city","website","logo_url"];
+    const patch = {};
+    for (const key of allowed) if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) patch[key] = req.body[key];
+    if (patch.business_name !== undefined) patch.business_name = String(patch.business_name || "").trim().slice(0,160);
+    if (patch.contact_name !== undefined) patch.contact_name = String(patch.contact_name || "").trim().slice(0,120);
+    if (patch.phone !== undefined) patch.phone = String(patch.phone || "").trim().slice(0,30);
+    if (patch.address !== undefined) patch.address = String(patch.address || "").trim().slice(0,250);
+    if (patch.city !== undefined) patch.city = String(patch.city || "").trim().slice(0,80);
+    if (patch.website !== undefined) patch.website = String(patch.website || "").trim().slice(0,500);
+    if (patch.logo_url !== undefined) patch.logo_url = String(patch.logo_url || "").trim().slice(0,2000);
+    if (!patch.business_name && !String(snap.data().business_name || "").trim()) return res.status(400).json({ error: "Le nom de l'entreprise est obligatoire." });
+    patch.updated_at = new Date();
+    await ref.update(patch);
+    res.json(sanitizeSupplier(docToData(await ref.get())));
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ error: e.message || "Impossible de mettre à jour le profil." });
+  }
 });
 
 app.get("/api/supplier/stats", requireSupplier, async (req, res) => {
