@@ -912,7 +912,280 @@ app.use("/supplier-api", async (req, res) => {
   }
 });
 
+
+
+const STUDIO_CONTENT_TYPES = new Set(["PAGE","BANNER","SECTION","PROMOTION","SEO"]);
+const STUDIO_LOCALES = new Set(["fr","en"]);
+const STUDIO_STATUSES = new Set(["DRAFT","PUBLISHED","ARCHIVED"]);
+const STUDIO_CATEGORIES = new Set(["MARKET","SAVEURS","EVASION"]);
+
+function studioClean(value, max = 5000) {
+  return String(value ?? "").trim().slice(0, max);
+}
+function studioActor(req) {
+  return {
+    actor_type: "admin",
+    actor_id: req.admin?.id || null,
+    actor_email: req.admin?.email || "admin",
+    actor_name: req.admin?.email || "Administration"
+  };
+}
+async function studioAudit(req, action, targetType, targetId, before, after) {
+  const actor = studioActor(req);
+  const now = new Date();
+  await firestore.collection("studio_audit_logs").doc(crypto.randomUUID()).set({
+    id: crypto.randomUUID(),
+    action,
+    target_type: targetType,
+    target_id: String(targetId || ""),
+    before: before || null,
+    after: after || null,
+    ...actor,
+    created_at: now
+  });
+}
+
+app.get("/api/content", async (req, res) => {
+  try {
+    const universe = normalizeUniverse(req.query.universe);
+    const locale = String(req.query.locale || "fr").trim().toLowerCase();
+    const key = studioClean(req.query.key, 160);
+    if (req.query.universe && !universe) return res.status(400).json({ error: "Univers invalide." });
+    if (!STUDIO_LOCALES.has(locale)) return res.status(400).json({ error: "Langue invalide." });
+    let query = firestore.collection("studio_contents")
+      .where("status", "==", "PUBLISHED")
+      .where("locale", "==", locale);
+    const snap = await query.get();
+    let rows = snap.docs.map(docToData).filter(row => row.active !== false);
+    if (universe) rows = rows.filter(row => row.universe === universe);
+    if (key) rows = rows.filter(row => row.key === key);
+    rows.sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0) || sortByDateDesc(a, b));
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Impossible de charger le contenu." });
+  }
+});
+
+app.get("/api/admin/studio/content", requireAdmin, async (req, res) => {
+  try {
+    const universe = req.query.universe ? normalizeUniverse(req.query.universe) : null;
+    const status = req.query.status ? String(req.query.status).trim().toUpperCase() : null;
+    if (req.query.universe && !universe) return res.status(400).json({ error: "Univers invalide." });
+    if (status && !STUDIO_STATUSES.has(status)) return res.status(400).json({ error: "Statut de contenu invalide." });
+    const snap = await firestore.collection("studio_contents").get();
+    let rows = snap.docs.map(docToData);
+    if (universe) rows = rows.filter(row => row.universe === universe);
+    if (status) rows = rows.filter(row => row.status === status);
+    rows.sort(sortByDateDesc);
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Impossible de charger les contenus Studio." });
+  }
+});
+
+app.post("/api/admin/studio/content", requireAdmin, async (req, res) => {
+  try {
+    const content_type = String(req.body?.content_type || "").trim().toUpperCase();
+    const universe = normalizeUniverse(req.body?.universe);
+    const locale = String(req.body?.locale || "fr").trim().toLowerCase();
+    const key = studioClean(req.body?.key, 160);
+    const title = studioClean(req.body?.title, 220);
+    if (!STUDIO_CONTENT_TYPES.has(content_type) || !universe || !STUDIO_LOCALES.has(locale) || !key || !title) {
+      return res.status(400).json({ error: "Type, univers, langue, identifiant et titre sont obligatoires." });
+    }
+    const duplicate = await firestore.collection("studio_contents")
+      .where("universe", "==", universe)
+      .where("locale", "==", locale)
+      .where("key", "==", key)
+      .limit(1).get();
+    if (!duplicate.empty) return res.status(409).json({ error: "Ce contenu existe déjà dans cet univers et cette langue." });
+
+    const id = crypto.randomUUID();
+    const now = new Date();
+    const row = {
+      id, content_type, universe, locale, key, title,
+      subtitle: studioClean(req.body?.subtitle, 500),
+      body: studioClean(req.body?.body, 12000),
+      image_url: studioClean(req.body?.image_url, 2000),
+      cta_label: studioClean(req.body?.cta_label, 120),
+      cta_url: studioClean(req.body?.cta_url, 1000),
+      meta_title: studioClean(req.body?.meta_title, 220),
+      meta_description: studioClean(req.body?.meta_description, 500),
+      sort_order: Number.isFinite(Number(req.body?.sort_order)) ? Number(req.body.sort_order) : 0,
+      status: "DRAFT",
+      active: true,
+      created_at: now,
+      updated_at: now,
+      updated_by: studioActor(req)
+    };
+    await firestore.collection("studio_contents").doc(id).set(row);
+    await studioAudit(req, "CREATE", "CONTENT", id, null, row);
+    res.status(201).json(row);
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ error: e.message || "Impossible de créer le contenu." });
+  }
+});
+
+app.patch("/api/admin/studio/content/:id", requireAdmin, async (req, res) => {
+  try {
+    const ref = firestore.collection("studio_contents").doc(req.params.id);
+    const currentSnap = await ref.get();
+    if (!currentSnap.exists) return res.status(404).json({ error: "Contenu introuvable." });
+    const current = currentSnap.data();
+    const patch = {};
+    for (const key of ["content_type","universe","locale","key","title","subtitle","body","image_url","cta_label","cta_url","meta_title","meta_description","sort_order","active","status"]) {
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) patch[key] = req.body[key];
+    }
+    if (patch.content_type !== undefined) {
+      patch.content_type = String(patch.content_type).trim().toUpperCase();
+      if (!STUDIO_CONTENT_TYPES.has(patch.content_type)) return res.status(400).json({ error: "Type de contenu invalide." });
+    }
+    if (patch.universe !== undefined) {
+      patch.universe = normalizeUniverse(patch.universe);
+      if (!patch.universe) return res.status(400).json({ error: "Univers invalide." });
+    }
+    if (patch.locale !== undefined) {
+      patch.locale = String(patch.locale).trim().toLowerCase();
+      if (!STUDIO_LOCALES.has(patch.locale)) return res.status(400).json({ error: "Langue invalide." });
+    }
+    if (patch.status !== undefined) {
+      patch.status = String(patch.status).trim().toUpperCase();
+      if (!STUDIO_STATUSES.has(patch.status)) return res.status(400).json({ error: "Statut invalide." });
+    }
+    if (patch.title !== undefined && !studioClean(patch.title, 220)) return res.status(400).json({ error: "Le titre est obligatoire." });
+    for (const key of ["title","subtitle","body","image_url","cta_label","cta_url","meta_title","meta_description"]) {
+      if (patch[key] !== undefined) patch[key] = studioClean(patch[key], key === "body" ? 12000 : key === "meta_description" ? 500 : key === "image_url" ? 2000 : 1000);
+    }
+    if (patch.sort_order !== undefined) patch.sort_order = Number(patch.sort_order) || 0;
+    if (patch.active !== undefined) patch.active = Boolean(patch.active);
+
+    const next = { ...current, ...patch, updated_at: new Date(), updated_by: studioActor(req) };
+    await ref.set(next, { merge: true });
+    await studioAudit(req, patch.status === "PUBLISHED" && current.status !== "PUBLISHED" ? "PUBLISH" : "UPDATE", "CONTENT", req.params.id, current, next);
+    res.json(docToData(await ref.get()));
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ error: e.message || "Impossible de modifier le contenu." });
+  }
+});
+
+app.delete("/api/admin/studio/content/:id", requireAdmin, async (req, res) => {
+  const ref = firestore.collection("studio_contents").doc(req.params.id);
+  const currentSnap = await ref.get();
+  if (!currentSnap.exists) return res.status(404).json({ error: "Contenu introuvable." });
+  const before = currentSnap.data();
+  const patch = { active: false, status: "ARCHIVED", updated_at: new Date(), updated_by: studioActor(req) };
+  await ref.update(patch);
+  const after = { ...before, ...patch };
+  await studioAudit(req, "ARCHIVE", "CONTENT", req.params.id, before, after);
+  res.json({ ok: true });
+});
+
+app.get("/api/admin/studio/categories", requireAdmin, async (req, res) => {
+  try {
+    const universe = req.query.universe ? normalizeUniverse(req.query.universe) : null;
+    if (req.query.universe && !universe) return res.status(400).json({ error: "Univers invalide." });
+    let snap = await firestore.collection("categories").get();
+    let rows = snap.docs.map(docToData);
+    if (universe) rows = rows.filter(row => row.universe === universe);
+    rows.sort((a,b) => Number(a.sort_order||0) - Number(b.sort_order||0) || String(a.name||"").localeCompare(String(b.name||"")));
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Impossible de charger les catégories." });
+  }
+});
+
+app.post("/api/admin/studio/categories", requireAdmin, async (req, res) => {
+  try {
+    const universe = normalizeUniverse(req.body?.universe);
+    const name = studioClean(req.body?.name, 120);
+    const slug = studioClean(req.body?.slug || name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""), 140);
+    if (!universe || !name || !slug) return res.status(400).json({ error: "Univers, nom et slug sont obligatoires." });
+    const duplicate = await firestore.collection("categories").where("universe","==",universe).where("slug","==",slug).limit(1).get();
+    if (!duplicate.empty) return res.status(409).json({ error: "Cette catégorie existe déjà." });
+    const id = crypto.randomUUID();
+    const now = new Date();
+    const row = {
+      id, universe, slug, name,
+      description: studioClean(req.body?.description, 500),
+      image_url: studioClean(req.body?.image_url, 2000),
+      icon: studioClean(req.body?.icon, 80),
+      parent_slug: studioClean(req.body?.parent_slug, 140) || null,
+      sort_order: Number(req.body?.sort_order)||0,
+      active: req.body?.active !== false,
+      created_at: now,
+      updated_at: now
+    };
+    await firestore.collection("categories").doc(id).set(row);
+    await studioAudit(req, "CREATE", "CATEGORY", id, null, row);
+    res.status(201).json(row);
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ error: e.message || "Impossible de créer la catégorie." });
+  }
+});
+
+app.patch("/api/admin/studio/categories/:id", requireAdmin, async (req, res) => {
+  try {
+    const ref = firestore.collection("categories").doc(req.params.id);
+    const snap = await ref.get();
+    if (!snap.exists) return res.status(404).json({ error: "Catégorie introuvable." });
+    const before = snap.data();
+    const patch = {};
+    for (const key of ["name","slug","description","image_url","icon","parent_slug","sort_order","active","universe"]) {
+      if (Object.prototype.hasOwnProperty.call(req.body||{},key)) patch[key]=req.body[key];
+    }
+    if (patch.universe !== undefined) {
+      patch.universe=normalizeUniverse(patch.universe);
+      if (!patch.universe) return res.status(400).json({ error: "Univers invalide." });
+    }
+    if (patch.name !== undefined) patch.name=studioClean(patch.name,120);
+    if (patch.slug !== undefined) patch.slug=studioClean(patch.slug,140);
+    if (patch.description !== undefined) patch.description=studioClean(patch.description,500);
+    if (patch.image_url !== undefined) patch.image_url=studioClean(patch.image_url,2000);
+    if (patch.icon !== undefined) patch.icon=studioClean(patch.icon,80);
+    if (patch.parent_slug !== undefined) patch.parent_slug=studioClean(patch.parent_slug,140)||null;
+    if (patch.sort_order !== undefined) patch.sort_order=Number(patch.sort_order)||0;
+    if (patch.active !== undefined) patch.active=Boolean(patch.active);
+    await ref.update({ ...patch, updated_at: new Date() });
+    const after=docToData(await ref.get());
+    await studioAudit(req,"UPDATE","CATEGORY",req.params.id,before,after);
+    res.json(after);
+  } catch(e) {
+    console.error(e);
+    res.status(400).json({ error:e.message||"Impossible de modifier la catégorie." });
+  }
+});
+
+app.delete("/api/admin/studio/categories/:id", requireAdmin, async (req, res) => {
+  const ref=firestore.collection("categories").doc(req.params.id);
+  const snap=await ref.get();
+  if(!snap.exists)return res.status(404).json({error:"Catégorie introuvable."});
+  const before=snap.data();
+  const patch={active:false,updated_at:new Date()};
+  await ref.update(patch);
+  await studioAudit(req,"ARCHIVE","CATEGORY",req.params.id,before,{...before,...patch});
+  res.json({ok:true});
+});
+
+app.get("/api/admin/studio/audit", requireAdmin, async (req, res) => {
+  try {
+    const limit=Math.min(200,Math.max(1,Number(req.query.limit)||100));
+    const snap=await firestore.collection("studio_audit_logs").get();
+    const rows=snap.docs.map(docToData).sort(sortByDateDesc).slice(0,limit);
+    res.json(rows);
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({error:"Impossible de charger l'historique Studio."});
+  }
+});
+
 app.get("/admin.html", requireAdminPage, (_req,res)=>res.sendFile(path.join(webDir,"admin.html")));
+app.get("/egonar-studio.html", requireAdminPage, (_req,res)=>res.sendFile(path.join(webDir,"egonar-studio.html")));
 app.get("/supplier-admin.html", requireAdminPage, (_req,res)=>res.sendFile(path.join(webDir,"supplier-admin.html")));
 app.get("/supplier.html", requireSupplierPage, (_req,res)=>res.sendFile(path.join(webDir,"supplier.html")));
 
