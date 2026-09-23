@@ -304,12 +304,14 @@ app.get("/api/admin/orders", requireAdmin, async (_req, res) => {
 
 
 const WORKFLOW_ROLE_LABELS = {
+  CUSTOMER_SERVICE: "Service client",
   PAYMENT: "Paiement",
   SUPPLIER: "Fournisseur",
   LOGISTICS: "Logistique",
   COURIER: "Livreur"
 };
 const WORKFLOW_NEXT = {
+  CUSTOMER_SERVICE: { from: "EN_ATTENTE_SERVICE_CLIENT", to: null, key: "customer_service", label: "Commande validée par le service client" },
   PAYMENT: { from: "EN_ATTENTE_PAIEMENT", to: "CONFIRMEE", key: "payment", label: "Paiement confirmé" },
   LOGISTICS: { from: "EXPEDIEE", to: "EN_LIVRAISON", key: "logistics", label: "Commande prise en charge par la logistique" },
   COURIER: { from: "EN_LIVRAISON", to: "LIVREE", key: "courier", label: "Commande livrée" }
@@ -327,6 +329,45 @@ async function serviceConfirmOrder({ req, res, role, orderId }) {
   const currentSnap = await ref.get();
   if (!currentSnap.exists) return res.status(404).json({ error: "Commande introuvable." });
   const current = currentSnap.data();
+  if (role === "CUSTOMER_SERVICE") {
+    if (current.status !== "EN_ATTENTE_SERVICE_CLIENT") {
+      return res.status(409).json({
+        error: `Transition impossible. La commande est actuellement "${current.status}".`,
+        status: current.status,
+        expected_status: "EN_ATTENTE_SERVICE_CLIENT"
+      });
+    }
+    const nextStatus = ["WAVE", "ORANGE_MONEY"].includes(String(current.payment_method || "")) ? "EN_ATTENTE_PAIEMENT" : "CONFIRMEE";
+    const workflow = safeWorkflow(current);
+    const now = new Date();
+    workflow.customer_service = {
+      ...(workflow.customer_service || {}),
+      confirmed: true,
+      confirmed_at: now,
+      confirmed_by: req.service.email,
+      service_role: role
+    };
+    const entry = {
+      from: current.status,
+      to: nextStatus,
+      actor_type: "service",
+      actor_role: role,
+      actor_email: req.service.email,
+      label: step.label,
+      at: now
+    };
+    const timerTransition = transitionWorkflowTimer(current, nextStatus, now);
+    const patch = {
+      status: nextStatus,
+      workflow,
+      status_history: workflowHistoryAppend(current, entry),
+      workflow_timer: timerTransition.current,
+      workflow_timer_history: timerTransition.history,
+      updated_at: now
+    };
+    await ref.update(patch);
+    return res.json(docToData(await ref.get()));
+  }
   if (current.status !== step.from) {
     return res.status(409).json({
       error: `Transition impossible. La commande est actuellement "${current.status}".`,
@@ -394,6 +435,7 @@ app.get("/api/service/me", requireService(), (req, res) => {
 
 app.get("/api/service/orders", requireService(), async (req, res) => {
   const relevant = {
+    CUSTOMER_SERVICE: ["EN_ATTENTE_SERVICE_CLIENT"],
     PAYMENT: ["EN_ATTENTE_PAIEMENT"],
     LOGISTICS: ["EXPEDIEE"],
     COURIER: ["EN_LIVRAISON"]
@@ -512,7 +554,7 @@ app.patch("/api/admin/service-users/:id", requireAdmin, async (req, res) => {
   res.json(updated);
 });
 
-const STATUSES = new Set(["EN_ATTENTE_PAIEMENT","CONFIRMEE","PREPARATION","EXPEDIEE","EN_LIVRAISON","LIVREE","ANNULEE"]);
+const STATUSES = new Set(["EN_ATTENTE_SERVICE_CLIENT","EN_ATTENTE_PAIEMENT","CONFIRMEE","PREPARATION","EXPEDIEE","EN_LIVRAISON","LIVREE","ANNULEE"]);
 app.patch("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
   const status = String(req.body?.status || "");
   if (!STATUSES.has(status)) return res.status(400).json({ error: "Statut invalide." });
@@ -577,7 +619,7 @@ app.post("/api/orders", orderLimiter, async (req, res) => {
         });
       }
       const delivery = Math.max(0, Number(delivery_fcfa) || 0);
-      const initialStatus = ["WAVE","ORANGE_MONEY"].includes(chosenPayment) ? "EN_ATTENTE_PAIEMENT" : "CONFIRMEE";
+      const initialStatus = "EN_ATTENTE_SERVICE_CLIENT";
       const customerRow = {
         id: customerId,
         name: String(customer.name).trim().slice(0,100),
@@ -600,7 +642,8 @@ app.post("/api/orders", orderLimiter, async (req, res) => {
         total_fcfa: subtotal + delivery,
         items: orderItems,
         workflow: {
-          payment: { required: ["WAVE", "ORANGE_MONEY"].includes(chosenPayment), confirmed: initialStatus === "CONFIRMEE", confirmed_at: initialStatus === "CONFIRMEE" ? new Date() : null, confirmed_by: initialStatus === "CONFIRMEE" ? "system" : null, service_role: initialStatus === "CONFIRMEE" ? "SYSTEM" : null },
+          customer_service: { required: true, confirmed: false, confirmed_at: null, confirmed_by: null, service_role: null },
+          payment: { required: ["WAVE", "ORANGE_MONEY"].includes(chosenPayment), confirmed: false, confirmed_at: null, confirmed_by: null, service_role: null },
           supplier: { preparation_started_at: null, shipped_at: null, confirmed_by: null },
           logistics: { confirmed_at: null, confirmed_by: null },
           courier: { confirmed_at: null, confirmed_by: null }
@@ -612,7 +655,7 @@ app.post("/api/orders", orderLimiter, async (req, res) => {
           to: initialStatus,
           actor_type: "system",
           actor_email: "system",
-          label: initialStatus === "EN_ATTENTE_PAIEMENT" ? "Commande créée — paiement en attente" : "Commande créée — confirmation automatique",
+          label: "Commande créée — en attente de validation du service client",
           at: new Date()
         }],
         created_at: new Date(),
