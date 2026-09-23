@@ -8,6 +8,7 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const { getDb, docToData } = require("./firestore");
 const { requireAdmin } = require("./auth");
+const { requireAdminPage, requireSupplierPage } = require("./page-auth");
 require("dotenv").config();
 
 if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET manquant.");
@@ -505,6 +506,10 @@ app.patch("/api/supplier/admin/products/:id/approval", requireAdmin, async (req,
   const updated = docToData(await ref.get());
   res.json({ id: updated.id, name: updated.name, universe: updated.universe, approval_status: updated.approval_status, active: updated.active });
 });
+
+app.get("/admin.html", requireAdminPage, (_req,res)=>res.sendFile(path.join(webDir,"admin.html")));
+app.get("/supplier-admin.html", requireAdminPage, (_req,res)=>res.sendFile(path.join(webDir,"supplier-admin.html")));
+app.get("/supplier.html", requireSupplierPage, (_req,res)=>res.sendFile(path.join(webDir,"supplier.html")));
 
 app.use(express.static(webDir, { extensions: ["html"] }));
 app.listen(PORT, "0.0.0.0", () => console.log(`EgonarMarket supplier Firestore portal: http://localhost:${PORT}`));
