@@ -41,6 +41,16 @@ function normalizeUniverse(value) {
 function validInteger(value, { min = 0 } = {}) {
   return Number.isInteger(Number(value)) && Number(value) >= min;
 }
+function normalizeImageUrls(value) {
+  let list = value;
+  if (typeof list === "string") {
+    try { list = JSON.parse(list); } catch { list = list ? [list] : []; }
+  }
+  if (!Array.isArray(list)) list = [];
+  const urls = list.map(x => String(x || "").trim()).filter(Boolean).filter(url => /^https?:\/\//i.test(url) || /^\/assets\//i.test(url));
+  return [...new Set(urls)].slice(0, 8);
+}
+
 function supplierToken(supplier) {
   return jwt.sign(
     {
@@ -307,6 +317,7 @@ app.get("/api/supplier/orders", requireSupplier, async (req, res) => {
         quantity: Number(item.quantity || 0),
         unit_price_fcfa: Number(item.unit_price_fcfa || 0),
         image_url: products.find(p => String(p.id) === String(item.product_id))?.image_url || "",
+        image_gallery: products.find(p => String(p.id) === String(item.product_id))?.image_gallery || [],
         universe: products.find(p => String(p.id) === String(item.product_id))?.universe || ""
       }));
 
@@ -419,6 +430,16 @@ app.post("/api/supplier/orders/:id/workflow", requireSupplier, async (req, res) 
   }
 });
 
+app.get("/api/supplier/media", requireSupplier, async (req, res) => {
+  try {
+    const snap = await firestore.collection("media_assets").where("supplier_id", "==", String(req.supplier.sub)).get();
+    res.json(sortDesc(snap.docs.map(docToData)).filter(x => x.active !== false).slice(0, 200));
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Impossible de charger vos médias." });
+  }
+});
+
 app.get("/api/supplier/products", requireSupplier, async (req, res) => {
   const universe = String(req.query.universe || "").trim() ? normalizeUniverse(req.query.universe) : null;
   if (req.query.universe && !universe) return res.status(400).json({ error: "Univers invalide." });
@@ -429,7 +450,7 @@ app.get("/api/supplier/products", requireSupplier, async (req, res) => {
 
 app.post("/api/supplier/products", requireSupplier, async (req, res) => {
   try {
-    const { name, category, subcategory = "", description = "", price_fcfa, old_price_fcfa = null, stock = 0, sku = null, image_url = "" } = req.body || {};
+    const { name, category, subcategory = "", description = "", price_fcfa, old_price_fcfa = null, stock = 0, sku = null, image_url = "", image_gallery = [] } = req.body || {};
     const universe = normalizeUniverse(req.body?.universe);
     if (!universe) return res.status(400).json({ error: "Univers invalide. Choisissez MARKET, SAVEURS ou EVASION." });
     if (!String(name || "").trim() || !String(category || "").trim() || !validInteger(price_fcfa)) {
@@ -448,6 +469,9 @@ app.post("/api/supplier/products", requireSupplier, async (req, res) => {
       if (!duplicate.empty) return res.status(409).json({ error: "Ce SKU existe déjà." });
     }
 
+    const gallery = normalizeImageUrls(image_gallery);
+    const primaryImage = String(image_url || "").trim() || gallery[0] || "";
+
     const id = crypto.randomUUID();
     const now = new Date();
     const slug = `${String(name).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${Date.now()}`;
@@ -463,7 +487,8 @@ app.post("/api/supplier/products", requireSupplier, async (req, res) => {
       old_price_fcfa: oldPrice,
       stock: Number(stock),
       sku: sku ? String(sku).trim() : null,
-      image_url: String(image_url || "").trim(),
+      image_url: primaryImage,
+      image_gallery: [...new Set([primaryImage, ...gallery].filter(Boolean))].slice(0, 8),
       active: false,
       approval_status: "PENDING",
       supplier_id: String(req.supplier.sub),
@@ -495,7 +520,7 @@ app.patch("/api/supplier/products/:id", requireSupplier, async (req, res) => {
       return res.status(404).json({ error: "Produit introuvable." });
     }
 
-    const allowed = ["name", "universe", "category", "subcategory", "description", "price_fcfa", "old_price_fcfa", "stock", "sku", "image_url"];
+    const allowed = ["name", "universe", "category", "subcategory", "description", "price_fcfa", "old_price_fcfa", "stock", "sku", "image_url", "image_gallery"];
     const patch = {};
     for (const key of allowed) {
       if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) patch[key] = req.body[key];
@@ -526,6 +551,10 @@ app.patch("/api/supplier/products/:id", requireSupplier, async (req, res) => {
       patch.sku = String(patch.sku).trim();
     }
     if (patch.category !== undefined) patch.category = String(patch.category).trim().toUpperCase();
+    if (patch.image_gallery !== undefined) patch.image_gallery = normalizeImageUrls(patch.image_gallery);
+    if (patch.image_url !== undefined) patch.image_url = String(patch.image_url || "").trim();
+    if (patch.image_gallery !== undefined && patch.image_url === undefined) patch.image_url = patch.image_gallery[0] || String(current.image_url || "");
+    if (patch.image_url !== undefined && patch.image_gallery !== undefined) patch.image_gallery = [...new Set([patch.image_url, ...patch.image_gallery].filter(Boolean))].slice(0, 8);
     if (patch.name !== undefined) patch.name = String(patch.name).trim();
     patch.active = false;
     patch.approval_status = "PENDING";
