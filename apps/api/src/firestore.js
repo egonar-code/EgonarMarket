@@ -45,8 +45,6 @@ function getBucket() {
   return getStorage(getApp()).bucket();
 }
 
-module.exports = {
-
 function now() {
   return Timestamp.now();
 }
