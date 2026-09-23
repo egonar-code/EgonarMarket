@@ -446,6 +446,47 @@ app.post("/api/admin/service-users", requireAdmin, async (req, res) => {
   }
 });
 
+app.post("/api/admin/service-users/cleanup", requireAdmin, async (req, res) => {
+  try {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    if (!email) return res.status(400).json({ error: "Email de service requis." });
+    const snap = await firestore.collection("service_users").where("email", "==", email).get();
+    if (snap.empty) return res.status(404).json({ error: "Aucun compte service trouvé." });
+    const rows = snap.docs.map(doc => ({ doc, data: docToData(doc) }));
+    const keep = rows.find(x => x.data.active === true) || rows[0];
+    const batch = firestore.batch();
+    let deleted = 0;
+    for (const row of rows) {
+      if (row.doc.id === keep.doc.id) continue;
+      batch.delete(row.doc.ref);
+      deleted += 1;
+    }
+    await batch.commit();
+    res.json({
+      ok: true,
+      email,
+      kept: { id: keep.doc.id, active: keep.data.active === true, role: keep.data.role },
+      deleted
+    });
+  } catch (e) {
+    console.error("Service user cleanup failed:", e?.stack || e);
+    res.status(400).json({ error: String(e?.message || "Nettoyage impossible.").slice(0, 300) });
+  }
+});
+
+app.delete("/api/admin/service-users/:id", requireAdmin, async (req, res) => {
+  try {
+    const ref = firestore.collection("service_users").doc(req.params.id);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: "Compte service introuvable." });
+    await ref.delete();
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("Service user deletion failed:", e?.stack || e);
+    res.status(400).json({ error: String(e?.message || "Suppression impossible.").slice(0, 300) });
+  }
+});
+
 app.patch("/api/admin/service-users/:id", requireAdmin, async (req, res) => {
   const ref = firestore.collection("service_users").doc(req.params.id);
   const current = await ref.get();
