@@ -316,97 +316,127 @@ const WORKFLOW_NEXT = {
   LOGISTICS: { from: "EXPEDIEE", to: "EN_LIVRAISON", key: "logistics", label: "Commande prise en charge par la logistique" },
   COURIER: { from: "EN_LIVRAISON", to: "LIVREE", key: "courier", label: "Commande livrée" }
 };
+const SERVICE_STAGE_BY_STATUS = {
+  EN_ATTENTE_SERVICE_CLIENT: "CUSTOMER_SERVICE",
+  EN_ATTENTE_PAIEMENT: "PAYMENT",
+  EXPEDIEE: "LOGISTICS",
+  EN_LIVRAISON: "COURIER"
+};
 function workflowHistoryAppend(current, entry) {
   return [...(Array.isArray(current?.status_history) ? current.status_history : []), entry];
 }
 function safeWorkflow(order) {
-  return order?.workflow || { customer_service: {}, payment: {}, supplier: {}, logistics: {}, courier: {} };
+  return {
+    customer_service: {},
+    payment: {},
+    supplier: {},
+    logistics: {},
+    courier: {},
+    ...(order?.workflow || {})
+  };
+}
+function serviceActor(req) {
+  return {
+    id: req.service.sub,
+    email: req.service.email,
+    name: req.service.name || req.service.email,
+    role: req.service.role
+  };
+}
+function serviceAssignment(workflow, role) {
+  const key = WORKFLOW_NEXT[role]?.key;
+  return key ? workflow?.[key]?.assigned_to || null : null;
+}
+function serviceAssignmentMatches(assignment, actor) {
+  return !assignment?.id || assignment.id === actor.id;
 }
 async function serviceConfirmOrder({ req, res, role, orderId }) {
   const step = WORKFLOW_NEXT[role];
   if (!step) return res.status(400).json({ error: "Étape de workflow invalide." });
   const ref = firestore.collection("orders").doc(String(orderId));
-  const currentSnap = await ref.get();
-  if (!currentSnap.exists) return res.status(404).json({ error: "Commande introuvable." });
-  const current = currentSnap.data();
-  if (role === "CUSTOMER_SERVICE") {
-    if (current.status !== "EN_ATTENTE_SERVICE_CLIENT") {
-      return res.status(409).json({
-        error: `Transition impossible. La commande est actuellement "${current.status}".`,
-        status: current.status,
-        expected_status: "EN_ATTENTE_SERVICE_CLIENT"
-      });
-    }
-    const nextStatus = ["WAVE", "ORANGE_MONEY"].includes(String(current.payment_method || "")) ? "EN_ATTENTE_PAIEMENT" : "CONFIRMEE";
-    const workflow = safeWorkflow(current);
-    const now = new Date();
-    workflow.customer_service = {
-      ...(workflow.customer_service || {}),
-      confirmed: true,
-      confirmed_at: now,
-      confirmed_by: req.service.email,
-      service_role: role
-    };
-    const entry = {
-      from: current.status,
-      to: nextStatus,
-      actor_type: "service",
-      actor_role: role,
-      actor_email: req.service.email,
-      label: step.label,
-      at: now
-    };
-    const timerTransition = transitionWorkflowTimer(current, nextStatus, now);
-    const patch = {
-      status: nextStatus,
-      workflow,
-      status_history: workflowHistoryAppend(current, entry),
-      workflow_timer: timerTransition.current,
-      workflow_timer_history: timerTransition.history,
-      updated_at: now
-    };
-    await ref.update(patch);
-    return res.json(docToData(await ref.get()));
-  }
-  if (current.status !== step.from) {
-    return res.status(409).json({
-      error: `Transition impossible. La commande est actuellement "${current.status}".`,
-      status: current.status,
-      expected_status: step.from
+  const actor = serviceActor(req);
+
+  try {
+    const updated = await firestore.runTransaction(async transaction => {
+      const currentSnap = await transaction.get(ref);
+      if (!currentSnap.exists) {
+        const error = new Error("Commande introuvable.");
+        error.httpStatus = 404;
+        throw error;
+      }
+      const current = currentSnap.data();
+      if (current.status !== step.from) {
+        const error = new Error(`Transition impossible. La commande est actuellement "${current.status}".`);
+        error.httpStatus = 409;
+        error.payload = { status: current.status, expected_status: step.from };
+        throw error;
+      }
+
+      const now = new Date();
+      const workflow = safeWorkflow(current);
+      const existingAssignment = serviceAssignment(workflow, role);
+      if (!serviceAssignmentMatches(existingAssignment, actor)) {
+        const error = new Error(`Cette commande est affectée à ${existingAssignment.name || existingAssignment.email}.`);
+        error.httpStatus = 409;
+        error.payload = { assigned_to: existingAssignment };
+        throw error;
+      }
+
+      const assignedTo = existingAssignment || {
+        ...actor,
+        assigned_at: now,
+        assigned_by: actor.id
+      };
+      workflow[step.key] = {
+        ...(workflow[step.key] || {}),
+        assigned_to: assignedTo,
+        confirmed: true,
+        confirmed_at: now,
+        confirmed_by: actor.email,
+        confirmed_name: actor.name,
+        confirmed_user_id: actor.id,
+        service_role: role
+      };
+
+      let nextStatus = step.to;
+      if (role === "CUSTOMER_SERVICE") {
+        nextStatus = ["WAVE", "ORANGE_MONEY"].includes(String(current.payment_method || "")) ? "EN_ATTENTE_PAIEMENT" : "CONFIRMEE";
+      }
+
+      const entry = {
+        from: current.status,
+        to: nextStatus,
+        actor_type: "service",
+        actor_role: role,
+        actor_id: actor.id,
+        actor_name: actor.name,
+        actor_email: actor.email,
+        label: step.label,
+        at: now
+      };
+      const timerTransition = transitionWorkflowTimer(current, nextStatus, now);
+      const patch = {
+        status: nextStatus,
+        workflow,
+        ...(role === "PAYMENT" ? { payment_status: "PAID" } : {}),
+        status_history: workflowHistoryAppend(current, entry),
+        workflow_timer: timerTransition.current,
+        workflow_timer_history: timerTransition.history,
+        updated_at: now
+      };
+      transaction.update(ref, patch);
+      return { ...current, ...patch };
+    });
+
+    return res.json(docToData(updated));
+  } catch (error) {
+    const status = Number(error.httpStatus) || 400;
+    if (status >= 500) console.error(error);
+    return res.status(status).json({
+      error: error.message || "Impossible de valider cette étape.",
+      ...(error.payload || {})
     });
   }
-  const now = new Date();
-  const workflow = safeWorkflow(current);
-  workflow[step.key] = {
-    ...workflow[step.key],
-    confirmed: true,
-    confirmed_at: now,
-    confirmed_by: req.service.email,
-    service_role: role
-  };
-  if (role === "PAYMENT") {
-    current.payment_status = "PAID";
-  }
-  const entry = {
-    from: current.status,
-    to: step.to,
-    actor_type: "service",
-    actor_role: role,
-    actor_email: req.service.email,
-    label: step.label,
-    at: now
-  };
-  const timerTransition = transitionWorkflowTimer(current, step.to, now);
-  const patch = {
-    status: step.to,
-    workflow,
-    status_history: workflowHistoryAppend(current, entry),
-    workflow_timer: timerTransition.current,
-    workflow_timer_history: timerTransition.history,
-    updated_at: now
-  };
-  await ref.update(patch);
-  res.json(docToData(await ref.get()));
 }
 
 app.post("/api/service/login", authLimiter, async (req, res) => {
@@ -430,7 +460,7 @@ app.post("/api/service/logout", async (_req, res) => {
 });
 
 app.get("/api/service/me", requireService(), (req, res) => {
-  res.json({ email: req.service.email, role: req.service.role });
+  res.json({ id: req.service.sub, name: req.service.name || req.service.email, email: req.service.email, role: req.service.role });
 });
 
 app.get("/api/service/orders", requireService(), async (req, res) => {
@@ -441,17 +471,30 @@ app.get("/api/service/orders", requireService(), async (req, res) => {
     COURIER: ["EN_LIVRAISON"]
   };
   const allowedStatuses = relevant[req.service.role] || [];
+  const stageKey = WORKFLOW_NEXT[req.service.role]?.key || null;
   const snap = await firestore.collection("orders").get();
-  const rows = snap.docs.map(docToData).filter(row => allowedStatuses.includes(row.status)).sort(sortByDateDesc);
-  res.json(rows.map(row => ({
-    ...row,
-    customer_name: row.customer?.name || "",
-    phone: row.customer?.phone || "",
-    address: row.customer?.address || "",
-    city: row.customer?.city || "",
-    timer: getWorkflowTimerView(row),
-    timer_history: Array.isArray(row.workflow_timer_history) ? row.workflow_timer_history : []
-  })));
+  const rows = snap.docs
+    .map(docToData)
+    .filter(row => allowedStatuses.includes(row.status))
+    .filter(row => {
+      const assignment = stageKey ? safeWorkflow(row)?.[stageKey]?.assigned_to : null;
+      return !assignment?.id || assignment.id === req.service.sub;
+    })
+    .sort(sortByDateDesc);
+
+  res.json(rows.map(row => {
+    const workflow = safeWorkflow(row);
+    return {
+      ...row,
+      customer_name: row.customer?.name || "",
+      phone: row.customer?.phone || "",
+      address: row.customer?.address || "",
+      city: row.customer?.city || "",
+      assignment: stageKey ? workflow?.[stageKey]?.assigned_to || null : null,
+      timer: getWorkflowTimerView(row),
+      timer_history: Array.isArray(row.workflow_timer_history) ? row.workflow_timer_history : []
+    };
+  }));
 });
 
 app.post("/api/service/orders/:id/confirm", requireService(), async (req, res) => {
@@ -470,15 +513,16 @@ app.get("/api/admin/service-users", requireAdmin, async (_req, res) => {
 app.post("/api/admin/service-users", requireAdmin, async (req, res) => {
   try {
     const role = String(req.body?.role || "").trim().toUpperCase();
+    const name = String(req.body?.name || "").trim().slice(0, 120);
     const email = String(req.body?.email || "").trim().toLowerCase();
     const password = String(req.body?.password || "");
     if (!SERVICE_ROLES.has(role)) return res.status(400).json({ error: "Rôle de service invalide." });
-    if (!email || password.length < 8) return res.status(400).json({ error: "Email et mot de passe (8 caractères minimum) sont obligatoires." });
+    if (!name || !email || password.length < 8) return res.status(400).json({ error: "Nom, email et mot de passe (8 caractères minimum) sont obligatoires." });
     const existing = await firestore.collection("service_users").where("email", "==", email).limit(1).get();
     if (!existing.empty) return res.status(409).json({ error: "Cet email de service existe déjà." });
     const id = crypto.randomUUID();
     const row = {
-      id, email, role,
+      id, name, email, role,
       role_label: WORKFLOW_ROLE_LABELS[role],
       password_hash: await bcrypt.hash(password, 12),
       active: true,
@@ -486,7 +530,7 @@ app.post("/api/admin/service-users", requireAdmin, async (req, res) => {
       updated_at: new Date()
     };
     await firestore.collection("service_users").doc(id).set(row);
-    res.status(201).json({ id, email, role, role_label: row.role_label, active: true });
+    res.status(201).json({ id, name, email, role, role_label: row.role_label, active: true });
   } catch (e) {
     console.error(e);
     console.error("Service user creation failed:", e?.stack || e);
@@ -543,6 +587,11 @@ app.patch("/api/admin/service-users/:id", requireAdmin, async (req, res) => {
   const current = await ref.get();
   if (!current.exists) return res.status(404).json({ error: "Compte service introuvable." });
   const patch = { updated_at: new Date() };
+  if (req.body?.name !== undefined) {
+    const name = String(req.body.name || "").trim().slice(0, 120);
+    if (!name) return res.status(400).json({ error: "Le nom de l'utilisateur est obligatoire." });
+    patch.name = name;
+  }
   if (req.body?.active !== undefined) patch.active = Boolean(req.body.active);
   if (req.body?.password) {
     if (String(req.body.password).length < 8) return res.status(400).json({ error: "Le mot de passe doit contenir au moins 8 caractères." });
@@ -552,6 +601,71 @@ app.patch("/api/admin/service-users/:id", requireAdmin, async (req, res) => {
   const updated = docToData(await ref.get());
   delete updated.password_hash;
   res.json(updated);
+});
+
+app.patch("/api/admin/orders/:id/assignment", requireAdmin, async (req, res) => {
+  const role = String(req.body?.role || "").trim().toUpperCase();
+  const serviceUserId = String(req.body?.service_user_id || "").trim();
+
+  if (!["CUSTOMER_SERVICE", "PAYMENT", "LOGISTICS", "COURIER"].includes(role)) {
+    return res.status(400).json({ error: "Rôle de service invalide." });
+  }
+
+  const step = WORKFLOW_NEXT[role];
+  const ref = firestore.collection("orders").doc(req.params.id);
+  const currentSnap = await ref.get();
+  if (!currentSnap.exists) return res.status(404).json({ error: "Commande introuvable." });
+  const current = currentSnap.data();
+
+  if (current.status !== step.from) {
+    return res.status(409).json({
+      error: `Cette commande n'est plus à l'étape "${step.label}".`,
+      status: current.status,
+      expected_status: step.from
+    });
+  }
+
+  const workflow = safeWorkflow(current);
+  if (!serviceUserId) {
+    workflow[step.key] = { ...(workflow[step.key] || {}), assigned_to: null };
+  } else {
+    const userRef = firestore.collection("service_users").doc(serviceUserId);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) return res.status(404).json({ error: "Compte service introuvable." });
+    const user = docToData(userSnap);
+    if (user.active === false || user.role !== role) {
+      return res.status(409).json({ error: "Ce compte service n'est pas actif ou n'appartient pas à cette étape." });
+    }
+    workflow[step.key] = {
+      ...(workflow[step.key] || {}),
+      assigned_to: {
+        id: user.id,
+        name: user.name || user.email,
+        email: user.email,
+        role: user.role,
+        assigned_at: new Date(),
+        assigned_by: req.admin.email
+      }
+    };
+  }
+
+  const now = new Date();
+  await ref.update({
+    workflow,
+    updated_at: now,
+    status_history: workflowHistoryAppend(current, {
+      from: current.status || null,
+      to: current.status || null,
+      actor_type: "admin",
+      actor_role: "ADMIN",
+      actor_email: req.admin.email,
+      actor_name: req.admin.email,
+      label: serviceUserId ? `Affectation ${WORKFLOW_ROLE_LABELS[role]}` : `Désaffectation ${WORKFLOW_ROLE_LABELS[role]}`,
+      at: now
+    })
+  });
+
+  res.json(docToData(await ref.get()));
 });
 
 const STATUSES = new Set(["EN_ATTENTE_SERVICE_CLIENT","EN_ATTENTE_PAIEMENT","CONFIRMEE","PREPARATION","EXPEDIEE","EN_LIVRAISON","LIVREE","ANNULEE"]);
