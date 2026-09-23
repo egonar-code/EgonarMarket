@@ -1,6 +1,7 @@
 const fs = require("fs");
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { getStorage, getDownloadURL } = require("firebase-admin/storage");
 require("dotenv").config();
 
 function getServiceAccount() {
@@ -32,12 +33,19 @@ function getApp() {
   const apps = getApps();
   if (apps.length) return apps[0];
   const serviceAccount = getServiceAccount();
-  return initializeApp({ credential: cert(serviceAccount) });
+  const storageBucket = String(process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.projectId}.firebasestorage.app`).replace(/^gs:\/\//, "").trim();
+  return initializeApp({ credential: cert(serviceAccount), storageBucket });
 }
 
 function getDb() {
   return getFirestore(getApp());
 }
+
+function getBucket() {
+  return getStorage(getApp()).bucket();
+}
+
+module.exports = {
 
 function now() {
   return Timestamp.now();
@@ -60,6 +68,8 @@ function docToData(doc) {
 
 module.exports = {
   getDb,
+  getBucket,
+  getDownloadURL,
   now,
   FieldValue,
   docToData,
