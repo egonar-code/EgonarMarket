@@ -42,7 +42,13 @@ function validInteger(value, { min = 0 } = {}) {
 }
 function supplierToken(supplier) {
   return jwt.sign(
-    { sub: supplier.id, email: supplier.email, type: "supplier" },
+    {
+      sub: supplier.id,
+      name: supplier.contact_name || supplier.business_name || supplier.email,
+      business_name: supplier.business_name || "",
+      email: supplier.email,
+      type: "supplier"
+    },
     process.env.JWT_SECRET,
     { expiresIn: "12h" }
   );
@@ -317,12 +323,18 @@ app.post("/api/supplier/orders/:id/workflow", requireSupplier, async (req, res) 
     }
 
     const now = new Date();
+    const supplier = await supplierById(req.supplier.sub);
+    const supplierName = supplier?.contact_name || req.supplier.name || req.supplier.email;
+    const supplierBusinessName = supplier?.business_name || req.supplier.business_name || "";
     const workflow = {
       ...(order.workflow || {}),
       supplier: {
         ...(order.workflow?.supplier || {}),
         ...(action === "PREPARE" ? { preparation_started_at: now } : { shipped_at: now }),
-        confirmed_by: req.supplier.email
+        confirmed_by: req.supplier.email,
+        confirmed_name: supplierName,
+        confirmed_supplier_id: req.supplier.sub,
+        supplier_business_name: supplierBusinessName
       }
     };
     const history = Array.isArray(order.status_history) ? order.status_history : [];
@@ -331,6 +343,8 @@ app.post("/api/supplier/orders/:id/workflow", requireSupplier, async (req, res) 
       to: transition.to,
       actor_type: "supplier",
       actor_role: "SUPPLIER",
+      actor_id: req.supplier.sub,
+      actor_name: supplierName,
       actor_email: req.supplier.email,
       label: transition.label,
       at: now
