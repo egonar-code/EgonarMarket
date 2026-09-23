@@ -55,7 +55,7 @@
 <input type="hidden" name="image_url"><label>Image <span class="studio-actions"><button type="button" onclick="openMediaPicker('content')" class="studio-link-btn">Choisir dans la bibliothèque</button></span><input id="content-image" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><small class="studio-help">Télécharger une image — JPG, PNG, WEBP ou GIF, 7 Mo maximum.</small></label><div id="content-image-preview" class="studio-image-preview" hidden></div>
 <div class="studio-grid"><input name="cta_label" placeholder="Texte du bouton"><input name="cta_url" placeholder="Lien du bouton"></div>
 <div class="studio-grid"><input name="meta_title" placeholder="Titre SEO"><input name="meta_description" placeholder="Description SEO"></div>
-<input name="sort_order" type="number" placeholder="Ordre d’affichage" value="0">
+<div class="studio-grid"><label>Publication <input name="publish_at" type="datetime-local"><small class="studio-help">Optionnel : choisissez une date et une heure pour rendre automatiquement le contenu visible.</small></label><label>Ordre d’affichage<input name="sort_order" type="number" placeholder="Ordre d’affichage" value="0"></label></div>
 <div><button class="btn primary" type="submit">Enregistrer le brouillon</button> <button id="reset-content" class="btn secondary" type="button">Réinitialiser</button></div>
 <div id="content-msg"></div>
 </form>
