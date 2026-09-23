@@ -7,6 +7,7 @@
 <title>Egonar Studio — Gestion du contenu</title>
 <link rel="stylesheet" href="style.css">
 <style>
+.studio-link-btn{border:0;background:none;padding:0;text-decoration:underline;font-weight:700;cursor:pointer}.media-library{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:20px}.media-item{border:1px solid #eee;border-radius:16px;overflow:hidden;background:#fff}.media-item img{width:100%;height:170px;object-fit:cover;display:block;background:#f5f5f5}.media-item-body{padding:12px}.media-item-body strong{display:block;word-break:break-word}.media-item-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.media-item-actions button{padding:8px 10px;border:1px solid #ddd;background:#fff;border-radius:8px;cursor:pointer}.media-modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:grid;place-items:center;padding:20px}.media-modal-card{width:min(100%,950px);max-height:85vh;overflow:auto;background:#fff;border-radius:20px;padding:20px;box-shadow:0 25px 80px rgba(0,0,0,.2)}
 .studio-shell{display:grid;gap:22px}.studio-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}.studio-nav{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0}.studio-nav button{border:1px solid #ddd;background:#fff;padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer}.studio-nav button.active{background:#111;color:#fff;border-color:#111}.studio-toolbar{display:flex;justify-content:space-between;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:16px}.studio-toolbar .filters{display:flex;gap:10px;flex-wrap:wrap}.studio-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:22px}.studio-card{border:1px solid #e9e9e9;border-radius:18px;padding:20px;background:#fff}.studio-list{display:grid;gap:12px}.studio-item{border:1px solid #eee;border-radius:14px;padding:14px;display:flex;justify-content:space-between;gap:15px;align-items:flex-start}.studio-item-main{min-width:0}.studio-item h3{margin:0 0 6px;font-size:17px}.studio-item p{margin:4px 0;color:#777}.studio-actions{display:flex;gap:8px;flex-wrap:wrap}.studio-actions button{padding:8px 10px;border:1px solid #ddd;background:#fff;border-radius:8px;cursor:pointer}.studio-status{display:inline-flex;padding:5px 9px;border-radius:999px;background:#f1f1f1;font-size:11px;font-weight:900}.studio-status.published{background:#eef8f0}.studio-status.archived{background:#fff0f0}.studio-preview{border:1px dashed #ddd;border-radius:16px;padding:18px;background:#fafafa}.studio-preview img{width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:10px}.studio-image-preview{margin-top:10px}.studio-image-preview img{width:100%;max-height:220px;object-fit:cover;border-radius:12px;border:1px solid #eee}.studio-image-preview small{display:block;margin-top:6px;color:#777}.audit-entry{border-bottom:1px solid #eee;padding:12px 0}.audit-entry:last-child{border-bottom:0}.audit-entry strong{display:block}.audit-entry small{display:block;color:#888;margin-top:4px}.studio-help{color:#777;line-height:1.5}.empty{padding:35px;text-align:center;background:#fafafa;border-radius:14px;color:#888}
 @media(max-width:900px){.studio-grid{grid-template-columns:1fr}.studio-hero{flex-direction:column}}
 </style>
@@ -22,6 +23,7 @@
 <div class="studio-nav">
 <button class="tab active" data-tab="content">Contenus</button>
 <button class="tab" data-tab="categories">Catégories</button>
+<button class="tab" data-tab="media">Médias</button>
 <button class="tab" data-tab="audit">Historique</button>
 </div>
 
@@ -50,7 +52,7 @@
 <input name="title" maxlength="220" placeholder="Titre" required>
 <input name="subtitle" maxlength="500" placeholder="Sous-titre">
 <textarea name="body" maxlength="12000" placeholder="Contenu"></textarea>
-<input type="hidden" name="image_url"><label>Image <input id="content-image" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><small class="studio-help">Télécharger une image — JPG, PNG, WEBP ou GIF, 7 Mo maximum.</small></label><div id="content-image-preview" class="studio-image-preview" hidden></div>
+<input type="hidden" name="image_url"><label>Image <span class="studio-actions"><button type="button" onclick="openMediaPicker('content')" class="studio-link-btn">Choisir dans la bibliothèque</button></span><input id="content-image" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><small class="studio-help">Télécharger une image — JPG, PNG, WEBP ou GIF, 7 Mo maximum.</small></label><div id="content-image-preview" class="studio-image-preview" hidden></div>
 <div class="studio-grid"><input name="cta_label" placeholder="Texte du bouton"><input name="cta_url" placeholder="Lien du bouton"></div>
 <div class="studio-grid"><input name="meta_title" placeholder="Titre SEO"><input name="meta_description" placeholder="Description SEO"></div>
 <input name="sort_order" type="number" placeholder="Ordre d’affichage" value="0">
@@ -75,7 +77,7 @@
 <input name="name" maxlength="120" placeholder="Nom" required>
 <input name="slug" maxlength="140" placeholder="Slug">
 <input name="description" maxlength="500" placeholder="Description">
-<input type="hidden" name="image_url"><label>Miniature <input id="category-image" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><small class="studio-help">Télécharger une image — JPG, PNG, WEBP ou GIF, 7 Mo maximum.</small></label><div id="category-image-preview" class="studio-image-preview" hidden></div>
+<input type="hidden" name="image_url"><label>Miniature <span class="studio-actions"><button type="button" onclick="openMediaPicker('category')" class="studio-link-btn">Choisir dans la bibliothèque</button></span><input id="category-image" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><small class="studio-help">Télécharger une image — JPG, PNG, WEBP ou GIF, 7 Mo maximum.</small></label><div id="category-image-preview" class="studio-image-preview" hidden></div>
 <input name="icon" maxlength="80" placeholder="Icône / emoji">
 <input name="parent_slug" maxlength="140" placeholder="Slug de la catégorie parent (facultatif)">
 <input name="sort_order" type="number" value="0" placeholder="Ordre">
@@ -86,10 +88,26 @@
 </div>
 </section>
 
+<section id="media-tab" class="studio-panel" hidden>
+<section class="studio-card">
+<div class="studio-toolbar">
+<div><h2>Bibliothèque média</h2><p class="studio-help">Centralisez les images utilisées par Market, Saveurs, Évasion, les fournisseurs et les contenus Studio.</p></div>
+<div class="filters"><select id="media-universe" class="admin-filter"><option value="">Tous les univers</option><option value="MARKET">Market</option><option value="SAVEURS">Saveurs</option><option value="EVASION">Évasion</option></select><button id="refresh-media" class="btn secondary" type="button">Actualiser</button></div>
+</div>
+<form id="media-upload-form" class="form narrow">
+<label>Télécharger une image <input id="media-upload" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><small class="studio-help">JPG, PNG, WEBP ou GIF, 7 Mo maximum.</small></label>
+<button class="btn primary" type="submit">Téléverser dans la bibliothèque</button>
+<div id="media-msg"></div>
+</form>
+<div id="media-list" class="media-library"></div>
+</section>
+</section>
+
 <section id="audit-tab" class="studio-panel" hidden>
 <section class="studio-card"><div class="studio-toolbar"><div><h2>Historique des modifications</h2><p class="studio-help">Toutes les actions réalisées depuis Egonar Studio sont enregistrées avec l’administrateur et l’horodatage.</p></div><button id="refresh-audit" class="btn secondary">Actualiser</button></div><div id="audit-list"></div></section>
 </section>
 </main>
+<div id="media-modal" class="media-modal" hidden><div class="media-modal-card"><div class="studio-toolbar"><div><h2>Choisir une image</h2><p class="studio-help">Sélectionnez un média déjà importé.</p></div><button type="button" class="btn secondary" onclick="closeMediaPicker()">Fermer</button></div><div id="media-picker-list" class="media-library"></div></div></div>
 <script src="egonar-studio.js"></script>
 <script src="secondary-i18n.js"></script>
 </body>
