@@ -9,6 +9,7 @@ const { getDb, FieldValue, docToData } = require("./firestore");
 const { signAdmin, requireAdmin } = require("./auth");
 const { requireAdminPage, requireSupplierPage } = require("./page-auth");
 const { signService, requireService, authenticateService, ROLES: SERVICE_ROLES } = require("./service-auth");
+const { startWorkflowTimer, transitionWorkflowTimer, getWorkflowTimerView } = require("./workflow-timers");
 require("dotenv").config();
 
 if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET manquant.");
@@ -295,7 +296,9 @@ app.get("/api/admin/orders", requireAdmin, async (_req, res) => {
     address: row.customer?.address || "",
     city: row.customer?.city || "",
     workflow: safeWorkflow(row),
-    status_history: Array.isArray(row.status_history) ? row.status_history : []
+    status_history: Array.isArray(row.status_history) ? row.status_history : [],
+    timer: getWorkflowTimerView(row),
+    timer_history: Array.isArray(row.workflow_timer_history) ? row.workflow_timer_history : []
   })));
 });
 
@@ -352,10 +355,13 @@ async function serviceConfirmOrder({ req, res, role, orderId }) {
     label: step.label,
     at: now
   };
+  const timerTransition = transitionWorkflowTimer(current, step.to, now);
   const patch = {
     status: step.to,
     workflow,
     status_history: workflowHistoryAppend(current, entry),
+    workflow_timer: timerTransition.current,
+    workflow_timer_history: timerTransition.history,
     updated_at: now
   };
   await ref.update(patch);
@@ -400,7 +406,9 @@ app.get("/api/service/orders", requireService(), async (req, res) => {
     customer_name: row.customer?.name || "",
     phone: row.customer?.phone || "",
     address: row.customer?.address || "",
-    city: row.customer?.city || ""
+    city: row.customer?.city || "",
+    timer: getWorkflowTimerView(row),
+    timer_history: Array.isArray(row.workflow_timer_history) ? row.workflow_timer_history : []
   })));
 });
 
@@ -511,16 +519,21 @@ app.patch("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
   const ref = firestore.collection("orders").doc(req.params.id);
   const doc = await ref.get();
   if (!doc.exists) return res.status(404).json({ error: "Commande introuvable." });
+  const current = doc.data();
+  const now = new Date();
+  const timerTransition = transitionWorkflowTimer(current, status, now);
   await ref.update({
     status,
-    updated_at: new Date(),
-    status_history: workflowHistoryAppend(doc.data(), {
-      from: doc.data().status || null,
+    workflow_timer: timerTransition.current,
+    workflow_timer_history: timerTransition.history,
+    updated_at: now,
+    status_history: workflowHistoryAppend(current, {
+      from: current.status || null,
       to: status,
       actor_type: "admin",
       actor_email: req.admin.email,
       label: "Modification administrateur",
-      at: new Date()
+      at: now
     })
   });
   res.json(docToData(await ref.get()));
@@ -559,7 +572,8 @@ app.post("/api/orders", orderLimiter, async (req, res) => {
           product_id: id,
           product_name: product.name,
           unit_price_fcfa: Number(product.price_fcfa || 0),
-          quantity: qty
+          quantity: qty,
+          universe: product.universe || "MARKET"
         });
       }
       const delivery = Math.max(0, Number(delivery_fcfa) || 0);
@@ -591,6 +605,8 @@ app.post("/api/orders", orderLimiter, async (req, res) => {
           logistics: { confirmed_at: null, confirmed_by: null },
           courier: { confirmed_at: null, confirmed_by: null }
         },
+        workflow_timer: startWorkflowTimer(initialStatus, new Date()),
+        workflow_timer_history: [],
         status_history: [{
           from: null,
           to: initialStatus,
@@ -675,7 +691,10 @@ app.get("/api/orders/:number", async (req, res) => {
       payment_method: row.payment_method, total_fcfa: row.total_fcfa, created_at: row.created_at,
       name: row.customer?.name || "", phone: row.customer?.phone || "",
       address: row.customer?.address || "", city: row.customer?.city || "", items: row.items || [],
-      workflow: safeWorkflow(row), status_history: Array.isArray(row.status_history) ? row.status_history : []
+      workflow: safeWorkflow(row),
+      status_history: Array.isArray(row.status_history) ? row.status_history : [],
+      timer: getWorkflowTimerView(row),
+      timer_history: Array.isArray(row.workflow_timer_history) ? row.workflow_timer_history : []
     });
   } catch (e) {
     console.error(e);
