@@ -284,6 +284,62 @@ app.get("/api/supplier/orders", requireSupplier, async (req, res) => {
   res.json(sortDesc(result).slice(0, 100));
 });
 
+app.post("/api/supplier/orders/:id/workflow", requireSupplier, async (req, res) => {
+  try {
+    const action = String(req.body?.action || "").trim().toUpperCase();
+    if (!["PREPARE", "SHIP"].includes(action)) return res.status(400).json({ error: "Action fournisseur invalide." });
+
+    const orderRef = firestore.collection("orders").doc(req.params.id);
+    const orderSnap = await orderRef.get();
+    if (!orderSnap.exists) return res.status(404).json({ error: "Commande introuvable." });
+    const order = orderSnap.data();
+
+    const supplierProductsList = await supplierProducts(req.supplier.sub);
+    const supplierIds = new Set(supplierProductsList.map(product => String(product.id)));
+    const belongs = (Array.isArray(order.items) ? order.items : []).some(item => supplierIds.has(String(item.product_id)));
+    if (!belongs) return res.status(403).json({ error: "Cette commande ne contient aucun produit de votre catalogue." });
+
+    const transitions = {
+      PREPARE: { from: "CONFIRMEE", to: "PREPARATION", label: "Préparation démarrée" },
+      SHIP: { from: "PREPARATION", to: "EXPEDIEE", label: "Commande expédiée par le fournisseur" }
+    };
+    const transition = transitions[action];
+    if (order.status !== transition.from) {
+      return res.status(409).json({
+        error: `Transition impossible. La commande est actuellement "${order.status}".`,
+        status: order.status,
+        expected_status: transition.from
+      });
+    }
+
+    const now = new Date();
+    const workflow = {
+      ...(order.workflow || {}),
+      supplier: {
+        ...(order.workflow?.supplier || {}),
+        ...(action === "PREPARE" ? { preparation_started_at: now } : { shipped_at: now }),
+        confirmed_by: req.supplier.email
+      }
+    };
+    const history = Array.isArray(order.status_history) ? order.status_history : [];
+    history.push({
+      from: transition.from,
+      to: transition.to,
+      actor_type: "supplier",
+      actor_role: "SUPPLIER",
+      actor_email: req.supplier.email,
+      label: transition.label,
+      at: now
+    });
+
+    await orderRef.update({ status: transition.to, workflow, status_history: history, updated_at: now });
+    res.json(docToData(await orderRef.get()));
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: "Impossible de valider l'étape fournisseur." });
+  }
+});
+
 app.get("/api/supplier/products", requireSupplier, async (req, res) => {
   const universe = String(req.query.universe || "").trim() ? normalizeUniverse(req.query.universe) : null;
   if (req.query.universe && !universe) return res.status(400).json({ error: "Univers invalide." });
