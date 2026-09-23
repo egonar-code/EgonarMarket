@@ -425,10 +425,9 @@ async function serviceConfirmOrder({ req, res, role, orderId }) {
         updated_at: now
       };
       transaction.update(ref, patch);
-      return { ...current, ...patch };
     });
 
-    return res.json(docToData(updated));
+    return res.json(docToData(await ref.get()));
   } catch (error) {
     const status = Number(error.httpStatus) || 400;
     if (status >= 500) console.error(error);
