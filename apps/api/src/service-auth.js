@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { getDb, docToData } = require("./firestore");
 
-const ROLES = new Set(["PAYMENT", "LOGISTICS", "COURIER"]);
+const ROLES = new Set(["CUSTOMER_SERVICE", "PAYMENT", "LOGISTICS", "COURIER"]);
 
 function signService(user) {
   return jwt.sign(
