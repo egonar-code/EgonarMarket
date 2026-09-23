@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Egonar Studio — centre de gestion de contenu EgonarMarket">
+<title>Egonar Studio — Gestion du contenu</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.studio-shell{display:grid;gap:22px}.studio-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}.studio-nav{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0}.studio-nav button{border:1px solid #ddd;background:#fff;padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer}.studio-nav button.active{background:#111;color:#fff;border-color:#111}.studio-toolbar{display:flex;justify-content:space-between;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:16px}.studio-toolbar .filters{display:flex;gap:10px;flex-wrap:wrap}.studio-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:22px}.studio-card{border:1px solid #e9e9e9;border-radius:18px;padding:20px;background:#fff}.studio-list{display:grid;gap:12px}.studio-item{border:1px solid #eee;border-radius:14px;padding:14px;display:flex;justify-content:space-between;gap:15px;align-items:flex-start}.studio-item-main{min-width:0}.studio-item h3{margin:0 0 6px;font-size:17px}.studio-item p{margin:4px 0;color:#777}.studio-actions{display:flex;gap:8px;flex-wrap:wrap}.studio-actions button{padding:8px 10px;border:1px solid #ddd;background:#fff;border-radius:8px;cursor:pointer}.studio-status{display:inline-flex;padding:5px 9px;border-radius:999px;background:#f1f1f1;font-size:11px;font-weight:900}.studio-status.published{background:#eef8f0}.studio-status.archived{background:#fff0f0}.studio-preview{border:1px dashed #ddd;border-radius:16px;padding:18px;background:#fafafa}.studio-preview img{width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:10px}.audit-entry{border-bottom:1px solid #eee;padding:12px 0}.audit-entry:last-child{border-bottom:0}.audit-entry strong{display:block}.audit-entry small{display:block;color:#888;margin-top:4px}.studio-help{color:#777;line-height:1.5}.empty{padding:35px;text-align:center;background:#fafafa;border-radius:14px;color:#888}
+@media(max-width:900px){.studio-grid{grid-template-columns:1fr}.studio-hero{flex-direction:column}}
+</style>
+</head>
+<body>
+<header class="header"><div class="nav wrap"><a class="logo" href="index.html">Egonar<span>Market</span></a><nav><a href="admin.html">Administration</a><a href="index.html">Boutique</a></nav></div></header>
+<main class="wrap section studio-shell">
+<section class="studio-hero">
+<div><p class="eyebrow">EGONAR STUDIO</p><h1>Centre de gestion du contenu</h1><p class="muted">Gérez Market, Saveurs et Évasion depuis un seul espace. Les contenus restent sous le contrôle de l’Administration.</p></div>
+<div><a class="btn secondary" href="admin.html">← Administration</a></div>
+</section>
+
+<div class="studio-nav">
+<button class="tab active" data-tab="content">Contenus</button>
+<button class="tab" data-tab="categories">Catégories</button>
+<button class="tab" data-tab="audit">Historique</button>
+</div>
+
+<section id="content-tab" class="studio-panel">
+<div class="studio-toolbar">
+<div class="filters">
+<select id="content-universe" class="admin-filter"><option value="">Tous les univers</option><option value="MARKET">Market</option><option value="SAVEURS">Saveurs</option><option value="EVASION">Évasion</option></select>
+<select id="content-status" class="admin-filter"><option value="">Tous les statuts</option><option value="DRAFT">Brouillon</option><option value="PUBLISHED">Publié</option><option value="ARCHIVED">Archivé</option></select>
+</div>
+<button id="new-content" class="btn primary">+ Nouveau contenu</button>
+</div>
+<div class="studio-grid">
+<section class="studio-card">
+<h2>Bibliothèque de contenus</h2>
+<p class="studio-help">Chaque contenu possède un identifiant stable, une langue, un univers et un statut. Utilisez « Publier » lorsque la version doit devenir visible par les plateformes.</p>
+<div id="content-list" class="studio-list"></div>
+</section>
+<section class="studio-card">
+<h2 id="content-form-title">Créer / modifier</h2>
+<form id="content-form" class="form">
+<input type="hidden" name="id">
+<label>Type<select name="content_type" required><option value="PAGE">Page</option><option value="BANNER">Bannière</option><option value="SECTION">Section</option><option value="PROMOTION">Promotion</option><option value="SEO">SEO</option></select></label>
+<label>Univers<select name="universe" required><option value="MARKET">Market</option><option value="SAVEURS">Saveurs</option><option value="EVASION">Évasion</option></select></label>
+<label>Langue<select name="locale" required><option value="fr">Français</option><option value="en">English</option></select></label>
+<input name="key" maxlength="160" placeholder="Identifiant (ex. home.hero)" required>
+<input name="title" maxlength="220" placeholder="Titre" required>
+<input name="subtitle" maxlength="500" placeholder="Sous-titre">
+<textarea name="body" maxlength="12000" placeholder="Contenu"></textarea>
+<input name="image_url" maxlength="2000" placeholder="URL de l’image">
+<div class="studio-grid"><input name="cta_label" placeholder="Texte du bouton"><input name="cta_url" placeholder="Lien du bouton"></div>
+<div class="studio-grid"><input name="meta_title" placeholder="Titre SEO"><input name="meta_description" placeholder="Description SEO"></div>
+<input name="sort_order" type="number" placeholder="Ordre d’affichage" value="0">
+<div><button class="btn primary" type="submit">Enregistrer le brouillon</button> <button id="reset-content" class="btn secondary" type="button">Réinitialiser</button></div>
+<div id="content-msg"></div>
+</form>
+</section>
+</div>
+</section>
+
+<section id="categories-tab" class="studio-panel" hidden>
+<div class="studio-toolbar">
+<div class="filters"><select id="category-universe" class="admin-filter"><option value="MARKET">Market</option><option value="SAVEURS">Saveurs</option><option value="EVASION">Évasion</option></select></div>
+<button id="new-category" class="btn primary">+ Nouvelle catégorie</button>
+</div>
+<div class="studio-grid">
+<section class="studio-card"><h2>Catégories</h2><div id="category-list" class="studio-list"></div></section>
+<section class="studio-card"><h2 id="category-form-title">Créer / modifier</h2>
+<form id="category-form" class="form">
+<input type="hidden" name="id">
+<select name="universe" required><option value="MARKET">Market</option><option value="SAVEURS">Saveurs</option><option value="EVASION">Évasion</option></select>
+<input name="name" maxlength="120" placeholder="Nom" required>
+<input name="slug" maxlength="140" placeholder="Slug">
+<input name="description" maxlength="500" placeholder="Description">
+<input name="image_url" maxlength="2000" placeholder="URL de la miniature">
+<input name="icon" maxlength="80" placeholder="Icône / emoji">
+<input name="parent_slug" maxlength="140" placeholder="Slug de la catégorie parent (facultatif)">
+<input name="sort_order" type="number" value="0" placeholder="Ordre">
+<label><input name="active" type="checkbox" checked> Catégorie active</label>
+<div><button class="btn primary" type="submit">Enregistrer</button> <button id="reset-category" class="btn secondary" type="button">Réinitialiser</button></div>
+<div id="category-msg"></div>
+</form></section>
+</div>
+</section>
+
+<section id="audit-tab" class="studio-panel" hidden>
+<section class="studio-card"><div class="studio-toolbar"><div><h2>Historique des modifications</h2><p class="studio-help">Toutes les actions réalisées depuis Egonar Studio sont enregistrées avec l’administrateur et l’horodatage.</p></div><button id="refresh-audit" class="btn secondary">Actualiser</button></div><div id="audit-list"></div></section>
+</section>
+</main>
+<script src="egonar-studio.js"></script>
+<script src="secondary-i18n.js"></script>
+</body>
+</html>
