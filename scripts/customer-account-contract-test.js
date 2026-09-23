@@ -1,0 +1,17 @@
+const fs=require("fs");
+const path=require("path");
+const root=path.join(__dirname,"..");
+const read=p=>fs.readFileSync(path.join(root,p),"utf8");
+const server=read("apps/api/src/server-firestore.js");
+const auth=read("apps/api/src/customer-auth.js");
+const account=read("apps/web/account.js");
+const accountHtml=read("apps/web/compte.html");
+const checkout=read("apps/web/commande.html");
+const product=read("apps/web/produit.html");
+for(const marker of ['app.post("/api/customer/register"','app.post("/api/customer/login"','app.get("/api/customer/me"','app.get("/api/customer/orders"','app.get("/api/customer/favorites"','app.post("/api/customer/favorites/:productId"','app.get("/api/customer/recently-viewed"','app.get("/api/recommendations"']) if(!server.includes(marker)) throw new Error("Route client absente: "+marker);
+for(const marker of ['signCustomer','requireCustomer']) if(!auth.includes(marker)) throw new Error("Auth client absente: "+marker);
+for(const marker of ['/customer/login','/customer/register','/customer/orders','/customer/favorites','/customer/recently-viewed']) if(!account.includes(marker)) throw new Error("Dashboard client incomplet: "+marker);
+if(!accountHtml.includes('account.js')) throw new Error("Page compte absente.");
+if(!checkout.includes("/customer/me") || !checkout.includes("customer_id")) throw new Error("Checkout non relié au compte client.");
+if(!product.includes("id=\"favorite\"") || !product.includes("/recommendations") || !product.includes("/customer/recently-viewed/")) throw new Error("Fiche produit non reliée aux favoris/historique/recommandations.");
+console.log("customer-account-contract-test: OK");
