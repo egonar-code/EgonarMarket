@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const multer = require("multer");
 const { getDb, docToData } = require("./firestore");
 const { transitionWorkflowTimer, getWorkflowTimerView } = require("./workflow-timers");
 const { requireAdmin } = require("./auth");
@@ -75,6 +76,49 @@ function setSupplierCookie(res, token) {
     maxAge: 12 * 60 * 60 * 1000
   });
 }
+const supplierUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 7 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = new Set(["image/jpeg","image/png","image/webp","image/gif"]);
+    cb(allowed.has(file.mimetype) ? null : new Error("Format image non pris en charge. Utilisez JPG, PNG, WEBP ou GIF."), allowed.has(file.mimetype));
+  }
+});
+
+app.post("/api/supplier/upload-image", requireSupplier, (req, res) => {
+  supplierUpload.single("image")(req, res, async error => {
+    try {
+      if (error) return res.status(400).json({ error: error.message || "Téléversement impossible." });
+      if (!req.file) return res.status(400).json({ error: "Aucune image sélectionnée." });
+      const extension = ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" })[req.file.mimetype];
+      const now = new Date();
+      const objectName = `suppliers/${String(req.supplier.sub)}/${now.getUTCFullYear()}/${String(now.getUTCMonth()+1).padStart(2,"0")}/${crypto.randomUUID()}.${extension}`;
+      const file = getBucket().file(objectName);
+      await file.save(req.file.buffer, {
+        resumable: false,
+        metadata: { contentType: req.file.mimetype, cacheControl: "public,max-age=31536000,immutable" }
+      });
+      const url = await getDownloadURL(file);
+      const asset = {
+        id: crypto.randomUUID(),
+        object_name: objectName,
+        url,
+        content_type: req.file.mimetype,
+        size_bytes: req.file.size,
+        original_name: req.file.originalname,
+        supplier_id: String(req.supplier.sub),
+        uploaded_by: { id: String(req.supplier.sub), name: req.supplier.name || req.supplier.email || "", email: req.supplier.email || "", role: "SUPPLIER" },
+        created_at: now
+      };
+      await firestore.collection("media_assets").doc(asset.id).set(asset);
+      res.status(201).json(asset);
+    } catch (e) {
+      console.error("Supplier image upload failed:", e?.stack || e);
+      res.status(500).json({ error: e.message || "Téléversement de l’image impossible." });
+    }
+  });
+});
+
 function sortDesc(rows, field = "created_at") {
   return rows.sort((a, b) => new Date(b[field] || 0).getTime() - new Date(a[field] || 0).getTime());
 }
