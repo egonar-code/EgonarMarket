@@ -284,6 +284,11 @@ app.post("/api/admin/products", requireAdmin, async (req, res) => {
     const price = Number(price_fcfa);
     const oldPrice = old_price_fcfa === null || old_price_fcfa === "" ? null : Number(old_price_fcfa);
     if (oldPrice !== null && (!Number.isInteger(oldPrice) || oldPrice < price)) return res.status(400).json({ error: "L'ancien prix doit être supérieur ou égal au prix actuel." });
+    let publishAt = null;
+    if (req.body?.publish_at) {
+      publishAt = new Date(req.body.publish_at);
+      if (Number.isNaN(publishAt.getTime())) return res.status(400).json({ error: "Date de publication invalide." });
+    }
     const id = crypto.randomUUID();
     const now = new Date();
     const slug = `${String(name).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${Date.now()}`;
@@ -1199,7 +1204,7 @@ app.post("/api/admin/studio/content", requireAdmin, async (req, res) => {
       cta_url: studioClean(req.body?.cta_url, 1000),
       meta_title: studioClean(req.body?.meta_title, 220),
       meta_description: studioClean(req.body?.meta_description, 500),
-      publish_at: req.body?.publish_at ? new Date(req.body.publish_at) : null,
+      publish_at: publishAt,
       sort_order: Number.isFinite(Number(req.body?.sort_order)) ? Number(req.body.sort_order) : 0,
       status: "DRAFT",
       active: true,
