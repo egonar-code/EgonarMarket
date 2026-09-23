@@ -933,8 +933,9 @@ function studioActor(req) {
 async function studioAudit(req, action, targetType, targetId, before, after) {
   const actor = studioActor(req);
   const now = new Date();
-  await firestore.collection("studio_audit_logs").doc(crypto.randomUUID()).set({
-    id: crypto.randomUUID(),
+  const auditId = crypto.randomUUID();
+  await firestore.collection("studio_audit_logs").doc(auditId).set({
+    id: auditId,
     action,
     target_type: targetType,
     target_id: String(targetId || ""),
@@ -952,11 +953,8 @@ app.get("/api/content", async (req, res) => {
     const key = studioClean(req.query.key, 160);
     if (req.query.universe && !universe) return res.status(400).json({ error: "Univers invalide." });
     if (!STUDIO_LOCALES.has(locale)) return res.status(400).json({ error: "Langue invalide." });
-    let query = firestore.collection("studio_contents")
-      .where("status", "==", "PUBLISHED")
-      .where("locale", "==", locale);
-    const snap = await query.get();
-    let rows = snap.docs.map(docToData).filter(row => row.active !== false);
+    const snap = await firestore.collection("studio_contents").get();
+    let rows = snap.docs.map(docToData).filter(row => row.status === "PUBLISHED" && row.locale === locale && row.active !== false);
     if (universe) rows = rows.filter(row => row.universe === universe);
     if (key) rows = rows.filter(row => row.key === key);
     rows.sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0) || sortByDateDesc(a, b));
@@ -1105,8 +1103,12 @@ app.post("/api/admin/studio/categories", requireAdmin, async (req, res) => {
     const name = studioClean(req.body?.name, 120);
     const slug = studioClean(req.body?.slug || name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""), 140);
     if (!universe || !name || !slug) return res.status(400).json({ error: "Univers, nom et slug sont obligatoires." });
-    const duplicate = await firestore.collection("categories").where("universe","==",universe).where("slug","==",slug).limit(1).get();
-    if (!duplicate.empty) return res.status(409).json({ error: "Cette catégorie existe déjà." });
+    const categorySnap = await firestore.collection("categories").get();
+    const duplicate = categorySnap.docs.some(doc => {
+      const item = doc.data() || {};
+      return item.universe === universe && item.slug === slug && item.active !== false;
+    });
+    if (duplicate) return res.status(409).json({ error: "Cette catégorie existe déjà." });
     const id = crypto.randomUUID();
     const now = new Date();
     const row = {
