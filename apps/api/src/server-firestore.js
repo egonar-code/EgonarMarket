@@ -995,12 +995,12 @@ app.post("/api/admin/studio/content", requireAdmin, async (req, res) => {
     if (!STUDIO_CONTENT_TYPES.has(content_type) || !universe || !STUDIO_LOCALES.has(locale) || !key || !title) {
       return res.status(400).json({ error: "Type, univers, langue, identifiant et titre sont obligatoires." });
     }
-    const duplicate = await firestore.collection("studio_contents")
-      .where("universe", "==", universe)
-      .where("locale", "==", locale)
-      .where("key", "==", key)
-      .limit(1).get();
-    if (!duplicate.empty) return res.status(409).json({ error: "Ce contenu existe déjà dans cet univers et cette langue." });
+    const existingContents = await firestore.collection("studio_contents").get();
+    const duplicate = existingContents.docs.some(doc => {
+      const item = doc.data() || {};
+      return item.universe === universe && item.locale === locale && item.key === key && item.status !== "ARCHIVED";
+    });
+    if (duplicate) return res.status(409).json({ error: "Ce contenu existe déjà dans cet univers et cette langue." });
 
     const id = crypto.randomUUID();
     const now = new Date();
