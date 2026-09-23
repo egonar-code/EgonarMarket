@@ -974,10 +974,11 @@ app.post("/api/orders", orderLimiter, async (req, res) => {
         id: customerId,
         name: String(customer.name).trim().slice(0,100),
         phone: String(customer.phone).trim().slice(0,30),
-        email: customer.email ? String(customer.email).trim().slice(0,160) : null,
-        address: String(customer.address).trim().slice(0,250),
-        city: String(customer.city || "Dakar").trim().slice(0,80),
-        created_at: new Date()
+        email: customer.email ? String(customer.email).trim().toLowerCase().slice(0,160) : (linkedCustomer?.email || null),
+        address: String(customer.address).trim().slice(0,250) || (linkedCustomer?.address || ""),
+        city: String(customer.city || linkedCustomer?.city || "Dakar").trim().slice(0,80),
+        created_at: linkedCustomer?.created_at || new Date(),
+        updated_at: new Date()
       };
       const orderRow = {
         id: orderId,
@@ -1012,7 +1013,8 @@ app.post("/api/orders", orderLimiter, async (req, res) => {
         created_at: new Date(),
         updated_at: new Date()
       };
-      transaction.set(firestore.collection("customers").doc(customerId), customerRow);
+      if (!linkedCustomer) transaction.set(firestore.collection("customers").doc(customerId), customerRow);
+      else transaction.update(firestore.collection("customers").doc(customerId), customerRow);
       transaction.set(firestore.collection("orders").doc(orderId), orderRow);
       for (const [id, qty] of totals) {
         const productRef = firestore.collection("products").doc(id);
