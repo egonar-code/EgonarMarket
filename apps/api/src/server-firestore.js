@@ -815,6 +815,12 @@ app.post("/api/customer/register", authLimiter, async (req, res) => {
     const id = crypto.randomUUID();
     const row = { id, name, email, phone, password_hash: await bcrypt.hash(password, 12), address: "", city: "Dakar", created_at: new Date(), updated_at: new Date() };
     await firestore.collection("customers").doc(id).set(row);
+    const guestOrders = await firestore.collection("orders").where("customer.email", "==", email).get();
+    if (!guestOrders.empty) {
+      const batch = firestore.batch();
+      guestOrders.docs.forEach(orderDoc => batch.update(orderDoc.ref, { customer_id: id, "customer.id": id, updated_at: new Date() }));
+      await batch.commit();
+    }
     const token = signCustomer(row);
     res.cookie("egonar_customer", token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 30 * 24 * 60 * 60 * 1000 });
     res.status(201).json({ ok: true, customer: customerSafe(row) });
