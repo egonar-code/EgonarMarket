@@ -4,6 +4,8 @@ const root=path.join(__dirname,"..");
 const read=p=>fs.readFileSync(path.join(root,p),"utf8");
 
 const server=read("apps/api/src/server-firestore.js");
+const notifications=read("apps/api/src/notifications.js");
+const categoryNav=read("apps/web/category-header-nav.js");
 const supplier=read("apps/api/src/supplier-server-firestore.js");
 const admin=read("apps/web/admin.html");
 const supplierHtml=read("apps/web/supplier.html");
@@ -16,7 +18,8 @@ const product=read("apps/web/produit.html");
 for(const marker of [
   'const studioUpload = multer(', 'app.post("/api/admin/studio/upload"',
   'app.get("/api/admin/studio/media"', 'app.delete("/api/admin/studio/media/:id"',
-  'image_gallery', 'normalizeImageUrls'
+  'app.get("/api/admin/notifications"', 'app.get("/api/service/notifications"',
+  'payment_attempts', 'image_gallery', 'normalizeImageUrls'
 ]) if(!server.includes(marker)) throw new Error("Fonctionnalité média/gallerie absente du serveur: "+marker);
 
 for(const marker of [
@@ -37,4 +40,7 @@ for(const marker of ['EgonarStudioRuntime','data-content-key','/api/content'])
   if(!runtime.includes(marker)) throw new Error("Runtime Studio dynamique incomplet: "+marker);
 
 if(!product.includes("detail-gallery") || !product.includes("image_gallery")) throw new Error("Galerie fiche produit absente.");
+if(!notifications.includes("notifyWorkflowAdvance") || !notifications.includes("createNotification")) throw new Error("Service de notifications incomplet.");
+if(!categoryNav.includes("loadServerCategories") || !categoryNav.includes("SERVER_CATEGORIES")) throw new Error("Catégories publiques non connectées au serveur.");
+if(!supplierHtml.includes('id="supplier-profile-form"') || !supplier.includes('app.patch("/api/supplier/profile"')) throw new Error("Profil fournisseur absent.");
 console.log("platform-modernization-contract-test: OK");
