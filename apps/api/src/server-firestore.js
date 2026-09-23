@@ -7,6 +7,7 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { getDb, FieldValue, docToData } = require("./firestore");
 const { signAdmin, requireAdmin } = require("./auth");
+const { requireAdminPage, requireSupplierPage } = require("./page-auth");
 const { signService, requireService, authenticateService, ROLES: SERVICE_ROLES } = require("./service-auth");
 require("dotenv").config();
 
@@ -735,6 +736,10 @@ app.use("/supplier-api", async (req, res) => {
     clearTimeout(timeout);
   }
 });
+
+app.get("/admin.html", requireAdminPage, (_req,res)=>res.sendFile(path.join(webDir,"admin.html")));
+app.get("/supplier-admin.html", requireAdminPage, (_req,res)=>res.sendFile(path.join(webDir,"supplier-admin.html")));
+app.get("/supplier.html", requireSupplierPage, (_req,res)=>res.sendFile(path.join(webDir,"supplier.html")));
 
 app.use(express.static(webDir, { extensions: ["html"] }));
 app.get("/", (_req, res) => res.sendFile(path.join(webDir, "index.html")));
