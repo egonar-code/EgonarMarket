@@ -8,6 +8,7 @@ const crypto = require("crypto");
 const multer = require("multer");
 const { getDb, getBucket, getDownloadURL, FieldValue, docToData } = require("./firestore");
 const { signAdmin, requireAdmin } = require("./auth");
+const { signCustomer, requireCustomer } = require("./customer-auth");
 const { requireAdminPage, requireSupplierPage } = require("./page-auth");
 const { signService, requireService, authenticateService, ROLES: SERVICE_ROLES } = require("./service-auth");
 const { startWorkflowTimer, transitionWorkflowTimer, getWorkflowTimerView } = require("./workflow-timers");
@@ -790,6 +791,144 @@ app.patch("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
   const finalOrder = docToData(await ref.get());
   await notifyWorkflowAdvance(finalOrder, finalOrder.status);
   return res.json(finalOrder);
+});
+
+function customerSafe(row) {
+  if (!row) return null;
+  return { id: row.id, name: row.name || "", email: row.email || "", phone: row.phone || "", address: row.address || "", city: row.city || "" };
+}
+
+async function getCustomerByEmail(email) {
+  const snap = await firestore.collection("customers").where("email", "==", String(email || "").trim().toLowerCase()).limit(1).get();
+  return snap.docs[0] ? docToData(snap.docs[0]) : null;
+}
+
+app.post("/api/customer/register", authLimiter, async (req, res) => {
+  try {
+    const name = String(req.body?.name || "").trim().slice(0,100);
+    const email = String(req.body?.email || "").trim().toLowerCase().slice(0,160);
+    const phone = String(req.body?.phone || "").trim().slice(0,30);
+    const password = String(req.body?.password || "");
+    if (!name || !/^\\S+@\\S+\\.\\S+$/.test(email) || password.length < 8) return res.status(400).json({ error: "Nom, email valide et mot de passe de 8 caractères minimum sont requis." });
+    const existing = await getCustomerByEmail(email);
+    if (existing) return res.status(409).json({ error: "Un compte existe déjà avec cet email." });
+    const id = crypto.randomUUID();
+    const row = { id, name, email, phone, password_hash: await bcrypt.hash(password, 12), address: "", city: "Dakar", created_at: new Date(), updated_at: new Date() };
+    await firestore.collection("customers").doc(id).set(row);
+    const token = signCustomer(row);
+    res.cookie("egonar_customer", token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 30 * 24 * 60 * 60 * 1000 });
+    res.status(201).json({ ok: true, customer: customerSafe(row) });
+  } catch (e) { console.error(e); res.status(400).json({ error: "Création du compte impossible." }); }
+});
+
+app.post("/api/customer/login", authLimiter, async (req, res) => {
+  try {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    const password = String(req.body?.password || "");
+    const customer = await getCustomerByEmail(email);
+    if (!customer || !(await bcrypt.compare(password, customer.password_hash || ""))) return res.status(401).json({ error: "Email ou mot de passe incorrect." });
+    const token = signCustomer(customer);
+    res.cookie("egonar_customer", token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 30 * 24 * 60 * 60 * 1000 });
+    res.json({ ok: true, customer: customerSafe(customer) });
+  } catch (e) { console.error(e); res.status(500).json({ error: "Connexion impossible." }); }
+});
+
+app.post("/api/customer/logout", requireCustomer, (_req, res) => {
+  res.clearCookie("egonar_customer", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+  res.json({ ok: true });
+});
+
+app.get("/api/customer/me", requireCustomer, async (req, res) => {
+  const snap = await firestore.collection("customers").doc(req.customer.sub).get();
+  if (!snap.exists) return res.status(404).json({ error: "Compte client introuvable." });
+  res.json({ customer: customerSafe(docToData(snap)) });
+});
+
+app.patch("/api/customer/me", requireCustomer, async (req, res) => {
+  const ref = firestore.collection("customers").doc(req.customer.sub);
+  const snap = await ref.get();
+  if (!snap.exists) return res.status(404).json({ error: "Compte client introuvable." });
+  const patch = {};
+  for (const key of ["name","phone","address","city"]) if (req.body?.[key] !== undefined) patch[key] = String(req.body[key] || "").trim().slice(0, key === "address" ? 250 : 100);
+  if (req.body?.email !== undefined) {
+    const email = String(req.body.email || "").trim().toLowerCase();
+    if (!/^\\S+@\\S+\\.\\S+$/.test(email)) return res.status(400).json({ error: "Email invalide." });
+    const existing = await getCustomerByEmail(email);
+    if (existing && existing.id !== req.customer.sub) return res.status(409).json({ error: "Cet email est déjà utilisé." });
+    patch.email = email;
+  }
+  if (req.body?.password) {
+    if (String(req.body.password).length < 8) return res.status(400).json({ error: "Le mot de passe doit contenir au moins 8 caractères." });
+    patch.password_hash = await bcrypt.hash(String(req.body.password), 12);
+  }
+  patch.updated_at = new Date();
+  await ref.update(patch);
+  res.json({ customer: customerSafe(docToData(await ref.get())) });
+});
+
+app.get("/api/customer/orders", requireCustomer, async (req, res) => {
+  const snap = await firestore.collection("orders").where("customer_id", "==", req.customer.sub).get();
+  const rows = snap.docs.map(docToData).sort(sortByDateDesc);
+  res.json(rows);
+});
+
+app.get("/api/customer/favorites", requireCustomer, async (req, res) => {
+  const snap = await firestore.collection("favorites").where("customer_id", "==", req.customer.sub).get();
+  const ids = snap.docs.map(d => String(d.data().product_id));
+  const products = await getPublicProducts();
+  res.json(products.filter(p => ids.includes(String(p.id))));
+});
+
+app.post("/api/customer/favorites/:productId", requireCustomer, async (req, res) => {
+  const productRef = firestore.collection("products").doc(String(req.params.productId));
+  const product = await productRef.get();
+  if (!product.exists || product.data().active !== true || product.data().approval_status !== "APPROVED") return res.status(404).json({ error: "Produit introuvable." });
+  const id = req.customer.sub + "_" + String(req.params.productId);
+  const ref = firestore.collection("favorites").doc(id);
+  const current = await ref.get();
+  if (current.exists) { await ref.delete(); return res.json({ favorite: false }); }
+  await ref.set({ id, customer_id: req.customer.sub, product_id: String(req.params.productId), created_at: new Date() });
+  res.status(201).json({ favorite: true });
+});
+
+app.get("/api/customer/favorites/ids", requireCustomer, async (req, res) => {
+  const snap = await firestore.collection("favorites").where("customer_id", "==", req.customer.sub).get();
+  res.json({ product_ids: snap.docs.map(d => String(d.data().product_id)) });
+});
+
+app.post("/api/customer/recently-viewed/:productId", requireCustomer, async (req, res) => {
+  const productId = String(req.params.productId);
+  const product = await firestore.collection("products").doc(productId).get();
+  if (!product.exists || product.data().active !== true || product.data().approval_status !== "APPROVED") return res.status(404).json({ error: "Produit introuvable." });
+  const ref = firestore.collection("recently_viewed").doc(req.customer.sub + "_" + productId);
+  await ref.set({ id: ref.id, customer_id: req.customer.sub, product_id: productId, viewed_at: new Date() }, { merge: true });
+  res.json({ ok: true });
+});
+
+app.get("/api/customer/recently-viewed", requireCustomer, async (req, res) => {
+  const snap = await firestore.collection("recently_viewed").where("customer_id", "==", req.customer.sub).get();
+  const ids = snap.docs.map(d => docToData(d)).sort((a,b) => new Date(b.viewed_at || 0)-new Date(a.viewed_at || 0)).slice(0,20).map(x => x.product_id);
+  const products = await getPublicProducts();
+  res.json(products.filter(p => ids.includes(String(p.id))));
+});
+
+app.get("/api/recommendations", async (req, res) => {
+  const productId = String(req.query.product_id || "");
+  const universe = req.query.universe ? normalizeUniverse(req.query.universe) : null;
+  const category = String(req.query.category || "").trim();
+  const products = await getPublicProducts();
+  const base = products.find(p => String(p.id) === productId);
+  const candidates = products.filter(p => String(p.id) !== productId && (!universe || p.universe === universe) && (!category || p.category === category));
+  const scored = candidates.map(p => {
+    let score = 0;
+    if (base && p.category === base.category) score += 30;
+    if (base && p.universe === base.universe) score += 20;
+    if (Number(p.stock || 0) > 0) score += 10;
+    score += Number(p.rating_average || 0) * 4;
+    score += Number(p.verification_score || 0) * 0.08;
+    return { ...p, recommendation_score: score };
+  }).sort((a,b)=>b.recommendation_score-a.recommendation_score).slice(0,8);
+  res.json({ products: scored });
 });
 
 app.post("/api/orders", orderLimiter, async (req, res) => {
