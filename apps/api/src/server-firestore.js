@@ -537,6 +537,20 @@ app.post("/api/orders", orderLimiter, async (req, res) => {
         delivery_fcfa: delivery,
         total_fcfa: subtotal + delivery,
         items: orderItems,
+        workflow: {
+          payment: { required: ["WAVE", "ORANGE_MONEY"].includes(chosenPayment), confirmed: initialStatus === "CONFIRMEE", confirmed_at: initialStatus === "CONFIRMEE" ? new Date() : null, confirmed_by: initialStatus === "CONFIRMEE" ? "system" : null, service_role: initialStatus === "CONFIRMEE" ? "SYSTEM" : null },
+          supplier: { preparation_started_at: null, shipped_at: null, confirmed_by: null },
+          logistics: { confirmed_at: null, confirmed_by: null },
+          courier: { confirmed_at: null, confirmed_by: null }
+        },
+        status_history: [{
+          from: null,
+          to: initialStatus,
+          actor_type: "system",
+          actor_email: "system",
+          label: initialStatus === "EN_ATTENTE_PAIEMENT" ? "Commande créée — paiement en attente" : "Commande créée — confirmation automatique",
+          at: new Date()
+        }],
         created_at: new Date(),
         updated_at: new Date()
       };
@@ -612,7 +626,8 @@ app.get("/api/orders/:number", async (req, res) => {
       order_number: row.order_number, status: row.status, payment_status: row.payment_status,
       payment_method: row.payment_method, total_fcfa: row.total_fcfa, created_at: row.created_at,
       name: row.customer?.name || "", phone: row.customer?.phone || "",
-      address: row.customer?.address || "", city: row.customer?.city || "", items: row.items || []
+      address: row.customer?.address || "", city: row.customer?.city || "", items: row.items || [],
+      workflow: safeWorkflow(row), status_history: Array.isArray(row.status_history) ? row.status_history : []
     });
   } catch (e) {
     console.error(e);
