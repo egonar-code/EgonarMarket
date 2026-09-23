@@ -6,7 +6,7 @@ const ROLES = new Set(["CUSTOMER_SERVICE", "PAYMENT", "LOGISTICS", "COURIER"]);
 
 function signService(user) {
   return jwt.sign(
-    { sub: user.id, email: user.email, role: user.role, type: "service" },
+    { sub: user.id, name: user.name || user.email, email: user.email, role: user.role, type: "service" },
     process.env.JWT_SECRET,
     { expiresIn: "12h" }
   );
