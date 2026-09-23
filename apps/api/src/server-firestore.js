@@ -89,8 +89,23 @@ function extractAiIntent(message) {
 function sortByDateDesc(a, b) {
   return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
 }
+function normalizeImageUrls(value) {
+  let list = value;
+  if (typeof list === "string") {
+    try { list = JSON.parse(list); } catch { list = list ? [list] : []; }
+  }
+  if (!Array.isArray(list)) list = [];
+  const urls = list.map(x => String(x || "").trim()).filter(Boolean).filter(url => /^https?:\/\//i.test(url) || /^\/assets\//i.test(url));
+  return [...new Set(urls)].slice(0, 8);
+}
+function normalizeProductMedia(row = {}) {
+  const gallery = normalizeImageUrls(row.image_gallery);
+  const image = String(row.image_url || "").trim();
+  const merged = [...new Set([image, ...gallery].filter(Boolean))].slice(0, 8);
+  return { ...row, image_url: merged[0] || "", image_gallery: merged };
+}
 function sanitizeProduct(doc) {
-  return docToData(doc);
+  return normalizeProductMedia(docToData(doc));
 }
 
 app.get("/api/health", async (_req, res) => {
@@ -129,7 +144,7 @@ app.get("/api/categories", async (req, res) => {
 
 async function getPublicProducts() {
   const snap = await firestore.collection("products").where("active", "==", true).get();
-  return snap.docs.map(docToData).filter(x => x.approval_status === "APPROVED").sort((a, b) => {
+  return snap.docs.map(doc => normalizeProductMedia(docToData(doc))).filter(x => x.approval_status === "APPROVED").sort((a, b) => {
     const stockDiff = Number(b.stock || 0) > 0 ? 1 : 0;
     const stockDiffA = Number(a.stock || 0) > 0 ? 1 : 0;
     return stockDiff - stockDiffA ||
@@ -159,7 +174,7 @@ app.get("/api/products/:id", async (req, res) => {
   try {
     const doc = await firestore.collection("products").doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: "Produit introuvable." });
-    const product = docToData(doc);
+    const product = normalizeProductMedia(docToData(doc));
     if (product.active !== true || product.approval_status !== "APPROVED") return res.status(404).json({ error: "Produit introuvable." });
     if (product.supplier_id) {
       const supplier = await firestore.collection("suppliers").doc(String(product.supplier_id)).get();
@@ -223,7 +238,7 @@ app.get("/api/admin/products", requireAdmin, async (_req, res) => {
 
 app.post("/api/admin/products", requireAdmin, async (req, res) => {
   try {
-    const { name, category, subcategory = "", description = "", price_fcfa, old_price_fcfa = null, stock = 0, sku = null, image_url = "" } = req.body || {};
+    const { name, category, subcategory = "", description = "", price_fcfa, old_price_fcfa = null, stock = 0, sku = null, image_url = "", image_gallery = [] } = req.body || {};
     const universe = normalizeUniverse(req.body?.universe || "MARKET");
     if (!universe) return res.status(400).json({ error: "Univers invalide." });
     if (!String(name || "").trim() || !String(category || "").trim() || !Number.isInteger(Number(price_fcfa)) || Number(price_fcfa) < 0) return res.status(400).json({ error: "Nom, catégorie et prix valides sont obligatoires." });
@@ -233,11 +248,13 @@ app.post("/api/admin/products", requireAdmin, async (req, res) => {
     const id = crypto.randomUUID();
     const now = new Date();
     const slug = `${String(name).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${Date.now()}`;
+    const gallery = normalizeImageUrls(image_gallery);
+    const primaryImage = String(image_url || "").trim() || gallery[0] || "";
     const row = {
       id, name: String(name).trim(), slug, universe, category: String(category).trim(),
       subcategory: String(subcategory).trim(), description: String(description),
       price_fcfa: price, old_price_fcfa: oldPrice, stock: Math.max(0, Number(stock) || 0),
-      sku: sku ? String(sku).trim() : null, image_url: String(image_url || "").trim(),
+      sku: sku ? String(sku).trim() : null, image_url: primaryImage, image_gallery: [...new Set([primaryImage, ...gallery].filter(Boolean))].slice(0, 8),
       active: true, approval_status: "APPROVED", verified_level: "STANDARD",
       verification_score: 0, rating_average: 0, rating_count: 0,
       delivery_min_minutes: 0, delivery_max_minutes: 0, delivery_city: "Dakar",
@@ -256,7 +273,7 @@ app.patch("/api/admin/products/:id", requireAdmin, async (req, res) => {
     const ref = firestore.collection("products").doc(req.params.id);
     const existing = await ref.get();
     if (!existing.exists) return res.status(404).json({ error: "Produit introuvable." });
-    const allowed = ["name","universe","category","subcategory","description","price_fcfa","old_price_fcfa","stock","sku","image_url","active"];
+    const allowed = ["name","universe","category","subcategory","description","price_fcfa","old_price_fcfa","stock","sku","image_url","image_gallery","active"];
     const patch = {};
     for (const key of allowed) if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) patch[key] = req.body[key];
     if (Object.keys(patch).length === 0) return res.status(400).json({ error: "Aucune modification." });
@@ -267,6 +284,10 @@ app.patch("/api/admin/products/:id", requireAdmin, async (req, res) => {
     if (patch.price_fcfa !== undefined) patch.price_fcfa = Number(patch.price_fcfa);
     if (patch.stock !== undefined) patch.stock = Math.max(0, Number(patch.stock) || 0);
     if (patch.old_price_fcfa !== undefined && patch.old_price_fcfa !== null && patch.old_price_fcfa !== "") patch.old_price_fcfa = Number(patch.old_price_fcfa);
+    if (patch.image_gallery !== undefined) patch.image_gallery = normalizeImageUrls(patch.image_gallery);
+    if (patch.image_url !== undefined) patch.image_url = String(patch.image_url || "").trim();
+    if (patch.image_gallery !== undefined && patch.image_url === undefined) patch.image_url = patch.image_gallery[0] || String(existing.data().image_url || "");
+    if (patch.image_url !== undefined && patch.image_gallery !== undefined) patch.image_gallery = [...new Set([patch.image_url, ...patch.image_gallery].filter(Boolean))].slice(0, 8);
     const nextPrice = patch.price_fcfa !== undefined ? patch.price_fcfa : Number(existing.data().price_fcfa);
     const nextOld = patch.old_price_fcfa !== undefined ? patch.old_price_fcfa : existing.data().old_price_fcfa;
     if (nextOld !== null && nextOld !== "" && Number(nextOld) < Number(nextPrice)) return res.status(400).json({ error: "L'ancien prix doit être supérieur ou égal au prix actuel." });
@@ -990,7 +1011,10 @@ app.post("/api/admin/studio/upload", requireAdmin, (req, res) => {
       });
       const url = await getDownloadURL(file);
       const asset = { id: crypto.randomUUID(), object_name: objectName, url, content_type: req.file.mimetype, size_bytes: req.file.size, original_name: req.file.originalname, uploaded_by: studioActor(req), created_at: now };
-      await firestore.collection("studio_assets").doc(asset.id).set(asset);
+      await Promise.all([
+        firestore.collection("studio_assets").doc(asset.id).set(asset),
+        firestore.collection("media_assets").doc(asset.id).set({ ...asset, universe: "MARKET" })
+      ]);
       await studioAudit(req, "UPLOAD", "ASSET", asset.id, null, asset);
       res.status(201).json(asset);
     } catch (e) {
@@ -999,6 +1023,60 @@ app.post("/api/admin/studio/upload", requireAdmin, (req, res) => {
     }
   });
 });
+app.get("/api/admin/studio/media", requireAdmin, async (req, res) => {
+  try {
+    const [studioSnap, sharedSnap] = await Promise.all([
+      firestore.collection("studio_assets").get(),
+      firestore.collection("media_assets").get()
+    ]);
+    const map = new Map();
+    for (const doc of [...studioSnap.docs, ...sharedSnap.docs]) {
+      const row = docToData(doc);
+      if (row.active === false) continue;
+      const key = row.id || doc.id;
+      map.set(key, row);
+    }
+    const universe = req.query.universe ? normalizeUniverse(req.query.universe) : null;
+    if (req.query.universe && !universe) return res.status(400).json({ error: "Univers invalide." });
+    let rows = [...map.values()];
+    if (universe) rows = rows.filter(x => !x.universe || x.universe === universe);
+    rows.sort(sortByDateDesc);
+    res.json(rows.slice(0, 300));
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Impossible de charger la bibliothèque média." });
+  }
+});
+
+app.delete("/api/admin/studio/media/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    const [studioRef, sharedRef] = [firestore.collection("studio_assets").doc(id), firestore.collection("media_assets").doc(id)];
+    const [studioSnap, sharedSnap] = await Promise.all([studioRef.get(), sharedRef.get()]);
+    const asset = studioSnap.exists ? studioSnap.data() : (sharedSnap.exists ? sharedSnap.data() : null);
+    if (!asset) return res.status(404).json({ error: "Média introuvable." });
+    const url = String(asset.url || "");
+    const refs = [];
+    const [contentsSnap, categoriesSnap, productsSnap] = await Promise.all([
+      firestore.collection("studio_contents").get(),
+      firestore.collection("categories").get(),
+      firestore.collection("products").get()
+    ]);
+    contentsSnap.docs.forEach(d => { const x=d.data()||{}; if(String(x.image_url||"")===url) refs.push("contenu "+d.id); });
+    categoriesSnap.docs.forEach(d => { const x=d.data()||{}; if(String(x.image_url||"")===url) refs.push("catégorie "+d.id); });
+    productsSnap.docs.forEach(d => { const x=d.data()||{}; const gallery=normalizeImageUrls(x.image_gallery); if(String(x.image_url||"")===url || gallery.includes(url)) refs.push("produit "+d.id); });
+    if (refs.length) return res.status(409).json({ error: "Ce média est encore utilisé par : " + refs.slice(0,5).join(", ") + "." });
+    const now = new Date();
+    if (studioSnap.exists) await studioRef.update({ active:false, deleted_at:now, deleted_by:studioActor(req) });
+    if (sharedSnap.exists) await sharedRef.update({ active:false, deleted_at:now, deleted_by:studioActor(req) });
+    await studioAudit(req, "DELETE", "ASSET", id, asset, { ...asset, active:false });
+    res.json({ ok:true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Impossible de supprimer le média." });
+  }
+});
+
 app.get("/api/admin/studio/content", requireAdmin, async (req, res) => {
   try {
     const universe = req.query.universe ? normalizeUniverse(req.query.universe) : null;
