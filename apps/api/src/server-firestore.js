@@ -416,6 +416,8 @@ async function serviceConfirmOrder({ req, res, role, orderId }) {
   if (!step) return res.status(400).json({ error: "Étape de workflow invalide." });
   const ref = firestore.collection("orders").doc(String(orderId));
   const actor = serviceActor(req);
+  const paymentReference = String(req.body?.payment_reference || "").trim().slice(0, 120);
+  if (role === "PAYMENT" && !paymentReference) return res.status(400).json({ error: "La référence de transaction est obligatoire pour confirmer ce paiement." });
 
   try {
     const updated = await firestore.runTransaction(async transaction => {
@@ -479,7 +481,19 @@ async function serviceConfirmOrder({ req, res, role, orderId }) {
       const patch = {
         status: nextStatus,
         workflow,
-        ...(role === "PAYMENT" ? { payment_status: "PAID" } : {}),
+        ...(role === "PAYMENT" ? {
+          payment_status: "PAID",
+          payment: {
+            ...(current.payment || {}),
+            provider: current.payment?.provider || current.payment_method || "",
+            method: current.payment?.method || current.payment_method || "",
+            status: "PAID",
+            reference: paymentReference,
+            verified_at: now,
+            updated_at: now,
+            verified_by: { id: actor.id, name: actor.name, email: actor.email }
+          }
+        } : {}),
         status_history: workflowHistoryAppend(current, entry),
         workflow_timer: timerTransition.current,
         workflow_timer_history: timerTransition.history,
@@ -489,6 +503,19 @@ async function serviceConfirmOrder({ req, res, role, orderId }) {
     });
 
     const finalOrder = docToData(await ref.get());
+    if (role === "PAYMENT") {
+      await firestore.collection("payment_attempts").doc(crypto.randomUUID()).set({
+        id: crypto.randomUUID(),
+        order_id: finalOrder.id,
+        order_number: finalOrder.order_number,
+        provider: finalOrder.payment?.provider || finalOrder.payment_method || "",
+        reference: paymentReference,
+        status: "VERIFIED",
+        verified_by: { id: actor.id, name: actor.name, email: actor.email },
+        verified_at: new Date(),
+        created_at: new Date()
+      });
+    }
     await notifyWorkflowAdvance(finalOrder, finalOrder.status);
     return res.json(finalOrder);
   } catch (error) {
@@ -815,6 +842,7 @@ app.post("/api/orders", orderLimiter, async (req, res) => {
         status: initialStatus,
         payment_method: chosenPayment,
         payment_status: "PENDING",
+        payment: { provider: chosenPayment, method: chosenPayment, status: "PENDING", reference: null, verified_at: null, updated_at: new Date() },
         subtotal_fcfa: subtotal,
         delivery_fcfa: delivery,
         total_fcfa: subtotal + delivery,
