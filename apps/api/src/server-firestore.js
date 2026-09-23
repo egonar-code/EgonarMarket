@@ -809,7 +809,7 @@ app.post("/api/customer/register", authLimiter, async (req, res) => {
     const email = String(req.body?.email || "").trim().toLowerCase().slice(0,160);
     const phone = String(req.body?.phone || "").trim().slice(0,30);
     const password = String(req.body?.password || "");
-    if (!name || !/^\\S+@\\S+\\.\\S+$/.test(email) || password.length < 8) return res.status(400).json({ error: "Nom, email valide et mot de passe de 8 caractères minimum sont requis." });
+    if (!name || !/^\S+@\S+\.\S+$/.test(email) || password.length < 8) return res.status(400).json({ error: "Nom, email valide et mot de passe de 8 caractères minimum sont requis." });
     const existing = await getCustomerByEmail(email);
     if (existing) return res.status(409).json({ error: "Un compte existe déjà avec cet email." });
     const id = crypto.randomUUID();
@@ -852,7 +852,7 @@ app.patch("/api/customer/me", requireCustomer, async (req, res) => {
   for (const key of ["name","phone","address","city"]) if (req.body?.[key] !== undefined) patch[key] = String(req.body[key] || "").trim().slice(0, key === "address" ? 250 : 100);
   if (req.body?.email !== undefined) {
     const email = String(req.body.email || "").trim().toLowerCase();
-    if (!/^\\S+@\\S+\\.\\S+$/.test(email)) return res.status(400).json({ error: "Email invalide." });
+    if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: "Email invalide." });
     const existing = await getCustomerByEmail(email);
     if (existing && existing.id !== req.customer.sub) return res.status(409).json({ error: "Cet email est déjà utilisé." });
     patch.email = email;
