@@ -30,6 +30,8 @@ services:
         value: "1500"
       - key: DELIVERY_OTHER_FCFA
         value: "3000"
+      - key: TIMER_CUSTOMER_SERVICE_MINUTES
+        value: "10"
       - key: TIMER_PAYMENT_MINUTES
         value: "15"
       - key: TIMER_SUPPLIER_PREPARATION_MINUTES
