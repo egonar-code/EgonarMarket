@@ -1010,10 +1010,10 @@ app.post("/api/admin/studio/upload", requireAdmin, (req, res) => {
         metadata: { contentType: req.file.mimetype, cacheControl: "public,max-age=31536000,immutable" }
       });
       const url = await getDownloadURL(file);
-      const asset = { id: crypto.randomUUID(), object_name: objectName, url, content_type: req.file.mimetype, size_bytes: req.file.size, original_name: req.file.originalname, uploaded_by: studioActor(req), created_at: now };
+      const asset = { id: crypto.randomUUID(), object_name: objectName, url, content_type: req.file.mimetype, size_bytes: req.file.size, original_name: req.file.originalname, universe: normalizeUniverse(req.body?.universe) || null, uploaded_by: studioActor(req), created_at: now };
       await Promise.all([
         firestore.collection("studio_assets").doc(asset.id).set(asset),
-        firestore.collection("media_assets").doc(asset.id).set({ ...asset, universe: "MARKET" })
+        firestore.collection("media_assets").doc(asset.id).set(asset)
       ]);
       await studioAudit(req, "UPLOAD", "ASSET", asset.id, null, asset);
       res.status(201).json(asset);
