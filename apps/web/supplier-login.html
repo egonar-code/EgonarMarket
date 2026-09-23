@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Portail Fournisseur — EgonarMarket</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header class="header"><div class="nav wrap"><a class="logo" href="index.html">Egonar<span>Market</span></a><nav><a href="index.html">Boutique</a></nav></div></header>
+<main class="wrap section">
+<section class="admin-grid" style="max-width:1000px;margin:60px auto">
+<div><p class="eyebrow">ESPACE PARTENAIRE</p><h1>Créer un compte fournisseur</h1><p class="muted">La création est ouverte. Après validation par EgonarMarket, vous pourrez accéder à votre espace fournisseur.</p>
+<form id="register" class="form">
+<input name="business_name" placeholder="Nom de l'entreprise" required><input name="contact_name" placeholder="Nom du contact" required><input name="phone" placeholder="Téléphone"><input name="email" type="email" placeholder="Email professionnel" required><input name="password" type="password" minlength="8" placeholder="Mot de passe (8 caractères min.)" required><button class="btn primary">Demander l'accès</button>
+<div id="register-msg" class="state"></div></form></div>
+<div><p class="eyebrow">ACCÈS FOURNISSEUR</p><h1>Se connecter</h1><form id="login" class="form"><input name="email" type="email" placeholder="Email" required><input name="password" type="password" placeholder="Mot de passe" required><button class="btn primary">Se connecter</button><div id="login-msg" class="state error" hidden></div></form></div>
+</section></main>
+<script>
+const API="/supplier-api";
+const register=document.getElementById("register"),login=document.getElementById("login"),rm=document.getElementById("register-msg"),lm=document.getElementById("login-msg");
+async function call(path,options={}){const r=await fetch(API+path,{credentials:"include",...options});return {ok:r.ok,data:await r.json().catch(()=>({}))};}
+register.addEventListener("submit",async e=>{e.preventDefault();rm.textContent="";const r=await call("/api/supplier/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.fromEntries(new FormData(register)))});rm.textContent=r.data.error||r.data.message||(r.ok?"Demande envoyée.":"Erreur");rm.className="state "+(r.ok?"success":"error");if(r.ok)register.reset();});
+login.addEventListener("submit",async e=>{e.preventDefault();lm.hidden=true;const b=login.querySelector("button");b.disabled=true;b.textContent="Connexion…";try{const r=await call("/api/supplier/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.fromEntries(new FormData(login)))});if(!r.ok){lm.textContent=r.data.error||"Connexion impossible.";lm.hidden=false;return;}location.href="/supplier.html";}catch{lm.textContent="Serveur indisponible.";lm.hidden=false;}finally{b.disabled=false;b.textContent="Se connecter";}});
+</script>
+</body></html>
