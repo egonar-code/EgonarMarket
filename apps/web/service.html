@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Validation service — EgonarMarket</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.service-card{max-width:980px;margin:auto}.service-login,.service-orders{border:1px solid #e9e9e9;border-radius:22px;padding:24px;background:#fff}.service-grid{display:grid;gap:16px}.service-order{border:1px solid #eee;border-radius:18px;padding:18px;background:#fafafa}.service-order-head{display:flex;justify-content:space-between;gap:15px;align-items:flex-start}.service-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.service-pill{display:inline-flex;padding:6px 10px;border-radius:999px;background:#f0f0f0;font-size:12px;font-weight:800}.service-state{margin-top:12px}.service-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.service-links a{margin-right:12px}
+</style>
+</head>
+<body>
+<header class="header"><div class="nav wrap"><a class="logo" href="index.html">Egonar<span>Market</span></a><nav><a href="admin.html">Administration</a><a href="index.html">Boutique</a></nav></div></header>
+<main class="wrap section service-card">
+  <div class="service-top"><div><p class="eyebrow" id="service-eyebrow">SERVICE</p><h1 id="service-title">Validation des commandes</h1><p class="muted" id="service-subtitle">Confirmez uniquement l'étape qui relève de votre service.</p></div><button id="logout" class="btn secondary" style="display:none">Déconnexion</button></div>
+  <section id="login" class="service-login">
+    <form id="login-form" class="form narrow">
+      <input name="email" type="email" placeholder="Email du service" autocomplete="username" required>
+      <input name="password" type="password" placeholder="Mot de passe" autocomplete="current-password" required>
+      <button class="btn primary">Connexion</button>
+      <div id="login-msg" class="state error" hidden></div>
+    </form>
+  </section>
+  <section id="orders" class="service-orders" style="display:none">
+    <div class="service-grid" id="orders-list"></div>
+    <div id="empty" class="muted" style="display:none">Aucune commande à valider actuellement.</div>
+  </section>
+</main>
+<script>
+const params=new URLSearchParams(location.search);const wanted=String(params.get("service")||"PAYMENT").toUpperCase();
+const META={PAYMENT:{eyebrow:"SERVICE PAIEMENT",title:"Confirmation du paiement",subtitle:"Confirmez le paiement uniquement après vérification du règlement.",button:"Confirmer le paiement",empty:"Aucun paiement en attente."},LOGISTICS:{eyebrow:"SERVICE LOGISTIQUE",title:"Prise en charge logistique",subtitle:"Confirmez la prise en charge d'une commande expédiée par le fournisseur.",button:"Confirmer la prise en charge",empty:"Aucune commande expédiée à prendre en charge."},COURIER:{eyebrow:"SERVICE LIVREUR",title:"Livraison des commandes",subtitle:"Confirmez la livraison uniquement après remise effective au client.",button:"Confirmer la livraison",empty:"Aucune commande actuellement en livraison."}};
+const meta=META[wanted]||META.PAYMENT;document.getElementById("service-eyebrow").textContent=meta.eyebrow;document.getElementById("service-title").textContent=meta.title;document.getElementById("service-subtitle").textContent=meta.subtitle;
+const $=id=>document.getElementById(id);
+const call=(url,options={})=>fetch(url,{credentials:"include",...options}).then(async r=>({ok:r.ok,data:await r.json().catch(()=>({}))}));
+function money(n){return new Intl.NumberFormat("fr-FR").format(Number(n)||0)+" FCFA";}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function formatStatus(s){return ({EN_ATTENTE_PAIEMENT:"En attente de paiement",EXPEDIEE:"Expédiée",EN_LIVRAISON:"En livraison"})[s]||s;}
+async function boot(){const me=await call("/api/service/me");if(me.ok){if(me.data.role!==wanted){$("login-msg").textContent="Ce compte n'est pas autorisé pour ce service."; $("login-msg").hidden=false;return;}showApp();await refresh();}}
+function showApp(){$("login").style.display="none";$("orders").style.display="block";$("logout").style.display="inline-block";}
+async function refresh(){const r=await call("/api/service/orders");if(!r.ok){$("orders-list").innerHTML="";$("empty").textContent=r.data.error||"Impossible de charger les commandes.";$("empty").style.display="block";return;}const rows=r.data||[];$("empty").style.display=rows.length?"none":"block";$("orders-list").innerHTML=rows.map(o=>`<article class="service-order"><div class="service-order-head"><div><p class="eyebrow">COMMANDE</p><h3>${esc(o.order_number)}</h3><p class="muted">${esc(o.customer_name||"Client")} · ${esc(o.city||"")} · ${money(o.total_fcfa)}</p></div><span class="service-pill">${esc(formatStatus(o.status))}</span></div><p class="small muted">${esc(o.address||"Adresse non renseignée")} · Paiement : ${esc(o.payment_method||"")}${o.payment_status?" · "+esc(o.payment_status):""}</p><div class="service-actions"><button class="btn primary" onclick="confirmStep('${esc(o.id)}')">${meta.button}</button></div></article>`).join("");}
+async function confirmStep(id){const r=await call("/api/service/orders/"+encodeURIComponent(id)+"/confirm",{method:"POST"});if(!r.ok)return alert(r.data.error||"Confirmation impossible.");await refresh();}
+$("login-form").onsubmit=async e=>{e.preventDefault();$("login-msg").hidden=true;const r=await call("/api/service/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...Object.fromEntries(new FormData(e.currentTarget)),role:wanted})});if(!r.ok){$("login-msg").textContent=r.data.error||"Connexion impossible.";$("login-msg").hidden=false;return;}showApp();await refresh();};
+$("logout").onclick=async()=>{await call("/api/service/logout",{method:"POST"});location.reload();};
+boot();
+</script>
+<script src="secondary-i18n.js"></script>
+</body>
+</html>
