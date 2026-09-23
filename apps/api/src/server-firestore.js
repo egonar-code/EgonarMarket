@@ -504,8 +504,9 @@ async function serviceConfirmOrder({ req, res, role, orderId }) {
 
     const finalOrder = docToData(await ref.get());
     if (role === "PAYMENT") {
-      await firestore.collection("payment_attempts").doc(crypto.randomUUID()).set({
-        id: crypto.randomUUID(),
+      const paymentAttemptId = crypto.randomUUID();
+      await firestore.collection("payment_attempts").doc(paymentAttemptId).set({
+        id: paymentAttemptId,
         order_id: finalOrder.id,
         order_number: finalOrder.order_number,
         provider: finalOrder.payment?.provider || finalOrder.payment_method || "",
