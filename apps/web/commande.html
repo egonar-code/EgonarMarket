@@ -40,9 +40,10 @@ const summaryBox=document.getElementById('summary');
 const messageBox=document.getElementById('msg');
 const zoneSelect=document.getElementById('delivery-zone');
 const read=()=>{try{const value=JSON.parse(localStorage.getItem('egonarCart')||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
-let config={delivery:{dakar_fcfa:0,other_fcfa:0}};
+let config={delivery:{dakar_fcfa:0,other_fcfa:0}};let customerSession=null;
 
-async function loadConfig(){try{const r=await fetch(API+'/config');if(r.ok)config=await r.json()}catch{}}
+async function loadConfig(){try{const r=await fetch(API+'/config');if(r.ok)config=await r.json()}catch{}} 
+async function loadCustomer(){try{const r=await fetch(API+'/customer/me',{credentials:'include'});if(!r.ok)return;const d=await r.json();customerSession=d.customer;for(const [name,value] of Object.entries({name:d.customer.name,phone:d.customer.phone,email:d.customer.email,address:d.customer.address,city:d.customer.city})){const input=form.elements[name];if(input&&value)input.value=value}}catch{}}
 function deliveryFee(){return zoneSelect.value==='DAKAR'?Number(config.delivery?.dakar_fcfa||0):Number(config.delivery?.other_fcfa||0)}
 
 async function loadSummary(){
@@ -54,7 +55,7 @@ async function loadSummary(){
 }
 
 zoneSelect.addEventListener('change',loadSummary);
-(async()=>{await loadConfig();await loadSummary()})();
+(async()=>{await loadConfig();await loadCustomer();await loadSummary()})();
 
 form.onsubmit=async e=>{
   e.preventDefault();
@@ -67,7 +68,7 @@ form.onsubmit=async e=>{
   const button=document.getElementById('submit-btn');
   button.disabled=true;button.textContent=T('Création de la commande…','Creating order…');
   try{
-    const r=await fetch(API+'/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer:values,items,payment_method,delivery_zone,delivery_fcfa:deliveryFee()})});
+    const r=await fetch(API+'/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer:values,customer_id:customerSession?.id||"",items,payment_method,delivery_zone,delivery_fcfa:deliveryFee()})});
     const d=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(d.error||T('Commande impossible.','Order could not be created.'));
     localStorage.removeItem('egonarCart');form.style.display='none';
