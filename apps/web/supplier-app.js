@@ -54,6 +54,5 @@ function drawOrders(){$("orders").innerHTML=orders.map(o=>{const items=Array.isA
 
 async function refresh(){const [me,stats,sales,pr,or]=await Promise.all([call("/api/supplier/me"),call("/api/supplier/stats"),call("/api/supplier/sales-stats"),call("/api/supplier/products"),call("/api/supplier/orders")]);if(!me.ok||!stats.ok||!sales.ok||!pr.ok||!or.ok)return;products=pr.data||[];orders=or.data||[];$("active-count").textContent=stats.data.active_products??0;$("pending-count").textContent=stats.data.pending_products??0;$("stock-count").textContent=stats.data.total_stock??0;$("sales-count").textContent=money(sales.data.gross_sales_fcfa);$("orders-count").textContent=sales.data.orders_count??0;$("units-count").textContent=sales.data.units_sold??0;$("commission-count").textContent=money(sales.data.estimated_commission_fcfa);drawProducts();drawOrders();}
 boot();
-setInterval(()=>{if(!$("panel").hidden)refresh();},30000);
 setInterval(tickTimers,1000);function resetProductForm(){const f=$("product-form");if(!f)return;f.reset();f.elements.id.value="";f.elements.image_url.value="";f.elements.image_gallery.value="";f.elements.universe.value="MARKET";setSupplierImagePreview([]);$("form-title").textContent=T("Soumettre un produit","Submit a product");$("submit-product").textContent=T("Soumettre pour validation","Submit for approval");$("cancel-edit").hidden=true;}
 
