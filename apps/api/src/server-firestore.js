@@ -320,7 +320,7 @@ function workflowHistoryAppend(current, entry) {
   return [...(Array.isArray(current?.status_history) ? current.status_history : []), entry];
 }
 function safeWorkflow(order) {
-  return order?.workflow || { payment: {}, supplier: {}, logistics: {}, courier: {} };
+  return order?.workflow || { customer_service: {}, payment: {}, supplier: {}, logistics: {}, courier: {} };
 }
 async function serviceConfirmOrder({ req, res, role, orderId }) {
   const step = WORKFLOW_NEXT[role];
