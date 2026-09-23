@@ -9,6 +9,7 @@ const crypto = require("crypto");
 const multer = require("multer");
 const { getDb, getBucket, getDownloadURL, docToData } = require("./firestore");
 const { transitionWorkflowTimer, getWorkflowTimerView } = require("./workflow-timers");
+const { notifyWorkflowAdvance } = require("./notifications");
 const { requireAdmin } = require("./auth");
 const { requireAdminPage, requireSupplierPage } = require("./page-auth");
 require("dotenv").config();
@@ -242,6 +243,26 @@ app.post("/api/supplier/logout", requireSupplier, (_req, res) => {
   res.json({ ok: true });
 });
 
+app.get("/api/supplier/notifications", requireSupplier, async (req, res) => {
+  try {
+    const snap = await firestore.collection("notifications").get();
+    const rows = snap.docs.map(docToData)
+      .filter(x => x.recipient_type === "SUPPLIER" && String(x.recipient_id) === String(req.supplier.sub))
+      .sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+    res.json({ unread: rows.filter(x=>x.read!==true).length, notifications: rows.slice(0,100) });
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({ error: "Impossible de charger les notifications." });
+  }
+});
+app.patch("/api/supplier/notifications/:id/read", requireSupplier, async (req,res)=>{
+  const ref=firestore.collection("notifications").doc(String(req.params.id));
+  const snap=await ref.get();
+  if(!snap.exists || snap.data().recipient_type!=="SUPPLIER" || String(snap.data().recipient_id)!==String(req.supplier.sub)) return res.status(404).json({error:"Notification introuvable."});
+  await ref.update({read:true,updated_at:new Date()});
+  res.json({ok:true});
+});
+
 app.get("/api/supplier/me", requireSupplier, async (req, res) => {
   const supplier = await supplierById(req.supplier.sub);
   if (!supplier) return res.status(404).json({ error: "Fournisseur introuvable." });
@@ -452,7 +473,9 @@ app.post("/api/supplier/orders/:id/workflow", requireSupplier, async (req, res) 
       workflow_timer_history: timerTransition.history,
       updated_at: now
     });
-    res.json(docToData(await orderRef.get()));
+    const finalOrder = docToData(await orderRef.get());
+    await notifyWorkflowAdvance(finalOrder, finalOrder.status);
+    res.json(finalOrder);
   } catch (error) {
     console.error(error);
     res.status(400).json({ error: "Impossible de valider l'étape fournisseur." });
