@@ -18,7 +18,7 @@ for(const endpoint of [
   'app.get("/api/admin/studio/audit"'
 ]) if(!server.includes(endpoint)) throw new Error("Endpoint Studio manquant: "+endpoint);
 
-for(const marker of ["EGONAR STUDIO","Contenus","Catégories","Historique","data-tab="audit""]) if(!studio.includes(marker)) throw new Error("UI Studio manquante: "+marker);
+for(const marker of ["EGONAR STUDIO","Contenus","Catégories","Historique","data-tab=\\\"audit\\\""]) if(!studio.includes(marker)) throw new Error("UI Studio manquante: "+marker);
 for(const marker of ["saveContent","publishContent","archiveContent","saveCategory","loadAudit"]) if(!studioJs.includes(marker)) throw new Error("Fonction Studio manquante: "+marker);
 if(!admin.includes('href="egonar-studio.html"')) throw new Error("Accès Admin → Studio manquant");
 console.log("studio-contract-test: OK");
