@@ -7,6 +7,7 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { getDb, FieldValue, docToData } = require("./firestore");
 const { signAdmin, requireAdmin } = require("./auth");
+const { signService, requireService, authenticateService, ROLES: SERVICE_ROLES } = require("./service-auth");
 require("dotenv").config();
 
 if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET manquant.");
@@ -291,8 +292,168 @@ app.get("/api/admin/orders", requireAdmin, async (_req, res) => {
     customer_name: row.customer?.name || "",
     phone: row.customer?.phone || "",
     address: row.customer?.address || "",
+    city: row.customer?.city || "",
+    workflow: safeWorkflow(row),
+    status_history: Array.isArray(row.status_history) ? row.status_history : []
+  })));
+});
+
+
+const WORKFLOW_ROLE_LABELS = {
+  PAYMENT: "Paiement",
+  SUPPLIER: "Fournisseur",
+  LOGISTICS: "Logistique",
+  COURIER: "Livreur"
+};
+const WORKFLOW_NEXT = {
+  PAYMENT: { from: "EN_ATTENTE_PAIEMENT", to: "CONFIRMEE", key: "payment", label: "Paiement confirmé" },
+  LOGISTICS: { from: "EXPEDIEE", to: "EN_LIVRAISON", key: "logistics", label: "Commande prise en charge par la logistique" },
+  COURIER: { from: "EN_LIVRAISON", to: "LIVREE", key: "courier", label: "Commande livrée" }
+};
+function workflowHistoryAppend(current, entry) {
+  return [...(Array.isArray(current?.status_history) ? current.status_history : []), entry];
+}
+function safeWorkflow(order) {
+  return order?.workflow || { payment: {}, supplier: {}, logistics: {}, courier: {} };
+}
+async function serviceConfirmOrder({ req, res, role, orderId }) {
+  const step = WORKFLOW_NEXT[role];
+  if (!step) return res.status(400).json({ error: "Étape de workflow invalide." });
+  const ref = firestore.collection("orders").doc(String(orderId));
+  const currentSnap = await ref.get();
+  if (!currentSnap.exists) return res.status(404).json({ error: "Commande introuvable." });
+  const current = currentSnap.data();
+  if (current.status !== step.from) {
+    return res.status(409).json({
+      error: `Transition impossible. La commande est actuellement "${current.status}".`,
+      status: current.status,
+      expected_status: step.from
+    });
+  }
+  const now = new Date();
+  const workflow = safeWorkflow(current);
+  workflow[step.key] = {
+    ...workflow[step.key],
+    confirmed: true,
+    confirmed_at: now,
+    confirmed_by: req.service.email,
+    service_role: role
+  };
+  if (role === "PAYMENT") {
+    current.payment_status = "PAID";
+  }
+  const entry = {
+    from: current.status,
+    to: step.to,
+    actor_type: "service",
+    actor_role: role,
+    actor_email: req.service.email,
+    label: step.label,
+    at: now
+  };
+  const patch = {
+    status: step.to,
+    workflow,
+    status_history: workflowHistoryAppend(current, entry),
+    updated_at: now
+  };
+  await ref.update(patch);
+  res.json(docToData(await ref.get()));
+}
+
+app.post("/api/service/login", authLimiter, async (req, res) => {
+  try {
+    const user = await authenticateService(req.body?.email, req.body?.password);
+    if (!user) return res.status(401).json({ error: "Identifiants de service incorrects." });
+    const token = signService(user);
+    res.cookie("egonar_service", token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 12 * 60 * 60 * 1000 });
+    res.json({ ok: true, role: user.role, email: user.email });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Connexion service impossible." });
+  }
+});
+
+app.post("/api/service/logout", async (_req, res) => {
+  res.clearCookie("egonar_service", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+  res.json({ ok: true });
+});
+
+app.get("/api/service/me", requireService(), (req, res) => {
+  res.json({ email: req.service.email, role: req.service.role });
+});
+
+app.get("/api/service/orders", requireService(), async (req, res) => {
+  const relevant = {
+    PAYMENT: ["EN_ATTENTE_PAIEMENT"],
+    LOGISTICS: ["EXPEDIEE"],
+    COURIER: ["EN_LIVRAISON"]
+  };
+  const allowedStatuses = relevant[req.service.role] || [];
+  const snap = await firestore.collection("orders").get();
+  const rows = snap.docs.map(docToData).filter(row => allowedStatuses.includes(row.status)).sort(sortByDateDesc);
+  res.json(rows.map(row => ({
+    ...row,
+    customer_name: row.customer?.name || "",
+    phone: row.customer?.phone || "",
+    address: row.customer?.address || "",
     city: row.customer?.city || ""
   })));
+});
+
+app.post("/api/service/orders/:id/confirm", requireService(), async (req, res) => {
+  await serviceConfirmOrder({ req, res, role: req.service.role, orderId: req.params.id });
+});
+
+app.get("/api/admin/service-users", requireAdmin, async (_req, res) => {
+  const snap = await firestore.collection("service_users").get();
+  res.json(snap.docs.map(doc => {
+    const row = docToData(doc);
+    delete row.password_hash;
+    return row;
+  }).sort(sortByDateDesc));
+});
+
+app.post("/api/admin/service-users", requireAdmin, async (req, res) => {
+  try {
+    const role = String(req.body?.role || "").trim().toUpperCase();
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    const password = String(req.body?.password || "");
+    if (!SERVICE_ROLES.has(role)) return res.status(400).json({ error: "Rôle de service invalide." });
+    if (!email || password.length < 8) return res.status(400).json({ error: "Email et mot de passe (8 caractères minimum) sont obligatoires." });
+    const existing = await firestore.collection("service_users").where("email", "==", email).limit(1).get();
+    if (!existing.empty) return res.status(409).json({ error: "Cet email de service existe déjà." });
+    const id = crypto.randomUUID();
+    const row = {
+      id, email, role,
+      role_label: WORKFLOW_ROLE_LABELS[role],
+      password_hash: await bcrypt.hash(password, 12),
+      active: true,
+      created_at: new Date(),
+      updated_at: new Date()
+    };
+    await firestore.collection("service_users").doc(id).set(row);
+    res.status(201).json({ id, email, role, role_label: row.role_label, active: true });
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ error: "Impossible de créer le compte service." });
+  }
+});
+
+app.patch("/api/admin/service-users/:id", requireAdmin, async (req, res) => {
+  const ref = firestore.collection("service_users").doc(req.params.id);
+  const current = await ref.get();
+  if (!current.exists) return res.status(404).json({ error: "Compte service introuvable." });
+  const patch = { updated_at: new Date() };
+  if (req.body?.active !== undefined) patch.active = Boolean(req.body.active);
+  if (req.body?.password) {
+    if (String(req.body.password).length < 8) return res.status(400).json({ error: "Le mot de passe doit contenir au moins 8 caractères." });
+    patch.password_hash = await bcrypt.hash(String(req.body.password), 12);
+  }
+  await ref.update(patch);
+  const updated = docToData(await ref.get());
+  delete updated.password_hash;
+  res.json(updated);
 });
 
 const STATUSES = new Set(["EN_ATTENTE_PAIEMENT","CONFIRMEE","PREPARATION","EXPEDIEE","EN_LIVRAISON","LIVREE","ANNULEE"]);
@@ -302,7 +463,18 @@ app.patch("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
   const ref = firestore.collection("orders").doc(req.params.id);
   const doc = await ref.get();
   if (!doc.exists) return res.status(404).json({ error: "Commande introuvable." });
-  await ref.update({ status, updated_at: new Date() });
+  await ref.update({
+    status,
+    updated_at: new Date(),
+    status_history: workflowHistoryAppend(doc.data(), {
+      from: doc.data().status || null,
+      to: status,
+      actor_type: "admin",
+      actor_email: req.admin.email,
+      label: "Modification administrateur",
+      at: new Date()
+    })
+  });
   res.json(docToData(await ref.get()));
 });
 
