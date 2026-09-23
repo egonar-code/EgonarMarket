@@ -438,7 +438,11 @@ app.post("/api/admin/service-users", requireAdmin, async (req, res) => {
     res.status(201).json({ id, email, role, role_label: row.role_label, active: true });
   } catch (e) {
     console.error(e);
-    res.status(400).json({ error: "Impossible de créer le compte service." });
+    console.error("Service user creation failed:", e?.stack || e);
+    const message = String(e?.code || "").toUpperCase() === "ALREADY_EXISTS"
+      ? "Ce compte service existe déjà."
+      : (String(e?.message || "").slice(0, 300) || "Impossible de créer le compte service.");
+    res.status(400).json({ error: message });
   }
 });
 
