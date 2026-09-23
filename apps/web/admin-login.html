@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Connexion Admin — EgonarMarket</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header class="header"><div class="nav wrap"><a class="logo" href="index.html">Egonar<span>Market</span></a><nav><a href="index.html">Boutique</a><a href="suivi.html">Suivi</a></nav></div></header>
+<main class="wrap section">
+<section class="form narrow" style="margin:80px auto;max-width:520px">
+<p class="eyebrow">ESPACE SÉCURISÉ</p><h1>Connexion administrateur</h1><p class="muted">L'accès au tableau de bord est réservé aux administrateurs autorisés.</p>
+<form id="login" class="form">
+<input name="email" type="email" autocomplete="username" placeholder="Email administrateur" required>
+<input name="password" type="password" autocomplete="current-password" placeholder="Mot de passe" required>
+<button class="btn primary">Connexion</button>
+<div id="msg" class="state error" hidden></div>
+</form>
+</section>
+</main>
+<script>
+const form=document.getElementById("login"),msg=document.getElementById("msg");
+form.addEventListener("submit",async e=>{e.preventDefault();msg.hidden=true;const button=form.querySelector("button");button.disabled=true;button.textContent="Connexion…";try{const r=await fetch("/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify(Object.fromEntries(new FormData(form)))});const data=await r.json().catch(()=>({}));if(!r.ok){msg.textContent=data.error||"Connexion impossible.";msg.hidden=false;return;}location.href="/admin.html";}catch{msg.textContent="Serveur indisponible.";msg.hidden=false;}finally{button.disabled=false;button.textContent="Connexion";}});
+</script>
+</body></html>
