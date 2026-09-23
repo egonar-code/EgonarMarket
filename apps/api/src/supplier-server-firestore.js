@@ -330,10 +330,19 @@ app.post("/api/supplier/orders/:id/workflow", requireSupplier, async (req, res) 
       ...(order.workflow || {}),
       supplier: {
         ...(order.workflow?.supplier || {}),
-        ...(action === "PREPARE" ? { preparation_started_at: now } : { shipped_at: now }),
-        confirmed_by: req.supplier.email,
-        confirmed_name: supplierName,
-        confirmed_supplier_id: req.supplier.sub,
+        ...(action === "PREPARE"
+          ? {
+              preparation_started_at: now,
+              prepared_by: req.supplier.email,
+              prepared_name: supplierName,
+              prepared_supplier_id: req.supplier.sub
+            }
+          : {
+              shipped_at: now,
+              shipped_by: req.supplier.email,
+              shipped_name: supplierName,
+              shipped_supplier_id: req.supplier.sub
+            }),
         supplier_business_name: supplierBusinessName
       }
     };
