@@ -363,8 +363,10 @@ async function serviceConfirmOrder({ req, res, role, orderId }) {
 
 app.post("/api/service/login", authLimiter, async (req, res) => {
   try {
+    const requestedRole = String(req.body?.role || "").trim().toUpperCase();
     const user = await authenticateService(req.body?.email, req.body?.password);
     if (!user) return res.status(401).json({ error: "Identifiants de service incorrects." });
+    if (requestedRole && user.role !== requestedRole) return res.status(403).json({ error: "Ce compte n'est pas autorisé pour ce service." });
     const token = signService(user);
     res.cookie("egonar_service", token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 12 * 60 * 60 * 1000 });
     res.json({ ok: true, role: user.role, email: user.email });
