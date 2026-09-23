@@ -11,6 +11,7 @@ const { signAdmin, requireAdmin } = require("./auth");
 const { requireAdminPage, requireSupplierPage } = require("./page-auth");
 const { signService, requireService, authenticateService, ROLES: SERVICE_ROLES } = require("./service-auth");
 const { startWorkflowTimer, transitionWorkflowTimer, getWorkflowTimerView } = require("./workflow-timers");
+const { notifyWorkflowAdvance, createNotification } = require("./notifications");
 require("dotenv").config();
 
 if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET manquant.");
@@ -231,6 +232,44 @@ app.post("/api/admin/logout", requireAdmin, (_req, res) => {
 });
 app.get("/api/admin/me", requireAdmin, (req, res) => res.json({ email: req.admin.email, role: req.admin.role }));
 
+app.get("/api/admin/notifications", requireAdmin, async (_req, res) => {
+  try {
+    const snap = await firestore.collection("notifications").get();
+    const rows = snap.docs.map(docToData).filter(x => x.recipient_type === "ADMIN").sort(sortByDateDesc);
+    res.json({ unread: rows.filter(x => x.read !== true).length, notifications: rows.slice(0, 100) });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Impossible de charger les notifications." });
+  }
+});
+app.patch("/api/admin/notifications/:id/read", requireAdmin, async (req, res) => {
+  const ref = firestore.collection("notifications").doc(String(req.params.id));
+  const snap = await ref.get();
+  if (!snap.exists || snap.data().recipient_type !== "ADMIN") return res.status(404).json({ error: "Notification introuvable." });
+  await ref.update({ read: true, updated_at: new Date() });
+  res.json({ ok: true });
+});
+
+app.get("/api/service/notifications", requireService, async (req, res) => {
+  try {
+    const snap = await firestore.collection("notifications").get();
+    const rows = snap.docs.map(docToData)
+      .filter(x => x.recipient_type === "SERVICE" && String(x.recipient_id) === String(req.service.sub))
+      .sort(sortByDateDesc);
+    res.json({ unread: rows.filter(x => x.read !== true).length, notifications: rows.slice(0, 100) });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Impossible de charger les notifications." });
+  }
+});
+app.patch("/api/service/notifications/:id/read", requireService, async (req, res) => {
+  const ref = firestore.collection("notifications").doc(String(req.params.id));
+  const snap = await ref.get();
+  if (!snap.exists || snap.data().recipient_type !== "SERVICE" || String(snap.data().recipient_id) !== String(req.service.sub)) return res.status(404).json({ error: "Notification introuvable." });
+  await ref.update({ read: true, updated_at: new Date() });
+  res.json({ ok: true });
+});
+
 app.get("/api/admin/products", requireAdmin, async (_req, res) => {
   const snap = await firestore.collection("products").get();
   res.json(snap.docs.map(docToData).sort(sortByDateDesc));
@@ -449,7 +488,9 @@ async function serviceConfirmOrder({ req, res, role, orderId }) {
       transaction.update(ref, patch);
     });
 
-    return res.json(docToData(await ref.get()));
+    const finalOrder = docToData(await ref.get());
+    await notifyWorkflowAdvance(finalOrder, finalOrder.status);
+    return res.json(finalOrder);
   } catch (error) {
     const status = Number(error.httpStatus) || 400;
     if (status >= 500) console.error(error);
@@ -713,7 +754,9 @@ app.patch("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
       at: now
     })
   });
-  res.json(docToData(await ref.get()));
+  const finalOrder = docToData(await ref.get());
+  await notifyWorkflowAdvance(finalOrder, finalOrder.status);
+  return res.json(finalOrder);
 });
 
 app.post("/api/orders", orderLimiter, async (req, res) => {
@@ -804,6 +847,9 @@ app.post("/api/orders", orderLimiter, async (req, res) => {
       }
       return orderRow;
     });
+    await createNotification({recipient_type:"ADMIN",recipient_id:"admin",order_id:result.id,order_number:result.order_number,title:"Nouvelle commande",body:`La commande ${result.order_number} attend la validation du service client.`});
+    const serviceSnap = await firestore.collection("service_users").get();
+    for(const d of serviceSnap.docs){const u=docToData(d);if(u.role==="CUSTOMER_SERVICE"&&u.active!==false) await createNotification({recipient_type:"SERVICE",recipient_id:u.id,role:"CUSTOMER_SERVICE",order_id:result.id,order_number:result.order_number,title:"Nouvelle commande à valider",body:`La commande ${result.order_number} attend votre validation.`});}
     res.status(201).json({ order_number: result.order_number, status: result.status, payment_status: result.payment_status, subtotal_fcfa: result.subtotal_fcfa, delivery_fcfa: result.delivery_fcfa, total_fcfa: result.total_fcfa });
   } catch (e) {
     console.error(e);
