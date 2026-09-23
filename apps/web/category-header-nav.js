@@ -80,6 +80,15 @@
 
 
   const currentUniverse = () => String(document.body?.dataset?.universe || 'MARKET').toUpperCase();
+  const SERVER_CATEGORIES = {};
+  async function loadServerCategories(universe) {
+    try {
+      const response = await fetch('/api/categories?universe=' + encodeURIComponent(universe), { headers: { Accept: 'application/json' } });
+      if (!response.ok) return;
+      const rows = await response.json();
+      if (Array.isArray(rows) && rows.length) SERVER_CATEGORIES[universe] = rows.map(row => [row.name, row.icon || '•', row.description || '', row.image_url || '']);
+    } catch {}
+  }
 
   function injectStyles() {
     if (document.getElementById('egonar-category-premium-style')) return;
@@ -133,13 +142,13 @@
     return IMAGES[label] || FALLBACK;
   }
 
-  function makeItem([label,icon,description]) {
+  function makeItem([label,icon,description,imageUrl]) {
     const item=document.createElement('button');
     item.type='button';
     item.className='egonar-category-item'+(label==='Se faire livrer'?' egonar-delivery-category':'');
     const photo=document.createElement('img');
     photo.className='egonar-category-photo';
-    photo.src=USER_ASSETS[label]||FEATURED_IMAGES[label]||IMAGES[label]||FALLBACK;
+    photo.src=imageUrl||USER_ASSETS[label]||FEATURED_IMAGES[label]||IMAGES[label]||FALLBACK;
     photo.alt=label;
     photo.loading='lazy';
     photo.decoding='async';
@@ -252,7 +261,7 @@
   function makeShell() {
     const universe=currentUniverse();
     const meta=META[universe]||META.MARKET;
-    const categories=DATA[universe]||[];
+    const categories=SERVER_CATEGORIES[universe]||DATA[universe]||[];
     const featured=FEATURED_BY_UNIVERSE[universe]||[];
     const shell=document.createElement('div'); shell.className='egonar-category-shell';
     shell.innerHTML='<div class="egonar-category-heading"><div><span class="egonar-category-kicker">'+meta[1]+'</span><h2>Toutes nos catégories</h2><p>'+meta[3]+'</p></div><button type="button" class="egonar-category-all-link">Voir toutes les offres →</button></div>';
@@ -287,8 +296,10 @@
     document.querySelector('.egonar-search-with-categories')?.classList.remove('egonar-search-with-categories');
   }
 
-  function start() {
+  async function start() {
     cleanupLegacy();
+    const universe=currentUniverse();
+    await loadServerCategories(universe);
     const build=()=>{const section=ensureSection();if(!section)return false;injectStyles();section.classList.add('egonar-category-hub');section.querySelector('.egonar-category-shell')?.remove();section.appendChild(makeShell());return true;};
     if(build())return;
     const observer=new MutationObserver(()=>{if(build())observer.disconnect();});
