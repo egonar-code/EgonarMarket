@@ -7,6 +7,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const { getDb, docToData } = require("./firestore");
+const { transitionWorkflowTimer, getWorkflowTimerView } = require("./workflow-timers");
 const { requireAdmin } = require("./auth");
 const { requireAdminPage, requireSupplierPage } = require("./page-auth");
 require("dotenv").config();
@@ -276,6 +277,8 @@ app.get("/api/supplier/orders", requireSupplier, async (req, res) => {
       customer_phone: order.customer?.phone || "",
       customer_address: order.customer?.address || "",
       customer_city: order.customer?.city || "",
+      timer: getWorkflowTimerView(order),
+      timer_history: Array.isArray(order.workflow_timer_history) ? order.workflow_timer_history : [],
       supplier_units: items.reduce((sum, item) => sum + item.quantity, 0),
       supplier_total_fcfa: items.reduce((sum, item) => sum + item.quantity * item.unit_price_fcfa, 0),
       items
@@ -333,7 +336,15 @@ app.post("/api/supplier/orders/:id/workflow", requireSupplier, async (req, res) 
       at: now
     });
 
-    await orderRef.update({ status: transition.to, workflow, status_history: history, updated_at: now });
+    const timerTransition = transitionWorkflowTimer(order, transition.to, now);
+    await orderRef.update({
+      status: transition.to,
+      workflow,
+      status_history: history,
+      workflow_timer: timerTransition.current,
+      workflow_timer_history: timerTransition.history,
+      updated_at: now
+    });
     res.json(docToData(await orderRef.get()));
   } catch (error) {
     console.error(error);
