@@ -1051,7 +1051,8 @@ app.get("/api/content", async (req, res) => {
     if (req.query.universe && !universe) return res.status(400).json({ error: "Univers invalide." });
     if (!STUDIO_LOCALES.has(locale)) return res.status(400).json({ error: "Langue invalide." });
     const snap = await firestore.collection("studio_contents").get();
-    let rows = snap.docs.map(docToData).filter(row => row.status === "PUBLISHED" && row.locale === locale && row.active !== false);
+    const now = Date.now();
+    let rows = snap.docs.map(docToData).filter(row => row.status === "PUBLISHED" && row.locale === locale && row.active !== false && (!row.publish_at || new Date(row.publish_at).getTime() <= now));
     if (universe) rows = rows.filter(row => row.universe === universe);
     if (key) rows = rows.filter(row => row.key === key);
     rows.sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0) || sortByDateDesc(a, b));
@@ -1198,6 +1199,7 @@ app.post("/api/admin/studio/content", requireAdmin, async (req, res) => {
       cta_url: studioClean(req.body?.cta_url, 1000),
       meta_title: studioClean(req.body?.meta_title, 220),
       meta_description: studioClean(req.body?.meta_description, 500),
+      publish_at: req.body?.publish_at ? new Date(req.body.publish_at) : null,
       sort_order: Number.isFinite(Number(req.body?.sort_order)) ? Number(req.body.sort_order) : 0,
       status: "DRAFT",
       active: true,
@@ -1221,7 +1223,7 @@ app.patch("/api/admin/studio/content/:id", requireAdmin, async (req, res) => {
     if (!currentSnap.exists) return res.status(404).json({ error: "Contenu introuvable." });
     const current = currentSnap.data();
     const patch = {};
-    for (const key of ["content_type","universe","locale","key","title","subtitle","body","image_url","cta_label","cta_url","meta_title","meta_description","sort_order","active","status"]) {
+    for (const key of ["content_type","universe","locale","key","title","subtitle","body","image_url","cta_label","cta_url","meta_title","meta_description","publish_at","sort_order","active","status"]) {
       if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) patch[key] = req.body[key];
     }
     if (patch.content_type !== undefined) {
@@ -1243,6 +1245,14 @@ app.patch("/api/admin/studio/content/:id", requireAdmin, async (req, res) => {
     if (patch.title !== undefined && !studioClean(patch.title, 220)) return res.status(400).json({ error: "Le titre est obligatoire." });
     for (const key of ["title","subtitle","body","image_url","cta_label","cta_url","meta_title","meta_description"]) {
       if (patch[key] !== undefined) patch[key] = studioClean(patch[key], key === "body" ? 12000 : key === "meta_description" ? 500 : key === "image_url" ? 2000 : 1000);
+    }
+    if (patch.publish_at !== undefined) {
+      if (patch.publish_at === "" || patch.publish_at === null) patch.publish_at = null;
+      else {
+        const parsedPublishAt = new Date(patch.publish_at);
+        if (Number.isNaN(parsedPublishAt.getTime())) return res.status(400).json({ error: "Date de publication invalide." });
+        patch.publish_at = parsedPublishAt;
+      }
     }
     if (patch.sort_order !== undefined) patch.sort_order = Number(patch.sort_order) || 0;
     if (patch.active !== undefined) patch.active = Boolean(patch.active);
