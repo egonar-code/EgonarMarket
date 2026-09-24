@@ -32,4 +32,8 @@ assert(publicApp.includes('admin-login.html'), 'public navigation cleanup should
 new Function(publicApp);
 new Function(read('apps/web/assistant-voice.js'));
 new Function(read('apps/web/ai-launcher.js'));
+assert(server.includes('function isPublicProduct'), 'public catalog should support legacy active products');
+assert(server.includes('filter(isPublicProduct)'), 'public catalog should use the compatibility visibility filter');
+assert(server.includes('filter(p => !searchable.length || p.ai_score > 0)'), 'AI search should rank matching products without hard token filtering');
+new Function(server);
 
