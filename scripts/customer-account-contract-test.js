@@ -29,3 +29,7 @@ assert(categoryHeader.includes('Rechercher une catégorie'), 'category explorer 
 assert(categoryHeader.includes('categories.html?universe='), 'category hub should link to dedicated category explorer');
 assert(publicApp.includes('accountLinks.slice(1)'), 'public navigation should deduplicate customer account links');
 assert(publicApp.includes('admin-login.html'), 'public navigation cleanup should hide admin entry points');
+new Function(publicApp);
+new Function(read('apps/web/assistant-voice.js'));
+new Function(read('apps/web/ai-launcher.js'));
+
