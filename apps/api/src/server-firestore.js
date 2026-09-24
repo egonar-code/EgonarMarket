@@ -1531,6 +1531,31 @@ app.delete("/api/admin/studio/categories/:id", requireAdmin, async (req, res) =>
   res.json({ok:true});
 });
 
+app.post("/api/admin/studio/audit/:id/restore", requireAdmin, async (req, res) => {
+  try {
+    const auditRef = firestore.collection("studio_audit_logs").doc(String(req.params.id));
+    const auditSnap = await auditRef.get();
+    if (!auditSnap.exists) return res.status(404).json({ error: "Version introuvable." });
+    const version = auditSnap.data() || {};
+    const before = version.before;
+    if (!before || !version.target_id || !["CONTENT","CATEGORY"].includes(String(version.target_type || "").toUpperCase())) {
+      return res.status(400).json({ error: "Cette entrée ne contient pas de version restaurable." });
+    }
+    const collection = String(version.target_type).toUpperCase() === "CONTENT" ? "studio_contents" : "categories";
+    const ref = firestore.collection(collection).doc(String(version.target_id));
+    const currentSnap = await ref.get();
+    if (!currentSnap.exists) return res.status(404).json({ error: "Élément à restaurer introuvable." });
+    const current = currentSnap.data() || {};
+    const restored = { ...before, updated_at: new Date(), updated_by: studioActor(req) };
+    await ref.set(restored, { merge: true });
+    await studioAudit(req, "RESTORE", version.target_type, version.target_id, current, restored);
+    res.json(docToData(await ref.get()));
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ error: e.message || "Impossible de restaurer cette version." });
+  }
+});
+
 app.get("/api/admin/studio/audit", requireAdmin, async (req, res) => {
   try {
     const limit=Math.min(200,Math.max(1,Number(req.query.limit)||100));
