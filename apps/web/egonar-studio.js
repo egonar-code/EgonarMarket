@@ -58,25 +58,64 @@ async function loadVisuals(){
   contents=r.data||[];
   drawVisuals();
 }
-function editVisualContent(key){
-  const slot=(window.EgonarStudioVisualCatalog||[]).find(x=>x.key===key); if(!slot)return;
-  const row=visualRow(slot)||visualRow(slot,"en");
-  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-  const contentTab=document.querySelector('.tab[data-tab="content"]'); if(contentTab)contentTab.classList.add("active");
+function activateStudioTab(tab){
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===tab));
   document.querySelectorAll(".studio-panel").forEach(x=>x.hidden=true);
-  $("content-tab").hidden=false;
-  if(row) fillContent(row);
-  else {
-    resetContent();
-    $("content-form").elements.content_type.value="BANNER";
-    $("content-form").elements.universe.value=slot.universe;
-    $("content-form").elements.locale.value="fr";
-    $("content-form").elements.key.value=slot.key;
-    $("content-form").elements.title.value=slot.label;
-    $("content-form").elements.image_url.value="";
-  }
-  window.scrollTo({top:0,behavior:"smooth"});
+  const panel=$(tab+"-tab"); if(panel)panel.hidden=false;
+  if(tab==="dashboard")drawDashboard();
+  if(tab==="visuals")loadVisuals();
+  if(tab==="content")loadContents();
+  if(tab==="categories")loadCategories();
+  if(tab==="media")loadMedia();
+  if(tab==="audit")loadAudit();
 }
+function drawDashboard(){
+  const box=$("dashboard-stats"); if(!box)return;
+  const published=contents.filter(x=>x.status==="PUBLISHED").length;
+  const drafts=contents.filter(x=>x.status==="DRAFT").length;
+  const visuals=(window.EgonarStudioVisualCatalog||[]).length;
+  const configured=(window.EgonarStudioVisualCatalog||[]).filter(slot=>visualRow(slot)).length;
+  box.innerHTML=[
+    ["Contenus",contents.length,"Toutes langues et plateformes"],
+    ["Publiés",published,"Contenus actuellement publiés"],
+    ["Brouillons",drafts,"Contenus en préparation"],
+    ["Visuels",configured+"/"+visuals,"Emplacements configurés"]
+  ].map(([a,b,d])=>'<div class="studio-stat"><strong>'+esc(b)+'</strong><span>'+esc(a)+'</span><small>'+esc(d)+'</small></div>').join("");
+}
+function openVisualEditor(key,locale="fr"){
+  const slot=(window.EgonarStudioVisualCatalog||[]).find(x=>x.key===key); if(!slot)return;
+  const row=visualRow(slot,locale)||visualRow(slot,"fr")||visualRow(slot,"en");
+  const form=$("visual-editor-form");
+  form.reset();
+  form.elements.id.value=row?.id||"";
+  form.elements.key.value=slot.key;
+  form.elements.universe.value=slot.universe;
+  form.elements.content_type.value=row?.content_type||"BANNER";
+  form.elements.locale.value=row?.locale||locale;
+  form.elements.title.value=row?.title||slot.label;
+  form.elements.subtitle.value=row?.subtitle||"";
+  form.elements.body.value=row?.body||"";
+  form.elements.cta_label.value=row?.cta_label||"";
+  form.elements.cta_url.value=row?.cta_url||"";
+  form.elements.image_url.value=row?.image_url||"";
+  setPreviewUrl("visual-editor-image",row?.image_url||slot.defaultImage||"");
+  form.dataset.slotKey=slot.key;
+  $("visual-editor-title").textContent="Modifier — "+slot.label;
+  $("visual-editor-msg").textContent="";
+  $("visual-editor-modal").hidden=false;
+}
+function closeVisualEditor(){$("visual-editor-modal").hidden=true;}
+async function saveVisualEditor(e){
+  e.preventDefault();
+  const form=e.currentTarget,b=Object.fromEntries(new FormData(form)),id=b.id; delete b.id;
+  b.status="PUBLISHED";b.active=true;b.publish_at=null;b.sort_order=0;
+  const r=await call(id?"/admin/studio/content/"+encodeURIComponent(id):"/admin/studio/content",{method:id?"PATCH":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)});
+  if(!r.ok){message("visual-editor-msg",r.data?.error||"Enregistrement impossible.",false);return;}
+  message("visual-editor-msg","Contenu enregistré et publié.",true);
+  await loadVisuals(); await loadContents(); drawDashboard(); await loadAudit();
+  setTimeout(closeVisualEditor,350);
+}
+function editVisualContent(key){openVisualEditor(key,"fr");}
 async function replaceVisualImage(key){
   const slot=(window.EgonarStudioVisualCatalog||[]).find(x=>x.key===key); if(!slot)return;
   const input=document.createElement("input"); input.type="file"; input.accept="image/jpeg,image/png,image/webp,image/gif";
@@ -194,10 +233,10 @@ function useStudioMedia(url){
 }
 async function loadAudit(){const r=await call("/admin/studio/audit?limit=100");if(!r.ok){$("audit-list").innerHTML='<div class="empty">Historique indisponible.</div>';return;}const rows=r.data||[];$("audit-list").innerHTML=rows.map(x=>`<div class="audit-entry"><strong>${esc(x.action)} · ${esc(x.target_type)} · ${esc(x.target_id)}</strong><span>${esc(x.actor_name||x.actor_email||"Admin")} · ${esc(x.actor_email||"")}</span><small>${esc(x.created_at||"")}</small></div>`).join("")||'<div class="empty">Aucune modification enregistrée.</div>';}
 
-document.querySelectorAll(".tab").forEach(btn=>btn.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));btn.classList.add("active");document.querySelectorAll(".studio-panel").forEach(x=>x.hidden=true);$(btn.dataset.tab+"-tab").hidden=false;if(btn.dataset.tab==="audit")loadAudit();if(btn.dataset.tab==="media")loadMedia();if(btn.dataset.tab==="visuals")loadVisuals();});
-$("content-universe").onchange=loadContents;$("content-status").onchange=loadContents;$("new-content").onclick=resetContent;$("reset-content").onclick=resetContent;$("content-form").onsubmit=saveContent;
-$("refresh-visuals").onclick=loadVisuals;$("category-universe").onchange=loadCategories;$("new-category").onclick=resetCategory;$("reset-category").onclick=resetCategory;$("category-form").onsubmit=saveCategory;$("refresh-audit").onclick=loadAudit;$("refresh-media").onclick=loadMedia;$("media-universe").onchange=()=>drawMedia();$("media-upload-form").onsubmit=uploadToMediaLibrary;
-(async function boot(){const me=await call("/admin/me");if(!me.ok){location.href="/admin-login.html";return;}resetContent();resetCategory();await Promise.all([loadContents(),loadCategories(),loadMedia()]);})();
+document.querySelectorAll(".tab").forEach(btn=>btn.onclick=()=>activateStudioTab(btn.dataset.tab));
+$("content-universe").onchange=loadContents;$("content-status").onchange=loadContents;$("new-content").onclick=resetContent;$("reset-content").onclick=resetContent;$("content-form").onsubmit=saveContent; $("visual-editor-form").onsubmit=saveVisualEditor;
+$("refresh-dashboard").onclick=drawDashboard; $("refresh-visuals").onclick=loadVisuals;$("category-universe").onchange=loadCategories;$("new-category").onclick=resetCategory;$("reset-category").onclick=resetCategory;$("category-form").onsubmit=saveCategory;$("refresh-audit").onclick=loadAudit;$("refresh-media").onclick=loadMedia;$("media-universe").onchange=()=>drawMedia();$("media-upload-form").onsubmit=uploadToMediaLibrary;
+(async function boot(){const me=await call("/admin/me");if(!me.ok){location.href="/admin-login.html";return;}resetContent();resetCategory();await Promise.all([loadContents(),loadCategories(),loadMedia()]);drawDashboard();})();
 
 $("content-image").onchange=()=>previewFile("content-image","content-image-preview");
 $("category-image").onchange=()=>previewFile("category-image","category-image-preview");
