@@ -37,6 +37,75 @@ function fillContent(x){editingContent=x;$("content-form-title").textContent="Mo
 function publishLabel(x){if(x.status!=="PUBLISHED")return statusLabel[x.status]||x.status; if(x.publish_at){const t=new Date(x.publish_at);if(!Number.isNaN(t.getTime())&&t.getTime()>Date.now())return "Programmé";}return "Publié";}
 function drawContents(){const q="",list=contents.filter(x=>(!$("content-universe").value||x.universe===$("content-universe").value)&&(!$("content-status").value||x.status===$("content-status").value)&&(!q||String(x.title).toLowerCase().includes(q)));$("content-list").innerHTML=list.map(x=>`<article class="studio-item"><div class="studio-item-main"><h3>${esc(x.title)}</h3><p><strong>${esc(x.key)}</strong> · ${esc(universeLabel[x.universe]||x.universe)} · ${esc(x.locale)}</p><p>${esc(x.subtitle||"")}</p><span class="studio-status ${x.status=== "PUBLISHED"?"published":x.status==="ARCHIVED"?"archived":""}">${esc(publishLabel(x))}</span></div><div class="studio-actions"><button onclick="fillContent(contents.find(y=>y.id==='${x.id}'))">Modifier</button>${x.status!=="PUBLISHED"&&x.status!=="ARCHIVED"?`<button onclick="publishContent('${x.id}')">Publier</button>`:""}${x.status==="PUBLISHED"?`<button onclick="archiveContent('${x.id}')">Archiver</button>`:""}${x.image_url?`<button onclick="previewContent('${x.id}')">Aperçu</button>`:""}</div></article>`).join("")||'<div class="empty">Aucun contenu pour ces filtres.</div>';}
 async function loadContents(){const params=new URLSearchParams();if($("content-universe").value)params.set("universe",$("content-universe").value);if($("content-status").value)params.set("status",$("content-status").value);const r=await call("/admin/studio/content?"+params);if(!r.ok){message("content-msg",r.data.error||"Impossible de charger le contenu.",false);return;}contents=r.data||[];drawContents();}
+function visualPage(universe){return universe==="MARKET"?"index.html":universe==="SAVEURS"?"food.html":"travel.html";}
+function visualRow(slot,locale="fr"){return contents.find(x=>x.universe===slot.universe&&x.key===slot.key&&x.locale===locale&&x.status!=="ARCHIVED")||null;}
+function drawVisuals(){
+  const box=$("visual-list"); if(!box)return;
+  const catalog=Array.isArray(window.EgonarStudioVisualCatalog)?window.EgonarStudioVisualCatalog:[];
+  const groups={MARKET:[],SAVEURS:[],EVASION:[]};
+  catalog.forEach(slot=>{if(groups[slot.universe])groups[slot.universe].push(slot);});
+  const names={MARKET:"Market",SAVEURS:"Saveurs",EVASION:"Évasion"};
+  box.innerHTML=Object.entries(groups).map(([universe,slots])=>`<div class="visual-group"><h3>${esc(names[universe])}</h3><div class="visual-grid">${slots.map(slot=>{
+    const row=visualRow(slot);
+    const image=row?.image_url||slot.defaultImage||"";
+    const state=row?.status==="PUBLISHED"?"Publié":"Par défaut";
+    return `<article class="visual-card"><img src="${esc(image)}" alt="${esc(slot.label)}" onerror="this.style.opacity='.35'"><div class="visual-card-body"><h3>${esc(slot.label)}</h3><p>${esc(slot.zone)}</p><span class="visual-state ${row?.status==="PUBLISHED"?"live":""}">${esc(state)}</span><div class="visual-card-actions"><button type="button" class="primary-action" onclick="replaceVisualImage('${esc(slot.key)}')">Remplacer la photo</button><button type="button" onclick="editVisualContent('${esc(slot.key)}')">Modifier le contenu</button><a class="btn secondary" href="${esc(visualPage(slot.universe))}" target="_blank" rel="noopener">Voir la plateforme</a></div></div></article>`;
+  }).join("")}</div></div>`).join("");
+}
+async function loadVisuals(){
+  const r=await call("/admin/studio/content");
+  if(!r.ok){message("visual-msg",r.data?.error||"Impossible de charger les visuels.",false);return;}
+  contents=r.data||[];
+  drawVisuals();
+}
+function editVisualContent(key){
+  const slot=(window.EgonarStudioVisualCatalog||[]).find(x=>x.key===key); if(!slot)return;
+  const row=visualRow(slot)||visualRow(slot,"en");
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  const contentTab=document.querySelector('.tab[data-tab="content"]'); if(contentTab)contentTab.classList.add("active");
+  document.querySelectorAll(".studio-panel").forEach(x=>x.hidden=true);
+  $("content-tab").hidden=false;
+  if(row) fillContent(row);
+  else {
+    resetContent();
+    $("content-form").elements.content_type.value="BANNER";
+    $("content-form").elements.universe.value=slot.universe;
+    $("content-form").elements.locale.value="fr";
+    $("content-form").elements.key.value=slot.key;
+    $("content-form").elements.title.value=slot.label;
+    $("content-form").elements.image_url.value="";
+  }
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+async function replaceVisualImage(key){
+  const slot=(window.EgonarStudioVisualCatalog||[]).find(x=>x.key===key); if(!slot)return;
+  const input=document.createElement("input"); input.type="file"; input.accept="image/jpeg,image/png,image/webp,image/gif";
+  input.onchange=async()=>{
+    const file=input.files?.[0]; if(!file)return;
+    try{
+      message("visual-msg","Téléversement de la nouvelle image…",true);
+      const asset=await uploadImage(file,slot.universe);
+      for(const locale of ["fr","en"]){
+        const row=visualRow(slot,locale);
+        if(row){
+          const r=await call("/admin/studio/content/"+encodeURIComponent(row.id),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({image_url:asset.url,status:"PUBLISHED",active:true})});
+          if(!r.ok)throw new Error(r.data?.error||"Impossible de publier l’image.");
+        }else{
+          const created=await call("/admin/studio/content",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({content_type:"BANNER",universe:slot.universe,locale,key:slot.key,title:slot.label,image_url:asset.url,subtitle:"",body:"",cta_label:"",cta_url:"",meta_title:"",meta_description:"",publish_at:null,sort_order:0})});
+          if(!created.ok)throw new Error(created.data?.error||"Impossible de créer le visuel.");
+          const id=created.data?.id;
+          if(id){
+            const published=await call("/admin/studio/content/"+encodeURIComponent(id),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:"PUBLISHED",active:true})});
+            if(!published.ok)throw new Error(published.data?.error||"Impossible de publier le visuel.");
+          }
+        }
+      }
+      message("visual-msg","Photo remplacée et publiée sur les deux langues.",true);
+      await Promise.all([loadVisuals(),loadAudit()]);
+    }catch(err){message("visual-msg",err.message||"Remplacement impossible.",false);}
+  };
+  input.click();
+}
 async function saveContent(e){e.preventDefault();const form=e.currentTarget,b=Object.fromEntries(new FormData(form)),id=b.id;delete b.id;delete b.image;if(form.elements.image?.files?.[0]){try{message("content-msg","Téléversement de l’image…",true);const asset=await uploadImage(form.elements.image.files[0],form.elements.universe.value);b.image_url=asset.url;}catch(err){message("content-msg",err.message,false);return;}}b.sort_order=Number(b.sort_order)||0;b.publish_at=b.publish_at?new Date(b.publish_at).toISOString():null;const r=await call(id?"/admin/studio/content/"+encodeURIComponent(id):"/admin/studio/content",{method:id?"PATCH":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)});if(!r.ok){message("content-msg",r.data.error||"Enregistrement impossible.",false);return;}message("content-msg",id?"Contenu mis à jour.":"Brouillon créé.",true);resetContent();await loadContents();}
 async function publishContent(id){const x=contents.find(y=>y.id===id);const publishAt=x?.publish_at?new Date(x.publish_at):null;const r=await call("/admin/studio/content/"+encodeURIComponent(id),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:"PUBLISHED",active:true,publish_at:publishAt&&!Number.isNaN(publishAt.getTime())?publishAt.toISOString():null})});if(!r.ok)return alert(r.data.error||"Publication impossible.");await loadContents();await loadAudit();}
 async function archiveContent(id){const r=await call("/admin/studio/content/"+encodeURIComponent(id),{method:"DELETE"});if(!r.ok)return alert(r.data.error||"Archivage impossible.");await loadContents();await loadAudit();}
@@ -125,9 +194,9 @@ function useStudioMedia(url){
 }
 async function loadAudit(){const r=await call("/admin/studio/audit?limit=100");if(!r.ok){$("audit-list").innerHTML='<div class="empty">Historique indisponible.</div>';return;}const rows=r.data||[];$("audit-list").innerHTML=rows.map(x=>`<div class="audit-entry"><strong>${esc(x.action)} · ${esc(x.target_type)} · ${esc(x.target_id)}</strong><span>${esc(x.actor_name||x.actor_email||"Admin")} · ${esc(x.actor_email||"")}</span><small>${esc(x.created_at||"")}</small></div>`).join("")||'<div class="empty">Aucune modification enregistrée.</div>';}
 
-document.querySelectorAll(".tab").forEach(btn=>btn.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));btn.classList.add("active");document.querySelectorAll(".studio-panel").forEach(x=>x.hidden=true);$(btn.dataset.tab+"-tab").hidden=false;if(btn.dataset.tab==="audit")loadAudit();if(btn.dataset.tab==="media")loadMedia();});
+document.querySelectorAll(".tab").forEach(btn=>btn.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));btn.classList.add("active");document.querySelectorAll(".studio-panel").forEach(x=>x.hidden=true);$(btn.dataset.tab+"-tab").hidden=false;if(btn.dataset.tab==="audit")loadAudit();if(btn.dataset.tab==="media")loadMedia();if(btn.dataset.tab==="visuals")loadVisuals();});
 $("content-universe").onchange=loadContents;$("content-status").onchange=loadContents;$("new-content").onclick=resetContent;$("reset-content").onclick=resetContent;$("content-form").onsubmit=saveContent;
-$("category-universe").onchange=loadCategories;$("new-category").onclick=resetCategory;$("reset-category").onclick=resetCategory;$("category-form").onsubmit=saveCategory;$("refresh-audit").onclick=loadAudit;$("refresh-media").onclick=loadMedia;$("media-universe").onchange=()=>drawMedia();$("media-upload-form").onsubmit=uploadToMediaLibrary;
+$("refresh-visuals").onclick=loadVisuals;$("category-universe").onchange=loadCategories;$("new-category").onclick=resetCategory;$("reset-category").onclick=resetCategory;$("category-form").onsubmit=saveCategory;$("refresh-audit").onclick=loadAudit;$("refresh-media").onclick=loadMedia;$("media-universe").onchange=()=>drawMedia();$("media-upload-form").onsubmit=uploadToMediaLibrary;
 (async function boot(){const me=await call("/admin/me");if(!me.ok){location.href="/admin-login.html";return;}resetContent();resetCategory();await Promise.all([loadContents(),loadCategories(),loadMedia()]);})();
 
 $("content-image").onchange=()=>previewFile("content-image","content-image-preview");
