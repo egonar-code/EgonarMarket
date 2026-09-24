@@ -10,7 +10,7 @@
     if ((node.tagName === 'IMG' && field === 'image') || field === 'background_image') {
       if (field === 'background_image') {
         const current = node.style.backgroundImage || '';
-        const gradient = current.replace(/url\\((?:'[^']*'|"[^"]*"|[^)]*)\\)/gi, '').replace(/,\\s*$/, '').trim();
+        const gradient = current.replace(/url\((?:'[^']*'|"[^"]*"|[^)]*)\)/gi, '').replace(/,\s*$/, '').trim();
         node.style.backgroundImage = (gradient ? gradient + ', ' : '') + 'url("' + String(value).replace(/"/g, '\\\"') + '")';
       } else {
         node.src = value;
