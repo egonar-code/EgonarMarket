@@ -1122,10 +1122,7 @@ app.post("/api/ai/search", async (req, res) => {
   if (universe) products = products.filter(p => p.universe === universe);
   if (intent.budget) products = products.filter(p => Number(p.price_fcfa || 0) <= intent.budget);
   const searchable = intent.words.filter(w => !["saveurs","evasion","market","food","travel"].includes(w)).slice(0,12);
-  const ranked = products.filter(p => {
-    const haystack = tokenize(`${p.name} ${p.description} ${p.category} ${p.subcategory} ${p.sku || ""}`);
-    return !searchable.length || searchable.some(word => haystack.includes(word));
-  }).map(p => {
+  const ranked = products.map(p => {
     const haystack = tokenize(`${p.name} ${p.description} ${p.category} ${p.subcategory} ${p.sku || ""}`);
     const exact = intent.words.reduce((score, w) => score + (haystack.includes(w) ? 1 : 0), 0);
     const budgetBoost = intent.budget ? Math.max(0, 1 - (Number(p.price_fcfa || 0) / intent.budget)) * 20 : 0;
@@ -1133,7 +1130,7 @@ app.post("/api/ai/search", async (req, res) => {
     const ratingBoost = Number(p.rating_average || 0) * 3;
     const stockBoost = Number(p.stock) > 0 ? 8 : 0;
     return { ...p, ai_score: Number((exact * 12 + budgetBoost + verifiedBoost + ratingBoost + stockBoost).toFixed(2)) };
-  }).sort((a,b) => b.ai_score - a.ai_score).slice(0,12);
+  }).filter(p => !searchable.length || p.ai_score > 0).sort((a,b) => b.ai_score - a.ai_score).slice(0,12);
   res.json({ message, budget: intent.budget, category: intent.category, universe, keywords: intent.words, products: ranked });
 });
 
