@@ -88,7 +88,7 @@ async function replaceVisualImage(key){
       for(const locale of ["fr","en"]){
         const row=visualRow(slot,locale);
         if(row){
-          const r=await call("/admin/studio/content/"+encodeURIComponent(row.id),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({image_url:asset.url,status:"PUBLISHED",active:true})});
+          const r=await call("/admin/studio/content/"+encodeURIComponent(row.id),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({image_url:asset.url,status:"PUBLISHED",active:true,publish_at:null})});
           if(!r.ok)throw new Error(r.data?.error||"Impossible de publier l’image.");
         }else{
           const created=await call("/admin/studio/content",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({content_type:"BANNER",universe:slot.universe,locale,key:slot.key,title:slot.label,image_url:asset.url,subtitle:"",body:"",cta_label:"",cta_url:"",meta_title:"",meta_description:"",publish_at:null,sort_order:0})});
