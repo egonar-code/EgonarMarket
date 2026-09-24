@@ -91,6 +91,24 @@ function openMediaPicker(target){
 function closeMediaPicker(){
   mediaPickerTarget=null;
   $("media-modal").hidden=true;
+  const input=$("media-picker-upload");
+  if(input)input.value="";
+  message("media-picker-msg","",true);
+}
+async function uploadFromMediaPicker(){
+  const file=$("media-picker-upload")?.files?.[0];
+  if(!file)return message("media-picker-msg","Sélectionnez une image.",false);
+  const target=mediaPickerTarget;
+  if(!target)return;
+  const universe=target==="content"?$("content-form").elements.universe.value:$("category-form").elements.universe.value;
+  try{
+    message("media-picker-msg","Téléversement de l’image…",true);
+    const asset=await uploadImage(file,universe);
+    await loadMedia();
+    useStudioMedia(asset.url);
+  }catch(err){
+    message("media-picker-msg",err.message||"Téléversement impossible.",false);
+  }
 }
 function useStudioMedia(url){
   if(mediaPickerTarget==="content"){
