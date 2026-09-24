@@ -15,3 +15,17 @@ if(!accountHtml.includes('account.js')) throw new Error("Page compte absente.");
 if(!checkout.includes("/customer/me") || !checkout.includes("customer_id")) throw new Error("Checkout non relié au compte client.");
 if(!product.includes("id=\"favorite\"") || !product.includes("/recommendations") || !product.includes("/customer/recently-viewed/")) throw new Error("Fiche produit non reliée aux favoris/historique/recommandations.");
 console.log("customer-account-contract-test: OK");
+
+const index = read('apps/web/index.html');
+const categoriesPage = read('apps/web/categories.html');
+const categoriesRuntime = read('apps/web/categories.js');
+const categoryHeader = read('apps/web/category-header-nav.js');
+const publicApp = read('apps/web/app.js');
+assert(index.includes('category-header-nav.js?v=20260924-category-explorer-v1'), 'index should load refreshed category explorer assets');
+assert(categoriesPage.includes('categories.js?v=20260924'), 'dedicated categories page should exist');
+assert(categoriesRuntime.includes('/api/categories?universe='), 'category explorer should use public category API');
+assert(categoryHeader.includes('loadCategoryCounts'), 'category explorer should show live product counts');
+assert(categoryHeader.includes('Rechercher une catégorie'), 'category explorer should provide category search');
+assert(categoryHeader.includes('categories.html?universe='), 'category hub should link to dedicated category explorer');
+assert(publicApp.includes('accountLinks.slice(1)'), 'public navigation should deduplicate customer account links');
+assert(publicApp.includes('admin-login.html'), 'public navigation cleanup should hide admin entry points');
