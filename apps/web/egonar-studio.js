@@ -83,10 +83,13 @@ async function deleteMedia(id){
 async function copyMediaUrl(url){
   try{await navigator.clipboard.writeText(url);message("media-msg","Lien copié.",true);}catch{alert(url);}
 }
-function openMediaPicker(target){
+async function openMediaPicker(target){
   mediaPickerTarget=target;
   $("media-modal").hidden=false;
+  message("media-picker-msg","Chargement de la bibliothèque…",true);
+  await loadMedia();
   drawMedia("media-picker-list",true);
+  message("media-picker-msg","",true);
 }
 function closeMediaPicker(){
   mediaPickerTarget=null;
