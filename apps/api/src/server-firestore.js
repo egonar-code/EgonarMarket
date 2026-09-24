@@ -148,6 +148,13 @@ function isPublicProduct(row) {
   return row?.active === true && (!row?.approval_status || row.approval_status === "APPROVED");
 }
 
+function isProductInUniverse(row, universe) {
+  if (!universe) return true;
+  if (row?.universe === universe) return true;
+  // Products created before the universe field existed belong to the legacy MARKET catalog.
+  return universe === "MARKET" && !row?.universe;
+}
+
 async function getPublicProducts() {
   const snap = await firestore.collection("products").where("active", "==", true).get();
   return snap.docs.map(doc => normalizeProductMedia(docToData(doc))).filter(isPublicProduct).sort((a, b) => {
@@ -166,7 +173,7 @@ app.get("/api/products", async (req, res) => {
     const universe = req.query.universe ? normalizeUniverse(req.query.universe) : null;
     if (req.query.universe && !universe) return res.status(400).json({ error: "Univers invalide." });
     let products = await getPublicProducts();
-    if (universe) products = products.filter(p => p.universe === universe);
+    if (universe) products = products.filter(p => isProductInUniverse(p, universe));
     if (category) products = products.filter(p => p.category === category);
     if (q) products = products.filter(p => normalize(`${p.name} ${p.description} ${p.category} ${p.sku || ""}`).includes(q));
     res.json(products);
@@ -1119,7 +1126,7 @@ app.post("/api/ai/search", async (req, res) => {
   const intent = extractAiIntent(message);
   const universe = requestedUniverse || intent.universe;
   let products = await getPublicProducts();
-  if (universe) products = products.filter(p => p.universe === universe);
+  if (universe) products = products.filter(p => isProductInUniverse(p, universe));
   if (intent.budget) products = products.filter(p => Number(p.price_fcfa || 0) <= intent.budget);
   const searchable = intent.words.filter(w => !["saveurs","evasion","market","food","travel"].includes(w)).slice(0,12);
   const ranked = products.map(p => {
