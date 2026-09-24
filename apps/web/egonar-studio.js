@@ -38,6 +38,15 @@ function publishLabel(x){if(x.status!=="PUBLISHED")return statusLabel[x.status]|
 function drawContents(){const q="",list=contents.filter(x=>(!$("content-universe").value||x.universe===$("content-universe").value)&&(!$("content-status").value||x.status===$("content-status").value)&&(!q||String(x.title).toLowerCase().includes(q)));$("content-list").innerHTML=list.map(x=>`<article class="studio-item"><div class="studio-item-main"><h3>${esc(x.title)}</h3><p><strong>${esc(x.key)}</strong> · ${esc(universeLabel[x.universe]||x.universe)} · ${esc(x.locale)}</p><p>${esc(x.subtitle||"")}</p><span class="studio-status ${x.status=== "PUBLISHED"?"published":x.status==="ARCHIVED"?"archived":""}">${esc(publishLabel(x))}</span></div><div class="studio-actions"><button onclick="fillContent(contents.find(y=>y.id==='${x.id}'))">Modifier</button>${x.status!=="PUBLISHED"&&x.status!=="ARCHIVED"?`<button onclick="publishContent('${x.id}')">Publier</button>`:""}${x.status==="PUBLISHED"?`<button onclick="archiveContent('${x.id}')">Archiver</button>`:""}${x.image_url?`<button onclick="previewContent('${x.id}')">Aperçu</button>`:""}</div></article>`).join("")||'<div class="empty">Aucun contenu pour ces filtres.</div>';}
 async function loadContents(){const params=new URLSearchParams();if($("content-universe").value)params.set("universe",$("content-universe").value);if($("content-status").value)params.set("status",$("content-status").value);const r=await call("/admin/studio/content?"+params);if(!r.ok){message("content-msg",r.data.error||"Impossible de charger le contenu.",false);return;}contents=r.data||[];drawContents();}
 function visualPage(universe){return universe==="MARKET"?"index.html":universe==="SAVEURS"?"food.html":"travel.html";}
+function previewPlatform(universe,device="desktop"){
+  const url=visualPage(universe);
+  const sizes={desktop:[1440,900],mobile:[390,844]};
+  const [width,height]=sizes[device]||sizes.desktop;
+  const left=Math.max(0,Math.round((screen.availWidth-width)/2));
+  const top=Math.max(0,Math.round((screen.availHeight-height)/2));
+  const w=window.open(url,"egonar-preview-"+device,"width="+width+",height="+height+",left="+left+",top="+top+",resizable=yes,scrollbars=yes");
+  if(w)w.focus();
+}
 function visualRow(slot,locale="fr"){return contents.find(x=>x.universe===slot.universe&&x.key===slot.key&&x.locale===locale&&x.status!=="ARCHIVED")||null;}
 function drawVisuals(){
   const box=$("visual-list"); if(!box)return;
@@ -49,7 +58,7 @@ function drawVisuals(){
     const row=visualRow(slot);
     const image=row?.image_url||slot.defaultImage||"";
     const state=row?.status==="PUBLISHED"?"Publié":"Par défaut";
-    return `<article class="visual-card"><img src="${esc(image)}" alt="${esc(slot.label)}" onerror="this.style.opacity='.35'"><div class="visual-card-body"><h3>${esc(slot.label)}</h3><p>${esc(slot.zone)}</p><span class="visual-state ${row?.status==="PUBLISHED"?"live":""}">${esc(state)}</span><div class="visual-card-actions"><button type="button" class="primary-action" onclick="replaceVisualImage('${esc(slot.key)}')">Remplacer la photo</button><button type="button" onclick="editVisualContent('${esc(slot.key)}')">Modifier le contenu</button><a class="btn secondary" href="${esc(visualPage(slot.universe))}" target="_blank" rel="noopener">Voir la plateforme</a></div></div></article>`;
+    return `<article class="visual-card"><img src="${esc(image)}" alt="${esc(slot.label)}" onerror="this.style.opacity='.35'"><div class="visual-card-body"><h3>${esc(slot.label)}</h3><p>${esc(slot.zone)}</p><span class="visual-state ${row?.status==="PUBLISHED"?"live":""}">${esc(state)}</span><div class="visual-card-actions"><button type="button" class="primary-action" onclick="replaceVisualImage('${esc(slot.key)}')">Remplacer la photo</button><button type="button" onclick="editVisualContent('${esc(slot.key)}')">Modifier le contenu</button><button type="button" onclick="previewPlatform('${esc(slot.universe)}','desktop')">Desktop</button><button type="button" onclick="previewPlatform('${esc(slot.universe)}','mobile')">Mobile</button></div></div></article>`;
   }).join("")}</div></div>`).join("");
 }
 async function loadVisuals(){
@@ -231,7 +240,20 @@ function useStudioMedia(url){
   }
   closeMediaPicker();
 }
-async function loadAudit(){const r=await call("/admin/studio/audit?limit=100");if(!r.ok){$("audit-list").innerHTML='<div class="empty">Historique indisponible.</div>';return;}const rows=r.data||[];$("audit-list").innerHTML=rows.map(x=>`<div class="audit-entry"><strong>${esc(x.action)} · ${esc(x.target_type)} · ${esc(x.target_id)}</strong><span>${esc(x.actor_name||x.actor_email||"Admin")} · ${esc(x.actor_email||"")}</span><small>${esc(x.created_at||"")}</small></div>`).join("")||'<div class="empty">Aucune modification enregistrée.</div>';}
+async function restoreAudit(id){
+  if(!confirm("Restaurer cette version ? La version actuelle sera conservée dans l’historique."))return;
+  const r=await call("/admin/studio/audit/"+encodeURIComponent(id)+"/restore",{method:"POST",headers:{"Content-Type":"application/json"}});
+  if(!r.ok)return alert(r.data?.error||"Restauration impossible.");
+  await Promise.all([loadAudit(),loadContents(),loadVisuals()]);
+  drawDashboard();
+  alert("Version restaurée.");
+}
+async function loadAudit(){
+  const r=await call("/admin/studio/audit?limit=100");
+  if(!r.ok){$("audit-list").innerHTML='<div class="empty">Historique indisponible.</div>';return;}
+  const rows=r.data||[];
+  $("audit-list").innerHTML=rows.map(x=>`<div class="audit-entry"><strong>${esc(x.action)} · ${esc(x.target_type)} · ${esc(x.target_id)}</strong><span>${esc(x.actor_name||x.actor_email||"Admin")} · ${esc(x.actor_email||"")}</span><small>${esc(x.created_at||"")}</small>${x.before&&["CONTENT","CATEGORY"].includes(String(x.target_type||"").toUpperCase())?`<div class="studio-actions" style="margin-top:8px"><button type="button" onclick="restoreAudit('${esc(x.id)}')">Restaurer cette version</button></div>`:''}</div>`).join("")||'<div class="empty">Aucune modification enregistrée.</div>';
+}
 
 document.querySelectorAll(".tab").forEach(btn=>btn.onclick=()=>activateStudioTab(btn.dataset.tab));
 $("content-universe").onchange=loadContents;$("content-status").onchange=loadContents;$("new-content").onclick=resetContent;$("reset-content").onclick=resetContent;$("content-form").onsubmit=saveContent; $("visual-editor-form").onsubmit=saveVisualEditor;
