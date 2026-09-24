@@ -144,9 +144,13 @@ app.get("/api/categories", async (req, res) => {
   }
 });
 
+function isPublicProduct(row) {
+  return row?.active === true && (!row?.approval_status || row.approval_status === "APPROVED");
+}
+
 async function getPublicProducts() {
   const snap = await firestore.collection("products").where("active", "==", true).get();
-  return snap.docs.map(doc => normalizeProductMedia(docToData(doc))).filter(x => x.approval_status === "APPROVED").sort((a, b) => {
+  return snap.docs.map(doc => normalizeProductMedia(docToData(doc))).filter(isPublicProduct).sort((a, b) => {
     const stockDiff = Number(b.stock || 0) > 0 ? 1 : 0;
     const stockDiffA = Number(a.stock || 0) > 0 ? 1 : 0;
     return stockDiff - stockDiffA ||
@@ -177,7 +181,7 @@ app.get("/api/products/:id", async (req, res) => {
     const doc = await firestore.collection("products").doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: "Produit introuvable." });
     const product = normalizeProductMedia(docToData(doc));
-    if (product.active !== true || product.approval_status !== "APPROVED") return res.status(404).json({ error: "Produit introuvable." });
+    if (!isPublicProduct(product)) return res.status(404).json({ error: "Produit introuvable." });
     if (product.supplier_id) {
       const supplier = await firestore.collection("suppliers").doc(String(product.supplier_id)).get();
       product.supplier_name = supplier.exists ? String(supplier.data().business_name || "") : "";
