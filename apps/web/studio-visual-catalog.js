@@ -1,4 +1,10 @@
 window.EgonarStudioVisualCatalog = [
+  {key:"home.saveurs.slide.1",universe:"MARKET",label:"Market — carrousel Saveurs — photo 1",zone:"Carrousel accueil / Saveurs",defaultImage:"https://upload.wikimedia.org/wikipedia/commons/5/51/Thieboudienne.JPG"},
+  {key:"home.saveurs.slide.2",universe:"MARKET",label:"Market — carrousel Saveurs — photo 2",zone:"Carrousel accueil / Saveurs",defaultImage:"https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1200&q=85"},
+  {key:"home.saveurs.slide.3",universe:"MARKET",label:"Market — carrousel Saveurs — photo 3",zone:"Carrousel accueil / Saveurs",defaultImage:"https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=85"},
+  {key:"home.evasion.slide.1",universe:"MARKET",label:"Market — carrousel Évasion — photo 1",zone:"Carrousel accueil / Évasion",defaultImage:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=85"},
+  {key:"home.evasion.slide.2",universe:"MARKET",label:"Market — carrousel Évasion — photo 2",zone:"Carrousel accueil / Évasion",defaultImage:"https://static.fram.fr/photos/vacances-senegal/dakar/vue-panoramique-jumbo-le-saly_849040_tgmob.jpg"},
+  {key:"home.evasion.slide.3",universe:"MARKET",label:"Market — carrousel Évasion — photo 3",zone:"Carrousel accueil / Évasion",defaultImage:"https://samy-quad-lacrose.com/5.jpg"},
   {key:"home.saveurs",universe:"MARKET",label:"Carte Saveurs — image principale",zone:"Accueil Market · Univers",defaultImage:"https://upload.wikimedia.org/wikipedia/commons/5/51/Thieboudienne.JPG"},
   {key:"home.evasion",universe:"MARKET",label:"Carte Évasion — image principale",zone:"Accueil Market · Univers",defaultImage:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=85"},
   {key:"saveurs.hero",universe:"SAVEURS",label:"Bannière principale Saveurs",zone:"Saveurs · Hero",defaultImage:"https://upload.wikimedia.org/wikipedia/commons/5/51/Thieboudienne.JPG"},
