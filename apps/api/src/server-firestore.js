@@ -1206,6 +1206,13 @@ function requireStudioPermission(permission) {
     next();
   };
 }
+function requireStudioContentWrite(req,res,next){
+  const role=studioRole(req);
+  const wantsPublish=String(req.body?.status||"").toUpperCase()==="PUBLISHED";
+  const allowed=wantsPublish?STUDIO_PERMISSIONS[role]?.has("publish"):STUDIO_PERMISSIONS[role]?.has("content");
+  if(!allowed)return res.status(403).json({error:wantsPublish?"Permission de publication insuffisante.":"Permission de modification insuffisante.",role,required:wantsPublish?"publish":"content"});
+  next();
+}
 async function studioAudit(req, action, targetType, targetId, before, after) {
   const actor = studioActor(req);
   const now = new Date();
@@ -1395,7 +1402,7 @@ app.post("/api/admin/studio/content", requireAdmin, requireStudioPermission("con
   }
 });
 
-app.patch("/api/admin/studio/content/:id", requireAdmin, requireStudioPermission("content"), async (req, res) => {
+app.patch("/api/admin/studio/content/:id", requireAdmin, requireStudioContentWrite, async (req, res) => {
   try {
     const ref = firestore.collection("studio_contents").doc(req.params.id);
     const currentSnap = await ref.get();
