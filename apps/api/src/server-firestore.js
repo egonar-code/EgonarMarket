@@ -1385,6 +1385,8 @@ app.post("/api/admin/studio/content", requireAdmin, requireStudioPermission("con
       cta_url: studioClean(req.body?.cta_url, 1000),
       meta_title: studioClean(req.body?.meta_title, 220),
       meta_description: studioClean(req.body?.meta_description, 500),
+      image_position: studioClean(req.body?.image_position || "50% 50%", 30),
+      image_zoom: Math.min(3, Math.max(1, Number(req.body?.image_zoom) || 1)),
       publish_at: publishAt,
       sort_order: Number.isFinite(Number(req.body?.sort_order)) ? Number(req.body.sort_order) : 0,
       status: "DRAFT",
@@ -1409,7 +1411,7 @@ app.patch("/api/admin/studio/content/:id", requireAdmin, requireStudioContentWri
     if (!currentSnap.exists) return res.status(404).json({ error: "Contenu introuvable." });
     const current = currentSnap.data();
     const patch = {};
-    for (const key of ["content_type","universe","locale","key","title","subtitle","body","image_url","cta_label","cta_url","meta_title","meta_description","publish_at","sort_order","active","status"]) {
+    for (const key of ["content_type","universe","locale","key","title","subtitle","body","image_url","cta_label","cta_url","meta_title","meta_description","image_position","image_zoom","publish_at","sort_order","active","status"]) {
       if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) patch[key] = req.body[key];
     }
     if (patch.content_type !== undefined) {
@@ -1431,6 +1433,15 @@ app.patch("/api/admin/studio/content/:id", requireAdmin, requireStudioContentWri
     if (patch.title !== undefined && !studioClean(patch.title, 220)) return res.status(400).json({ error: "Le titre est obligatoire." });
     for (const key of ["title","subtitle","body","image_url","cta_label","cta_url","meta_title","meta_description"]) {
       if (patch[key] !== undefined) patch[key] = studioClean(patch[key], key === "body" ? 12000 : key === "meta_description" ? 500 : key === "image_url" ? 2000 : 1000);
+    }
+    if (patch.image_position !== undefined) {
+      patch.image_position = studioClean(patch.image_position, 30);
+      if (!/^\d{1,3}%\s+\d{1,3}%$/.test(patch.image_position)) return res.status(400).json({ error: "Position de recadrage invalide." });
+    }
+    if (patch.image_zoom !== undefined) {
+      const zoom = Number(patch.image_zoom);
+      if (!Number.isFinite(zoom)) return res.status(400).json({ error: "Zoom de recadrage invalide." });
+      patch.image_zoom = Math.min(3, Math.max(1, zoom));
     }
     if (patch.publish_at !== undefined) {
       if (patch.publish_at === "" || patch.publish_at === null) patch.publish_at = null;
