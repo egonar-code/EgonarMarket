@@ -1350,7 +1350,7 @@ app.get("/api/admin/studio/content", requireAdmin, requireStudioPermission("read
   }
 });
 
-app.post("/api/admin/studio/content", requireAdmin, requireStudioPermission("read"), async (req, res) => {
+app.post("/api/admin/studio/content", requireAdmin, requireStudioPermission("content"), async (req, res) => {
   try {
     const content_type = String(req.body?.content_type || "").trim().toUpperCase();
     const universe = normalizeUniverse(req.body?.universe);
@@ -1473,7 +1473,7 @@ app.get("/api/admin/studio/categories", requireAdmin, requireStudioPermission("r
   }
 });
 
-app.post("/api/admin/studio/categories", requireAdmin, requireStudioPermission("read"), async (req, res) => {
+app.post("/api/admin/studio/categories", requireAdmin, requireStudioPermission("categories"), async (req, res) => {
   try {
     const universe = normalizeUniverse(req.body?.universe);
     const name = studioClean(req.body?.name, 120);
