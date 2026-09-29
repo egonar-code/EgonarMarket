@@ -67,16 +67,53 @@ async function loadVisuals(){
   contents=r.data||[];
   drawVisuals();
 }
+async function loadTeam(){
+  const r=await call("/admin/studio/team");
+  if(!r.ok){message("team-msg",r.data?.error||"Équipe indisponible.",false);return;}
+  const rows=r.data||[];
+  const labels={OWNER:"Administrateur Studio",EDITOR:"Éditeur",MEDIA:"Média",PUBLISHER:"Éditeur / publication",VIEWER:"Lecteur"};
+  $("team-list").innerHTML=rows.map(x=>`<article class="studio-item"><div class="studio-item-main"><h3>${esc(x.name||x.email)}</h3><p>${esc(x.email)}</p><span class="studio-status ${x.active?"published":""}">${esc(labels[x.role]||x.role)} · ${x.active?"Actif":"Désactivé"}</span></div><div class="studio-actions"><button type="button" onclick="toggleTeamUser('${esc(x.id)}',${!!x.active})">${x.active?"Désactiver":"Activer"}</button></div></article>`).join("")||'<div class="empty">Aucun membre Studio.</div>';
+}
+async function toggleTeamUser(id,active){
+  const r=await call("/admin/studio/team/"+encodeURIComponent(id),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({active:!active})});
+  if(!r.ok)return alert(r.data?.error||"Modification impossible.");
+  await loadTeam(); await loadAudit();
+}
+async function createTeamUser(e){
+  e.preventDefault();
+  const form=e.currentTarget, button=form.querySelector("button[type=submit]");
+  button.disabled=true; message("team-msg","Création du compte…",true);
+  const r=await call("/admin/studio/team",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.fromEntries(new FormData(form)))});
+  button.disabled=false;
+  if(!r.ok){message("team-msg",r.data?.error||"Création impossible.",false);return;}
+  form.reset(); message("team-msg","Compte Studio créé.",true); await loadTeam(); await loadAudit();
+}
+async function loadStudioAnalytics(){
+  const r=await call("/admin/studio/analytics");
+  if(!r.ok)return;
+  const t=r.data?.totals||{};
+  const by=r.data?.by_universe||{};
+  const box=$("dashboard-stats");
+  if(box)box.innerHTML=[
+    ["Contenus",t.contents||0,"Toutes langues et plateformes"],
+    ["Publiés",t.published||0,"Contenus visibles"],
+    ["Programmés",t.scheduled||0,"Publications futures"],
+    ["Médias",t.media||0,"Assets disponibles"]
+  ].map(([a,b,d])=>'<div class="studio-stat"><strong>'+esc(b)+'</strong><span>'+esc(a)+'</span><small>'+esc(d)+'</small></div>').join("");
+  const existing=$("dashboard-platforms");
+  if(existing)existing.innerHTML=["MARKET","SAVEURS","EVASION"].map(u=>'<div class="studio-platform-card"><strong>'+esc(universeLabel[u])+'</strong><span>'+Number(by[u]?.published||0)+' publiés · '+Number(by[u]?.contents||0)+' contenus · '+Number(by[u]?.categories||0)+' catégories</span></div>').join("");
+}
 function activateStudioTab(tab){
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===tab));
   document.querySelectorAll(".studio-panel").forEach(x=>x.hidden=true);
   const panel=$(tab+"-tab"); if(panel)panel.hidden=false;
-  if(tab==="dashboard")drawDashboard();
+  if(tab==="dashboard"){drawDashboard();loadStudioAnalytics();}
   if(tab==="visuals")loadVisuals();
   if(tab==="content")loadContents();
   if(tab==="categories")loadCategories();
   if(tab==="media")loadMedia();
   if(tab==="audit")loadAudit();
+  if(tab==="team")loadTeam();
 }
 function drawDashboard(){
   const box=$("dashboard-stats"); if(!box)return;
@@ -257,7 +294,7 @@ async function loadAudit(){
 
 document.querySelectorAll(".tab").forEach(btn=>btn.onclick=()=>activateStudioTab(btn.dataset.tab));
 $("content-universe").onchange=loadContents;$("content-status").onchange=loadContents;$("new-content").onclick=resetContent;$("reset-content").onclick=resetContent;$("content-form").onsubmit=saveContent; $("visual-editor-form").onsubmit=saveVisualEditor;
-$("refresh-dashboard").onclick=drawDashboard; $("refresh-visuals").onclick=loadVisuals;$("category-universe").onchange=loadCategories;$("new-category").onclick=resetCategory;$("reset-category").onclick=resetCategory;$("category-form").onsubmit=saveCategory;$("refresh-audit").onclick=loadAudit;$("refresh-media").onclick=loadMedia;$("media-universe").onchange=()=>drawMedia();$("media-upload-form").onsubmit=uploadToMediaLibrary;
+$("refresh-dashboard").onclick=()=>{drawDashboard();loadStudioAnalytics();}; $("team-form").onsubmit=createTeamUser; $("refresh-team").onclick=loadTeam; $("refresh-visuals").onclick=loadVisuals;$("category-universe").onchange=loadCategories;$("new-category").onclick=resetCategory;$("reset-category").onclick=resetCategory;$("category-form").onsubmit=saveCategory;$("refresh-audit").onclick=loadAudit;$("refresh-media").onclick=loadMedia;$("media-universe").onchange=()=>drawMedia();$("media-upload-form").onsubmit=uploadToMediaLibrary;
 (async function boot(){const me=await call("/admin/me");if(!me.ok){location.href="/admin-login.html";return;}resetContent();resetCategory();await Promise.all([loadContents(),loadCategories(),loadMedia()]);drawDashboard();})();
 
 $("content-image").onchange=()=>previewFile("content-image","content-image-preview");
