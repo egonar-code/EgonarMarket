@@ -4,7 +4,7 @@ window.EgonarStudioVisualCatalog = [
   {key:"saveurs.hero.slide.3",universe:"SAVEURS",label:"Saveurs — carrousel Hero — photo 3",zone:"Saveurs · Carrousel Hero",defaultImage:"https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=85"},
   {key:"evasion.hero.slide.1",universe:"EVASION",label:"Évasion — carrousel Hero — photo 1",zone:"Évasion · Carrousel Hero",defaultImage:"https://esim.markets/images/destinations/senegal.jpg"},
   {key:"evasion.hero.slide.2",universe:"EVASION",label:"Évasion — carrousel Hero — photo 2",zone:"Évasion · Carrousel Hero",defaultImage:"https://static.fram.fr/photos/vacances-senegal/dakar/vue-panoramique-jumbo-le-saly_849040_tgmob.jpg"},
-  {key:"evasion.hero.slide.3",universe:"EVASION",label:"Évasion — carrousel Hero — photo 3",zone:"Évasion · Carrousel Hero",defaultImage:"https://samy-quad-lacrose.com/5.jpg"}
+  {key:"evasion.hero.slide.3",universe:"EVASION",label:"Évasion — carrousel Hero — photo 3",zone:"Évasion · Carrousel Hero",defaultImage:"https://samy-quad-lacrose.com/5.jpg"},
   {key:"home.saveurs.slide.1",universe:"MARKET",label:"Market — carrousel Saveurs — photo 1",zone:"Carrousel accueil / Saveurs",defaultImage:"https://upload.wikimedia.org/wikipedia/commons/5/51/Thieboudienne.JPG"},
   {key:"home.saveurs.slide.2",universe:"MARKET",label:"Market — carrousel Saveurs — photo 2",zone:"Carrousel accueil / Saveurs",defaultImage:"https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1200&q=85"},
   {key:"home.saveurs.slide.3",universe:"MARKET",label:"Market — carrousel Saveurs — photo 3",zone:"Carrousel accueil / Saveurs",defaultImage:"https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=85"},
