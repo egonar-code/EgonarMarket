@@ -1187,6 +1187,25 @@ function studioActor(req) {
     actor_name: req.admin?.email || "Administration"
   };
 }
+const STUDIO_ROLES = new Set(["OWNER","EDITOR","MEDIA","PUBLISHER","VIEWER"]);
+const STUDIO_PERMISSIONS = {
+  VIEWER: new Set(["read"]),
+  MEDIA: new Set(["read","media"]),
+  EDITOR: new Set(["read","content","categories"]),
+  PUBLISHER: new Set(["read","content","publish"]),
+  OWNER: new Set(["read","media","content","categories","publish","users"])
+};
+function studioRole(req) {
+  const raw = String(req.admin?.role || "OWNER").trim().toUpperCase();
+  return STUDIO_ROLES.has(raw) ? raw : "OWNER";
+}
+function requireStudioPermission(permission) {
+  return (req, res, next) => {
+    const role = studioRole(req);
+    if (!STUDIO_PERMISSIONS[role]?.has(permission)) return res.status(403).json({ error: "Permission Studio insuffisante.", role, required: permission });
+    next();
+  };
+}
 async function studioAudit(req, action, targetType, targetId, before, after) {
   const actor = studioActor(req);
   const now = new Date();
@@ -1232,7 +1251,7 @@ const studioUpload = multer({
   }
 });
 
-app.post("/api/admin/studio/upload", requireAdmin, (req, res) => {
+app.post("/api/admin/studio/upload", requireAdmin, requireStudioPermission("media"), (req, res) => {
   studioUpload.single("image")(req, res, async error => {
     try {
       if (error) return res.status(400).json({ error: error.message || "Téléversement impossible." });
@@ -1259,7 +1278,7 @@ app.post("/api/admin/studio/upload", requireAdmin, (req, res) => {
     }
   });
 });
-app.get("/api/admin/studio/media", requireAdmin, async (req, res) => {
+app.get("/api/admin/studio/media", requireAdmin, requireStudioPermission("read"), async (req, res) => {
   try {
     const [studioSnap, sharedSnap] = await Promise.all([
       firestore.collection("studio_assets").get(),
@@ -1284,7 +1303,7 @@ app.get("/api/admin/studio/media", requireAdmin, async (req, res) => {
   }
 });
 
-app.delete("/api/admin/studio/media/:id", requireAdmin, async (req, res) => {
+app.delete("/api/admin/studio/media/:id", requireAdmin, requireStudioPermission("media"), async (req, res) => {
   try {
     const id = String(req.params.id);
     const [studioRef, sharedRef] = [firestore.collection("studio_assets").doc(id), firestore.collection("media_assets").doc(id)];
@@ -1313,7 +1332,7 @@ app.delete("/api/admin/studio/media/:id", requireAdmin, async (req, res) => {
   }
 });
 
-app.get("/api/admin/studio/content", requireAdmin, async (req, res) => {
+app.get("/api/admin/studio/content", requireAdmin, requireStudioPermission("read"), async (req, res) => {
   try {
     const universe = req.query.universe ? normalizeUniverse(req.query.universe) : null;
     const status = req.query.status ? String(req.query.status).trim().toUpperCase() : null;
@@ -1331,7 +1350,7 @@ app.get("/api/admin/studio/content", requireAdmin, async (req, res) => {
   }
 });
 
-app.post("/api/admin/studio/content", requireAdmin, async (req, res) => {
+app.post("/api/admin/studio/content", requireAdmin, requireStudioPermission("read"), async (req, res) => {
   try {
     const content_type = String(req.body?.content_type || "").trim().toUpperCase();
     const universe = normalizeUniverse(req.body?.universe);
@@ -1376,7 +1395,7 @@ app.post("/api/admin/studio/content", requireAdmin, async (req, res) => {
   }
 });
 
-app.patch("/api/admin/studio/content/:id", requireAdmin, async (req, res) => {
+app.patch("/api/admin/studio/content/:id", requireAdmin, requireStudioPermission("content"), async (req, res) => {
   try {
     const ref = firestore.collection("studio_contents").doc(req.params.id);
     const currentSnap = await ref.get();
@@ -1427,7 +1446,7 @@ app.patch("/api/admin/studio/content/:id", requireAdmin, async (req, res) => {
   }
 });
 
-app.delete("/api/admin/studio/content/:id", requireAdmin, async (req, res) => {
+app.delete("/api/admin/studio/content/:id", requireAdmin, requireStudioPermission("content"), async (req, res) => {
   const ref = firestore.collection("studio_contents").doc(req.params.id);
   const currentSnap = await ref.get();
   if (!currentSnap.exists) return res.status(404).json({ error: "Contenu introuvable." });
@@ -1439,7 +1458,7 @@ app.delete("/api/admin/studio/content/:id", requireAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/api/admin/studio/categories", requireAdmin, async (req, res) => {
+app.get("/api/admin/studio/categories", requireAdmin, requireStudioPermission("read"), async (req, res) => {
   try {
     const universe = req.query.universe ? normalizeUniverse(req.query.universe) : null;
     if (req.query.universe && !universe) return res.status(400).json({ error: "Univers invalide." });
@@ -1454,7 +1473,7 @@ app.get("/api/admin/studio/categories", requireAdmin, async (req, res) => {
   }
 });
 
-app.post("/api/admin/studio/categories", requireAdmin, async (req, res) => {
+app.post("/api/admin/studio/categories", requireAdmin, requireStudioPermission("read"), async (req, res) => {
   try {
     const universe = normalizeUniverse(req.body?.universe);
     const name = studioClean(req.body?.name, 120);
@@ -1488,7 +1507,7 @@ app.post("/api/admin/studio/categories", requireAdmin, async (req, res) => {
   }
 });
 
-app.patch("/api/admin/studio/categories/:id", requireAdmin, async (req, res) => {
+app.patch("/api/admin/studio/categories/:id", requireAdmin, requireStudioPermission("categories"), async (req, res) => {
   try {
     const ref = firestore.collection("categories").doc(req.params.id);
     const snap = await ref.get();
@@ -1520,7 +1539,7 @@ app.patch("/api/admin/studio/categories/:id", requireAdmin, async (req, res) => 
   }
 });
 
-app.delete("/api/admin/studio/categories/:id", requireAdmin, async (req, res) => {
+app.delete("/api/admin/studio/categories/:id", requireAdmin, requireStudioPermission("categories"), async (req, res) => {
   const ref=firestore.collection("categories").doc(req.params.id);
   const snap=await ref.get();
   if(!snap.exists)return res.status(404).json({error:"Catégorie introuvable."});
@@ -1531,7 +1550,7 @@ app.delete("/api/admin/studio/categories/:id", requireAdmin, async (req, res) =>
   res.json({ok:true});
 });
 
-app.post("/api/admin/studio/audit/:id/restore", requireAdmin, async (req, res) => {
+app.post("/api/admin/studio/audit/:id/restore", requireAdmin, requireStudioPermission("content"), async (req, res) => {
   try {
     const auditRef = firestore.collection("studio_audit_logs").doc(String(req.params.id));
     const auditSnap = await auditRef.get();
@@ -1556,7 +1575,60 @@ app.post("/api/admin/studio/audit/:id/restore", requireAdmin, async (req, res) =
   }
 });
 
-app.get("/api/admin/studio/audit", requireAdmin, async (req, res) => {
+app.get("/api/admin/studio/team", requireAdmin, requireStudioPermission("users"), async (_req, res) => {
+  try {
+    const snap = await firestore.collection("admins").get();
+    const rows = snap.docs.map(docToData).map(x => ({
+      id:x.id, email:x.email||"", name:x.name||x.email||"", role:STUDIO_ROLES.has(String(x.role||"").toUpperCase())?String(x.role).toUpperCase():"OWNER", active:x.active!==false
+    }));
+    rows.sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+    res.json(rows);
+  } catch(e) { res.status(500).json({error:"Impossible de charger l’équipe Studio."}); }
+});
+app.post("/api/admin/studio/team", requireAdmin, requireStudioPermission("users"), async (req, res) => {
+  try {
+    const email=String(req.body?.email||"").trim().toLowerCase();
+    const name=studioClean(req.body?.name||email,120);
+    const role=String(req.body?.role||"VIEWER").trim().toUpperCase();
+    const password=String(req.body?.password||"");
+    if(!email || !password || !STUDIO_ROLES.has(role)) return res.status(400).json({error:"Nom, email, rôle et mot de passe sont obligatoires."});
+    if(password.length<8) return res.status(400).json({error:"Le mot de passe doit contenir au moins 8 caractères."});
+    const existing=await firestore.collection("admins").where("email","==",email).limit(1).get();
+    if(!existing.empty) return res.status(409).json({error:"Un compte administrateur existe déjà avec cet email."});
+    const id=crypto.randomUUID(), now=new Date();
+    const row={id,email,name,role,password_hash:await bcrypt.hash(password,12),active:true,created_at:now,updated_at:now,created_by:studioActor(req)};
+    await firestore.collection("admins").doc(id).set(row);
+    await studioAudit(req,"CREATE","STUDIO_USER",id,null,{...row,password_hash:"[hidden]"});
+    res.status(201).json({id,email,name,role,active:true});
+  } catch(e) { res.status(400).json({error:e.message||"Impossible de créer le compte Studio."}); }
+});
+app.patch("/api/admin/studio/team/:id", requireAdmin, requireStudioPermission("users"), async (req,res)=>{
+  try {
+    const ref=firestore.collection("admins").doc(String(req.params.id)), snap=await ref.get();
+    if(!snap.exists)return res.status(404).json({error:"Compte Studio introuvable."});
+    const before=snap.data()||{}, patch={updated_at:new Date()};
+    if(req.body?.role!==undefined){const role=String(req.body.role).toUpperCase();if(!STUDIO_ROLES.has(role))return res.status(400).json({error:"Rôle Studio invalide."});patch.role=role;}
+    if(req.body?.active!==undefined)patch.active=Boolean(req.body.active);
+    if(req.body?.password){if(String(req.body.password).length<8)return res.status(400).json({error:"Le mot de passe doit contenir au moins 8 caractères."});patch.password_hash=await bcrypt.hash(String(req.body.password),12);}
+    await ref.update(patch);
+    const after={...before,...patch,password_hash:"[hidden]"};
+    await studioAudit(req,"UPDATE","STUDIO_USER",req.params.id,{...before,password_hash:"[hidden]"},after);
+    res.json({id:after.id,email:after.email,name:after.name||after.email,role:after.role||"OWNER",active:after.active!==false});
+  } catch(e){res.status(400).json({error:e.message||"Impossible de modifier le compte Studio."});}
+});
+app.get("/api/admin/studio/analytics", requireAdmin, requireStudioPermission("read"), async (_req,res)=>{
+  try{
+    const [contentsSnap,categoriesSnap,mediaSnap,auditSnap]=await Promise.all([
+      firestore.collection("studio_contents").get(),firestore.collection("categories").get(),firestore.collection("studio_assets").get(),firestore.collection("studio_audit_logs").get()
+    ]);
+    const contents=contentsSnap.docs.map(docToData), categories=categoriesSnap.docs.map(docToData);
+    const universes=["MARKET","SAVEURS","EVASION"];
+    const byUniverse=Object.fromEntries(universes.map(u=>[u,{contents:contents.filter(x=>x.universe===u).length,published:contents.filter(x=>x.universe===u&&x.status==="PUBLISHED").length,categories:categories.filter(x=>x.universe===u).length}]));
+    const scheduled=contents.filter(x=>x.status==="DRAFT"&&x.publish_at&&new Date(x.publish_at).getTime()>Date.now()).length;
+    res.json({totals:{contents:contents.length,published:contents.filter(x=>x.status==="PUBLISHED").length,drafts:contents.filter(x=>x.status==="DRAFT").length,scheduled,media:mediaSnap.size,audit:auditSnap.size,categories:categories.length},by_universe:byUniverse});
+  }catch(e){res.status(500).json({error:"Impossible de charger les statistiques Studio."});}
+});
+app.get("/api/admin/studio/audit", requireAdmin, requireStudioPermission("read"), async (req, res) => {
   try {
     const limit=Math.min(200,Math.max(1,Number(req.query.limit)||100));
     const snap=await firestore.collection("studio_audit_logs").get();
