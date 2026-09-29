@@ -24,7 +24,7 @@
 <button class="tab active" data-tab="dashboard">Tableau de bord</button><button class="tab" data-tab="visuals">Visuels</button><button class="tab" data-tab="content">Contenus</button>
 <button class="tab" data-tab="categories">Catégories</button>
 <button class="tab" data-tab="media">Médias</button>
-<button class="tab" data-tab="audit">Historique</button>
+<button class="tab" data-tab="audit">Historique</button><button class="tab" data-tab="team">Équipe & permissions</button>
 </div>
 
 <section id="dashboard-tab" class="studio-panel">
@@ -118,6 +118,16 @@
 <div id="media-msg"></div>
 </form>
 <div id="media-list" class="media-library"></div>
+</section>
+</section>
+<section id="team-tab" class="studio-panel" hidden>
+<section class="studio-card">
+<div class="studio-toolbar"><div><p class="eyebrow">ACCÈS</p><h2>Équipe & permissions</h2><p class="studio-help">Créez des comptes Studio spécialisés et contrôlez ce que chaque membre peut modifier.</p></div><button id="refresh-team" class="btn secondary" type="button">Actualiser</button></div>
+<div class="studio-grid">
+<section><h3>Créer un membre</h3><form id="team-form" class="form"><input name="name" maxlength="120" placeholder="Nom complet" required><input name="email" type="email" placeholder="Email" required><select name="role"><option value="VIEWER">Lecteur</option><option value="EDITOR">Éditeur</option><option value="MEDIA">Média</option><option value="PUBLISHER">Éditeur / publication</option><option value="OWNER">Administrateur Studio</option></select><input name="password" type="password" minlength="8" placeholder="Mot de passe (8 caractères min.)" required><button class="btn primary" type="submit">Créer le compte</button><div id="team-msg"></div></form></section>
+<section><h3>Membres Studio</h3><div id="team-list" class="studio-list"></div></section>
+</div>
+<div class="studio-preview"><strong>Permissions</strong><p>Lecteur : consultation · Média : consultation + médias · Éditeur : contenu + catégories · Éditeur/publication : contenu + publication · Administrateur Studio : accès complet.</p></div>
 </section>
 </section>
 
