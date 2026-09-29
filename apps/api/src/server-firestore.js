@@ -228,7 +228,7 @@ app.post("/api/admin/login", authLimiter, async (req, res) => {
     const snap = await firestore.collection("admins").where("email", "==", normalizedEmail).limit(1).get();
     const adminDoc = snap.docs[0];
     const admin = adminDoc ? docToData(adminDoc) : null;
-    if (!admin || !(await bcrypt.compare(String(password), admin.password_hash || ""))) return res.status(401).json({ error: "Identifiants incorrects." });
+    if (!admin || admin.active === false || !(await bcrypt.compare(String(password), admin.password_hash || ""))) return res.status(401).json({ error: "Identifiants incorrects." });
     const token = signAdmin({ id: admin.id, email: admin.email, role: admin.role || "admin" });
     res.cookie("egonar_admin", token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 8 * 60 * 60 * 1000 });
     res.json({ ok: true });
