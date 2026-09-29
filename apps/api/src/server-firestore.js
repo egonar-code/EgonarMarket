@@ -6,7 +6,7 @@ const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const multer = require("multer");
-const { getDb, getBucket, getDownloadURL, FieldValue, docToData } = require("./firestore");
+const { getDb, getBucket, getStorageBucketCandidates, getDownloadURL, FieldValue, docToData } = require("./firestore");
 const { signAdmin, requireAdmin } = require("./auth");
 const { signCustomer, requireCustomer } = require("./customer-auth");
 const { requireAdminPage, requireSupplierPage } = require("./page-auth");
@@ -1266,13 +1266,30 @@ app.post("/api/admin/studio/upload", requireAdmin, requireStudioPermission("medi
       const extension = ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" })[req.file.mimetype];
       const now = new Date();
       const objectName = `studio/${now.getUTCFullYear()}/${String(now.getUTCMonth()+1).padStart(2,"0")}/${crypto.randomUUID()}.${extension}`;
-      const file = getBucket().file(objectName);
-      await file.save(req.file.buffer, {
-        resumable: false,
-        metadata: { contentType: req.file.mimetype, cacheControl: "public,max-age=31536000,immutable" }
-      });
+      let file = null;
+      let bucketName = "";
+      let lastStorageError = null;
+      for (const candidate of getStorageBucketCandidates()) {
+        try {
+          const candidateFile = getBucket(candidate).file(objectName);
+          await candidateFile.save(req.file.buffer, {
+            resumable: false,
+            metadata: { contentType: req.file.mimetype, cacheControl: "public,max-age=31536000,immutable" }
+          });
+          file = candidateFile;
+          bucketName = candidate;
+          break;
+        } catch (storageError) {
+          lastStorageError = storageError;
+          console.warn("Studio storage bucket unavailable:", candidate, storageError?.message || storageError);
+        }
+      }
+      if (!file) {
+        const detail = lastStorageError?.message || "aucun bucket Firebase Storage disponible";
+        throw new Error("Stockage Firebase indisponible. Vérifiez FIREBASE_STORAGE_BUCKET dans Render. Détail: " + detail);
+      }
       const url = await getDownloadURL(file);
-      const asset = { id: crypto.randomUUID(), object_name: objectName, url, content_type: req.file.mimetype, size_bytes: req.file.size, original_name: req.file.originalname, universe: normalizeUniverse(req.body?.universe) || null, uploaded_by: studioActor(req), created_at: now };
+      const asset = { id: crypto.randomUUID(), object_name: objectName, url, storage_bucket: bucketName, content_type: req.file.mimetype, size_bytes: req.file.size, original_name: req.file.originalname, universe: normalizeUniverse(req.body?.universe) || null, uploaded_by: studioActor(req), created_at: now };
       await Promise.all([
         firestore.collection("studio_assets").doc(asset.id).set(asset),
         firestore.collection("media_assets").doc(asset.id).set(asset)
