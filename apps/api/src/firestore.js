@@ -41,8 +41,8 @@ function getDb() {
   return getFirestore(getApp());
 }
 
-function getBucket() {
-  return getStorage(getApp()).bucket();
+function getBucket(bucketName = "") {
+  return getStorage(getApp()).bucket(String(bucketName || "").trim() || undefined);
 }
 
 function getStorageBucketCandidates() {
