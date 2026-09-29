@@ -14,6 +14,13 @@
         node.style.backgroundImage = (gradient ? gradient + ', ' : '') + 'url("' + String(value).replace(/"/g, '\\\"') + '")';
       } else {
         node.src = value;
+        if (item.image_position || item.image_zoom) {
+          node.style.objectPosition = item.image_position || '50% 50%';
+          const zoom = Math.min(3, Math.max(1, Number(item.image_zoom) || 1));
+          const baseScale = node.classList.contains('universe-image') ? 1.03 : 1;
+          node.style.transform = 'scale(' + (baseScale * zoom) + ')';
+          node.style.transformOrigin = 'center center';
+        }
       }
       return;
     }
