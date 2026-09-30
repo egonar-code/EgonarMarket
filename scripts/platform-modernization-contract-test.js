@@ -19,7 +19,7 @@ for(const marker of [
   'const studioUpload = multer(', 'app.post("/api/admin/studio/upload"',
   'app.get("/api/admin/studio/media"', 'app.delete("/api/admin/studio/media/:id"',
   'app.get("/api/admin/notifications"', 'app.get("/api/service/notifications"',
-  'payment_attempts', 'image_gallery', 'normalizeImageUrls'
+  'payment_attempts', 'image_gallery', 'normalizeImageUrls', 'publish_at'
 ]) if(!server.includes(marker)) throw new Error("Fonctionnalité média/gallerie absente du serveur: "+marker);
 
 for(const marker of [
@@ -40,6 +40,7 @@ for(const marker of ['EgonarStudioRuntime','data-content-key','/api/content'])
   if(!runtime.includes(marker)) throw new Error("Runtime Studio dynamique incomplet: "+marker);
 
 if(!product.includes("detail-gallery") || !product.includes("image_gallery")) throw new Error("Galerie fiche produit absente.");
+if(!studioHtml.includes('name="publish_at"') || !studioJs.includes('publish_at') || !server.includes('publish_at')) throw new Error("Publication programmée Studio absente.");
 if(!notifications.includes("notifyWorkflowAdvance") || !notifications.includes("createNotification")) throw new Error("Service de notifications incomplet.");
 if(!categoryNav.includes("loadServerCategories") || !categoryNav.includes("SERVER_CATEGORIES")) throw new Error("Catégories publiques non connectées au serveur.");
 if(!supplierHtml.includes('id="supplier-profile-form"') || !supplier.includes('app.patch("/api/supplier/profile"')) throw new Error("Profil fournisseur absent.");

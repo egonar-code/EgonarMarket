@@ -6,8 +6,9 @@ const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const multer = require("multer");
-const { getDb, getBucket, getDownloadURL, FieldValue, docToData } = require("./firestore");
+const { getDb, getBucket, getStorageBucketCandidates, getDownloadURL, FieldValue, docToData } = require("./firestore");
 const { signAdmin, requireAdmin } = require("./auth");
+const { signCustomer, requireCustomer } = require("./customer-auth");
 const { requireAdminPage, requireSupplierPage } = require("./page-auth");
 const { signService, requireService, authenticateService, ROLES: SERVICE_ROLES } = require("./service-auth");
 const { startWorkflowTimer, transitionWorkflowTimer, getWorkflowTimerView } = require("./workflow-timers");
@@ -143,9 +144,20 @@ app.get("/api/categories", async (req, res) => {
   }
 });
 
+function isPublicProduct(row) {
+  return row?.active === true && (!row?.approval_status || row.approval_status === "APPROVED");
+}
+
+function isProductInUniverse(row, universe) {
+  if (!universe) return true;
+  if (row?.universe === universe) return true;
+  // Products created before the universe field existed belong to the legacy MARKET catalog.
+  return universe === "MARKET" && !row?.universe;
+}
+
 async function getPublicProducts() {
   const snap = await firestore.collection("products").where("active", "==", true).get();
-  return snap.docs.map(doc => normalizeProductMedia(docToData(doc))).filter(x => x.approval_status === "APPROVED").sort((a, b) => {
+  return snap.docs.map(doc => normalizeProductMedia(docToData(doc))).filter(isPublicProduct).sort((a, b) => {
     const stockDiff = Number(b.stock || 0) > 0 ? 1 : 0;
     const stockDiffA = Number(a.stock || 0) > 0 ? 1 : 0;
     return stockDiff - stockDiffA ||
@@ -161,7 +173,7 @@ app.get("/api/products", async (req, res) => {
     const universe = req.query.universe ? normalizeUniverse(req.query.universe) : null;
     if (req.query.universe && !universe) return res.status(400).json({ error: "Univers invalide." });
     let products = await getPublicProducts();
-    if (universe) products = products.filter(p => p.universe === universe);
+    if (universe) products = products.filter(p => isProductInUniverse(p, universe));
     if (category) products = products.filter(p => p.category === category);
     if (q) products = products.filter(p => normalize(`${p.name} ${p.description} ${p.category} ${p.sku || ""}`).includes(q));
     res.json(products);
@@ -176,7 +188,7 @@ app.get("/api/products/:id", async (req, res) => {
     const doc = await firestore.collection("products").doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: "Produit introuvable." });
     const product = normalizeProductMedia(docToData(doc));
-    if (product.active !== true || product.approval_status !== "APPROVED") return res.status(404).json({ error: "Produit introuvable." });
+    if (!isPublicProduct(product)) return res.status(404).json({ error: "Produit introuvable." });
     if (product.supplier_id) {
       const supplier = await firestore.collection("suppliers").doc(String(product.supplier_id)).get();
       product.supplier_name = supplier.exists ? String(supplier.data().business_name || "") : "";
@@ -216,7 +228,7 @@ app.post("/api/admin/login", authLimiter, async (req, res) => {
     const snap = await firestore.collection("admins").where("email", "==", normalizedEmail).limit(1).get();
     const adminDoc = snap.docs[0];
     const admin = adminDoc ? docToData(adminDoc) : null;
-    if (!admin || !(await bcrypt.compare(String(password), admin.password_hash || ""))) return res.status(401).json({ error: "Identifiants incorrects." });
+    if (!admin || admin.active === false || !(await bcrypt.compare(String(password), admin.password_hash || ""))) return res.status(401).json({ error: "Identifiants incorrects." });
     const token = signAdmin({ id: admin.id, email: admin.email, role: admin.role || "admin" });
     res.cookie("egonar_admin", token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 8 * 60 * 60 * 1000 });
     res.json({ ok: true });
@@ -284,6 +296,11 @@ app.post("/api/admin/products", requireAdmin, async (req, res) => {
     const price = Number(price_fcfa);
     const oldPrice = old_price_fcfa === null || old_price_fcfa === "" ? null : Number(old_price_fcfa);
     if (oldPrice !== null && (!Number.isInteger(oldPrice) || oldPrice < price)) return res.status(400).json({ error: "L'ancien prix doit être supérieur ou égal au prix actuel." });
+    let publishAt = null;
+    if (req.body?.publish_at) {
+      publishAt = new Date(req.body.publish_at);
+      if (Number.isNaN(publishAt.getTime())) return res.status(400).json({ error: "Date de publication invalide." });
+    }
     const id = crypto.randomUUID();
     const now = new Date();
     const slug = `${String(name).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${Date.now()}`;
@@ -787,6 +804,150 @@ app.patch("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
   return res.json(finalOrder);
 });
 
+function customerSafe(row) {
+  if (!row) return null;
+  return { id: row.id, name: row.name || "", email: row.email || "", phone: row.phone || "", address: row.address || "", city: row.city || "" };
+}
+
+async function getCustomerByEmail(email) {
+  const snap = await firestore.collection("customers").where("email", "==", String(email || "").trim().toLowerCase()).limit(1).get();
+  return snap.docs[0] ? docToData(snap.docs[0]) : null;
+}
+
+app.post("/api/customer/register", authLimiter, async (req, res) => {
+  try {
+    const name = String(req.body?.name || "").trim().slice(0,100);
+    const email = String(req.body?.email || "").trim().toLowerCase().slice(0,160);
+    const phone = String(req.body?.phone || "").trim().slice(0,30);
+    const password = String(req.body?.password || "");
+    if (!name || !/^\S+@\S+\.\S+$/.test(email) || password.length < 8) return res.status(400).json({ error: "Nom, email valide et mot de passe de 8 caractères minimum sont requis." });
+    const existing = await getCustomerByEmail(email);
+    if (existing) return res.status(409).json({ error: "Un compte existe déjà avec cet email." });
+    const id = crypto.randomUUID();
+    const row = { id, name, email, phone, password_hash: await bcrypt.hash(password, 12), address: "", city: "Dakar", created_at: new Date(), updated_at: new Date() };
+    await firestore.collection("customers").doc(id).set(row);
+    const guestOrders = await firestore.collection("orders").where("customer.email", "==", email).get();
+    if (!guestOrders.empty) {
+      const batch = firestore.batch();
+      guestOrders.docs.forEach(orderDoc => batch.update(orderDoc.ref, { customer_id: id, "customer.id": id, updated_at: new Date() }));
+      await batch.commit();
+    }
+    const token = signCustomer(row);
+    res.cookie("egonar_customer", token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 30 * 24 * 60 * 60 * 1000 });
+    res.status(201).json({ ok: true, customer: customerSafe(row) });
+  } catch (e) { console.error(e); res.status(400).json({ error: "Création du compte impossible." }); }
+});
+
+app.post("/api/customer/login", authLimiter, async (req, res) => {
+  try {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    const password = String(req.body?.password || "");
+    const customer = await getCustomerByEmail(email);
+    if (!customer || !(await bcrypt.compare(password, customer.password_hash || ""))) return res.status(401).json({ error: "Email ou mot de passe incorrect." });
+    const token = signCustomer(customer);
+    res.cookie("egonar_customer", token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 30 * 24 * 60 * 60 * 1000 });
+    res.json({ ok: true, customer: customerSafe(customer) });
+  } catch (e) { console.error(e); res.status(500).json({ error: "Connexion impossible." }); }
+});
+
+app.post("/api/customer/logout", requireCustomer, (_req, res) => {
+  res.clearCookie("egonar_customer", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+  res.json({ ok: true });
+});
+
+app.get("/api/customer/me", requireCustomer, async (req, res) => {
+  const snap = await firestore.collection("customers").doc(req.customer.sub).get();
+  if (!snap.exists) return res.status(404).json({ error: "Compte client introuvable." });
+  res.json({ customer: customerSafe(docToData(snap)) });
+});
+
+app.patch("/api/customer/me", requireCustomer, async (req, res) => {
+  const ref = firestore.collection("customers").doc(req.customer.sub);
+  const snap = await ref.get();
+  if (!snap.exists) return res.status(404).json({ error: "Compte client introuvable." });
+  const patch = {};
+  for (const key of ["name","phone","address","city"]) if (req.body?.[key] !== undefined) patch[key] = String(req.body[key] || "").trim().slice(0, key === "address" ? 250 : 100);
+  if (req.body?.email !== undefined) {
+    const email = String(req.body.email || "").trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: "Email invalide." });
+    const existing = await getCustomerByEmail(email);
+    if (existing && existing.id !== req.customer.sub) return res.status(409).json({ error: "Cet email est déjà utilisé." });
+    patch.email = email;
+  }
+  if (req.body?.password) {
+    if (String(req.body.password).length < 8) return res.status(400).json({ error: "Le mot de passe doit contenir au moins 8 caractères." });
+    patch.password_hash = await bcrypt.hash(String(req.body.password), 12);
+  }
+  patch.updated_at = new Date();
+  await ref.update(patch);
+  res.json({ customer: customerSafe(docToData(await ref.get())) });
+});
+
+app.get("/api/customer/orders", requireCustomer, async (req, res) => {
+  const snap = await firestore.collection("orders").where("customer_id", "==", req.customer.sub).get();
+  const rows = snap.docs.map(docToData).sort(sortByDateDesc);
+  res.json(rows);
+});
+
+app.get("/api/customer/favorites", requireCustomer, async (req, res) => {
+  const snap = await firestore.collection("favorites").where("customer_id", "==", req.customer.sub).get();
+  const ids = snap.docs.map(d => String(d.data().product_id));
+  const products = await getPublicProducts();
+  res.json(products.filter(p => ids.includes(String(p.id))));
+});
+
+app.post("/api/customer/favorites/:productId", requireCustomer, async (req, res) => {
+  const productRef = firestore.collection("products").doc(String(req.params.productId));
+  const product = await productRef.get();
+  if (!product.exists || product.data().active !== true || product.data().approval_status !== "APPROVED") return res.status(404).json({ error: "Produit introuvable." });
+  const id = req.customer.sub + "_" + String(req.params.productId);
+  const ref = firestore.collection("favorites").doc(id);
+  const current = await ref.get();
+  if (current.exists) { await ref.delete(); return res.json({ favorite: false }); }
+  await ref.set({ id, customer_id: req.customer.sub, product_id: String(req.params.productId), created_at: new Date() });
+  res.status(201).json({ favorite: true });
+});
+
+app.get("/api/customer/favorites/ids", requireCustomer, async (req, res) => {
+  const snap = await firestore.collection("favorites").where("customer_id", "==", req.customer.sub).get();
+  res.json({ product_ids: snap.docs.map(d => String(d.data().product_id)) });
+});
+
+app.post("/api/customer/recently-viewed/:productId", requireCustomer, async (req, res) => {
+  const productId = String(req.params.productId);
+  const product = await firestore.collection("products").doc(productId).get();
+  if (!product.exists || product.data().active !== true || product.data().approval_status !== "APPROVED") return res.status(404).json({ error: "Produit introuvable." });
+  const ref = firestore.collection("recently_viewed").doc(req.customer.sub + "_" + productId);
+  await ref.set({ id: ref.id, customer_id: req.customer.sub, product_id: productId, viewed_at: new Date() }, { merge: true });
+  res.json({ ok: true });
+});
+
+app.get("/api/customer/recently-viewed", requireCustomer, async (req, res) => {
+  const snap = await firestore.collection("recently_viewed").where("customer_id", "==", req.customer.sub).get();
+  const ids = snap.docs.map(d => docToData(d)).sort((a,b) => new Date(b.viewed_at || 0)-new Date(a.viewed_at || 0)).slice(0,20).map(x => x.product_id);
+  const products = await getPublicProducts();
+  res.json(products.filter(p => ids.includes(String(p.id))));
+});
+
+app.get("/api/recommendations", async (req, res) => {
+  const productId = String(req.query.product_id || "");
+  const universe = req.query.universe ? normalizeUniverse(req.query.universe) : null;
+  const category = String(req.query.category || "").trim();
+  const products = await getPublicProducts();
+  const base = products.find(p => String(p.id) === productId);
+  const candidates = products.filter(p => String(p.id) !== productId && (!universe || p.universe === universe) && (!category || p.category === category));
+  const scored = candidates.map(p => {
+    let score = 0;
+    if (base && p.category === base.category) score += 30;
+    if (base && p.universe === base.universe) score += 20;
+    if (Number(p.stock || 0) > 0) score += 10;
+    score += Number(p.rating_average || 0) * 4;
+    score += Number(p.verification_score || 0) * 0.08;
+    return { ...p, recommendation_score: score };
+  }).sort((a,b)=>b.recommendation_score-a.recommendation_score).slice(0,8);
+  res.json({ products: scored });
+});
+
 app.post("/api/orders", orderLimiter, async (req, res) => {
   const { customer, items, payment_method = "A_PAYER", delivery_fcfa = 0 } = req.body || {};
   if (!customer?.name || !customer?.phone || !customer?.address || !Array.isArray(items) || !items.length) return res.status(400).json({ error: "Informations client ou panier incomplets." });
@@ -830,10 +991,11 @@ app.post("/api/orders", orderLimiter, async (req, res) => {
         id: customerId,
         name: String(customer.name).trim().slice(0,100),
         phone: String(customer.phone).trim().slice(0,30),
-        email: customer.email ? String(customer.email).trim().slice(0,160) : null,
-        address: String(customer.address).trim().slice(0,250),
-        city: String(customer.city || "Dakar").trim().slice(0,80),
-        created_at: new Date()
+        email: customer.email ? String(customer.email).trim().toLowerCase().slice(0,160) : (linkedCustomer?.email || null),
+        address: String(customer.address).trim().slice(0,250) || (linkedCustomer?.address || ""),
+        city: String(customer.city || linkedCustomer?.city || "Dakar").trim().slice(0,80),
+        created_at: linkedCustomer?.created_at || new Date(),
+        updated_at: new Date()
       };
       const orderRow = {
         id: orderId,
@@ -868,7 +1030,8 @@ app.post("/api/orders", orderLimiter, async (req, res) => {
         created_at: new Date(),
         updated_at: new Date()
       };
-      transaction.set(firestore.collection("customers").doc(customerId), customerRow);
+      if (!linkedCustomer) transaction.set(firestore.collection("customers").doc(customerId), customerRow);
+      else transaction.update(firestore.collection("customers").doc(customerId), customerRow);
       transaction.set(firestore.collection("orders").doc(orderId), orderRow);
       for (const [id, qty] of totals) {
         const productRef = firestore.collection("products").doc(id);
@@ -963,13 +1126,10 @@ app.post("/api/ai/search", async (req, res) => {
   const intent = extractAiIntent(message);
   const universe = requestedUniverse || intent.universe;
   let products = await getPublicProducts();
-  if (universe) products = products.filter(p => p.universe === universe);
+  if (universe) products = products.filter(p => isProductInUniverse(p, universe));
   if (intent.budget) products = products.filter(p => Number(p.price_fcfa || 0) <= intent.budget);
   const searchable = intent.words.filter(w => !["saveurs","evasion","market","food","travel"].includes(w)).slice(0,12);
-  const ranked = products.filter(p => {
-    const haystack = tokenize(`${p.name} ${p.description} ${p.category} ${p.subcategory} ${p.sku || ""}`);
-    return !searchable.length || searchable.some(word => haystack.includes(word));
-  }).map(p => {
+  const ranked = products.map(p => {
     const haystack = tokenize(`${p.name} ${p.description} ${p.category} ${p.subcategory} ${p.sku || ""}`);
     const exact = intent.words.reduce((score, w) => score + (haystack.includes(w) ? 1 : 0), 0);
     const budgetBoost = intent.budget ? Math.max(0, 1 - (Number(p.price_fcfa || 0) / intent.budget)) * 20 : 0;
@@ -977,7 +1137,7 @@ app.post("/api/ai/search", async (req, res) => {
     const ratingBoost = Number(p.rating_average || 0) * 3;
     const stockBoost = Number(p.stock) > 0 ? 8 : 0;
     return { ...p, ai_score: Number((exact * 12 + budgetBoost + verifiedBoost + ratingBoost + stockBoost).toFixed(2)) };
-  }).sort((a,b) => b.ai_score - a.ai_score).slice(0,12);
+  }).filter(p => !searchable.length || p.ai_score > 0).sort((a,b) => b.ai_score - a.ai_score).slice(0,12);
   res.json({ message, budget: intent.budget, category: intent.category, universe, keywords: intent.words, products: ranked });
 });
 
@@ -1027,6 +1187,32 @@ function studioActor(req) {
     actor_name: req.admin?.email || "Administration"
   };
 }
+const STUDIO_ROLES = new Set(["OWNER","EDITOR","MEDIA","PUBLISHER","VIEWER"]);
+const STUDIO_PERMISSIONS = {
+  VIEWER: new Set(["read"]),
+  MEDIA: new Set(["read","media"]),
+  EDITOR: new Set(["read","content","categories"]),
+  PUBLISHER: new Set(["read","content","publish"]),
+  OWNER: new Set(["read","media","content","categories","publish","users"])
+};
+function studioRole(req) {
+  const raw = String(req.admin?.role || "OWNER").trim().toUpperCase();
+  return STUDIO_ROLES.has(raw) ? raw : "OWNER";
+}
+function requireStudioPermission(permission) {
+  return (req, res, next) => {
+    const role = studioRole(req);
+    if (!STUDIO_PERMISSIONS[role]?.has(permission)) return res.status(403).json({ error: "Permission Studio insuffisante.", role, required: permission });
+    next();
+  };
+}
+function requireStudioContentWrite(req,res,next){
+  const role=studioRole(req);
+  const wantsPublish=String(req.body?.status||"").toUpperCase()==="PUBLISHED";
+  const allowed=wantsPublish?STUDIO_PERMISSIONS[role]?.has("publish"):STUDIO_PERMISSIONS[role]?.has("content");
+  if(!allowed)return res.status(403).json({error:wantsPublish?"Permission de publication insuffisante.":"Permission de modification insuffisante.",role,required:wantsPublish?"publish":"content"});
+  next();
+}
 async function studioAudit(req, action, targetType, targetId, before, after) {
   const actor = studioActor(req);
   const now = new Date();
@@ -1051,7 +1237,8 @@ app.get("/api/content", async (req, res) => {
     if (req.query.universe && !universe) return res.status(400).json({ error: "Univers invalide." });
     if (!STUDIO_LOCALES.has(locale)) return res.status(400).json({ error: "Langue invalide." });
     const snap = await firestore.collection("studio_contents").get();
-    let rows = snap.docs.map(docToData).filter(row => row.status === "PUBLISHED" && row.locale === locale && row.active !== false);
+    const now = Date.now();
+    let rows = snap.docs.map(docToData).filter(row => row.status === "PUBLISHED" && row.locale === locale && row.active !== false && (!row.publish_at || new Date(row.publish_at).getTime() <= now));
     if (universe) rows = rows.filter(row => row.universe === universe);
     if (key) rows = rows.filter(row => row.key === key);
     rows.sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0) || sortByDateDesc(a, b));
@@ -1071,7 +1258,7 @@ const studioUpload = multer({
   }
 });
 
-app.post("/api/admin/studio/upload", requireAdmin, (req, res) => {
+app.post("/api/admin/studio/upload", requireAdmin, requireStudioPermission("media"), (req, res) => {
   studioUpload.single("image")(req, res, async error => {
     try {
       if (error) return res.status(400).json({ error: error.message || "Téléversement impossible." });
@@ -1079,13 +1266,30 @@ app.post("/api/admin/studio/upload", requireAdmin, (req, res) => {
       const extension = ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" })[req.file.mimetype];
       const now = new Date();
       const objectName = `studio/${now.getUTCFullYear()}/${String(now.getUTCMonth()+1).padStart(2,"0")}/${crypto.randomUUID()}.${extension}`;
-      const file = getBucket().file(objectName);
-      await file.save(req.file.buffer, {
-        resumable: false,
-        metadata: { contentType: req.file.mimetype, cacheControl: "public,max-age=31536000,immutable" }
-      });
+      let file = null;
+      let bucketName = "";
+      let lastStorageError = null;
+      for (const candidate of getStorageBucketCandidates()) {
+        try {
+          const candidateFile = getBucket(candidate).file(objectName);
+          await candidateFile.save(req.file.buffer, {
+            resumable: false,
+            metadata: { contentType: req.file.mimetype, cacheControl: "public,max-age=31536000,immutable" }
+          });
+          file = candidateFile;
+          bucketName = candidate;
+          break;
+        } catch (storageError) {
+          lastStorageError = storageError;
+          console.warn("Studio storage bucket unavailable:", candidate, storageError?.message || storageError);
+        }
+      }
+      if (!file) {
+        const detail = lastStorageError?.message || "aucun bucket Firebase Storage disponible";
+        throw new Error("Stockage Firebase indisponible. Vérifiez FIREBASE_STORAGE_BUCKET dans Render. Détail: " + detail);
+      }
       const url = await getDownloadURL(file);
-      const asset = { id: crypto.randomUUID(), object_name: objectName, url, content_type: req.file.mimetype, size_bytes: req.file.size, original_name: req.file.originalname, universe: normalizeUniverse(req.body?.universe) || null, uploaded_by: studioActor(req), created_at: now };
+      const asset = { id: crypto.randomUUID(), object_name: objectName, url, storage_bucket: bucketName, content_type: req.file.mimetype, size_bytes: req.file.size, original_name: req.file.originalname, universe: normalizeUniverse(req.body?.universe) || null, uploaded_by: studioActor(req), created_at: now };
       await Promise.all([
         firestore.collection("studio_assets").doc(asset.id).set(asset),
         firestore.collection("media_assets").doc(asset.id).set(asset)
@@ -1098,7 +1302,7 @@ app.post("/api/admin/studio/upload", requireAdmin, (req, res) => {
     }
   });
 });
-app.get("/api/admin/studio/media", requireAdmin, async (req, res) => {
+app.get("/api/admin/studio/media", requireAdmin, requireStudioPermission("read"), async (req, res) => {
   try {
     const [studioSnap, sharedSnap] = await Promise.all([
       firestore.collection("studio_assets").get(),
@@ -1123,7 +1327,7 @@ app.get("/api/admin/studio/media", requireAdmin, async (req, res) => {
   }
 });
 
-app.delete("/api/admin/studio/media/:id", requireAdmin, async (req, res) => {
+app.delete("/api/admin/studio/media/:id", requireAdmin, requireStudioPermission("media"), async (req, res) => {
   try {
     const id = String(req.params.id);
     const [studioRef, sharedRef] = [firestore.collection("studio_assets").doc(id), firestore.collection("media_assets").doc(id)];
@@ -1152,7 +1356,7 @@ app.delete("/api/admin/studio/media/:id", requireAdmin, async (req, res) => {
   }
 });
 
-app.get("/api/admin/studio/content", requireAdmin, async (req, res) => {
+app.get("/api/admin/studio/content", requireAdmin, requireStudioPermission("read"), async (req, res) => {
   try {
     const universe = req.query.universe ? normalizeUniverse(req.query.universe) : null;
     const status = req.query.status ? String(req.query.status).trim().toUpperCase() : null;
@@ -1170,7 +1374,7 @@ app.get("/api/admin/studio/content", requireAdmin, async (req, res) => {
   }
 });
 
-app.post("/api/admin/studio/content", requireAdmin, async (req, res) => {
+app.post("/api/admin/studio/content", requireAdmin, requireStudioPermission("content"), async (req, res) => {
   try {
     const content_type = String(req.body?.content_type || "").trim().toUpperCase();
     const universe = normalizeUniverse(req.body?.universe);
@@ -1198,6 +1402,9 @@ app.post("/api/admin/studio/content", requireAdmin, async (req, res) => {
       cta_url: studioClean(req.body?.cta_url, 1000),
       meta_title: studioClean(req.body?.meta_title, 220),
       meta_description: studioClean(req.body?.meta_description, 500),
+      image_position: studioClean(req.body?.image_position || "50% 50%", 30),
+      image_zoom: Math.min(3, Math.max(1, Number(req.body?.image_zoom) || 1)),
+      publish_at: publishAt,
       sort_order: Number.isFinite(Number(req.body?.sort_order)) ? Number(req.body.sort_order) : 0,
       status: "DRAFT",
       active: true,
@@ -1214,14 +1421,14 @@ app.post("/api/admin/studio/content", requireAdmin, async (req, res) => {
   }
 });
 
-app.patch("/api/admin/studio/content/:id", requireAdmin, async (req, res) => {
+app.patch("/api/admin/studio/content/:id", requireAdmin, requireStudioContentWrite, async (req, res) => {
   try {
     const ref = firestore.collection("studio_contents").doc(req.params.id);
     const currentSnap = await ref.get();
     if (!currentSnap.exists) return res.status(404).json({ error: "Contenu introuvable." });
     const current = currentSnap.data();
     const patch = {};
-    for (const key of ["content_type","universe","locale","key","title","subtitle","body","image_url","cta_label","cta_url","meta_title","meta_description","sort_order","active","status"]) {
+    for (const key of ["content_type","universe","locale","key","title","subtitle","body","image_url","cta_label","cta_url","meta_title","meta_description","image_position","image_zoom","publish_at","sort_order","active","status"]) {
       if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) patch[key] = req.body[key];
     }
     if (patch.content_type !== undefined) {
@@ -1244,6 +1451,23 @@ app.patch("/api/admin/studio/content/:id", requireAdmin, async (req, res) => {
     for (const key of ["title","subtitle","body","image_url","cta_label","cta_url","meta_title","meta_description"]) {
       if (patch[key] !== undefined) patch[key] = studioClean(patch[key], key === "body" ? 12000 : key === "meta_description" ? 500 : key === "image_url" ? 2000 : 1000);
     }
+    if (patch.image_position !== undefined) {
+      patch.image_position = studioClean(patch.image_position, 30);
+      if (!/^\d{1,3}%\s+\d{1,3}%$/.test(patch.image_position)) return res.status(400).json({ error: "Position de recadrage invalide." });
+    }
+    if (patch.image_zoom !== undefined) {
+      const zoom = Number(patch.image_zoom);
+      if (!Number.isFinite(zoom)) return res.status(400).json({ error: "Zoom de recadrage invalide." });
+      patch.image_zoom = Math.min(3, Math.max(1, zoom));
+    }
+    if (patch.publish_at !== undefined) {
+      if (patch.publish_at === "" || patch.publish_at === null) patch.publish_at = null;
+      else {
+        const parsedPublishAt = new Date(patch.publish_at);
+        if (Number.isNaN(parsedPublishAt.getTime())) return res.status(400).json({ error: "Date de publication invalide." });
+        patch.publish_at = parsedPublishAt;
+      }
+    }
     if (patch.sort_order !== undefined) patch.sort_order = Number(patch.sort_order) || 0;
     if (patch.active !== undefined) patch.active = Boolean(patch.active);
 
@@ -1257,7 +1481,7 @@ app.patch("/api/admin/studio/content/:id", requireAdmin, async (req, res) => {
   }
 });
 
-app.delete("/api/admin/studio/content/:id", requireAdmin, async (req, res) => {
+app.delete("/api/admin/studio/content/:id", requireAdmin, requireStudioPermission("content"), async (req, res) => {
   const ref = firestore.collection("studio_contents").doc(req.params.id);
   const currentSnap = await ref.get();
   if (!currentSnap.exists) return res.status(404).json({ error: "Contenu introuvable." });
@@ -1269,7 +1493,7 @@ app.delete("/api/admin/studio/content/:id", requireAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/api/admin/studio/categories", requireAdmin, async (req, res) => {
+app.get("/api/admin/studio/categories", requireAdmin, requireStudioPermission("read"), async (req, res) => {
   try {
     const universe = req.query.universe ? normalizeUniverse(req.query.universe) : null;
     if (req.query.universe && !universe) return res.status(400).json({ error: "Univers invalide." });
@@ -1284,7 +1508,7 @@ app.get("/api/admin/studio/categories", requireAdmin, async (req, res) => {
   }
 });
 
-app.post("/api/admin/studio/categories", requireAdmin, async (req, res) => {
+app.post("/api/admin/studio/categories", requireAdmin, requireStudioPermission("categories"), async (req, res) => {
   try {
     const universe = normalizeUniverse(req.body?.universe);
     const name = studioClean(req.body?.name, 120);
@@ -1318,7 +1542,7 @@ app.post("/api/admin/studio/categories", requireAdmin, async (req, res) => {
   }
 });
 
-app.patch("/api/admin/studio/categories/:id", requireAdmin, async (req, res) => {
+app.patch("/api/admin/studio/categories/:id", requireAdmin, requireStudioPermission("categories"), async (req, res) => {
   try {
     const ref = firestore.collection("categories").doc(req.params.id);
     const snap = await ref.get();
@@ -1350,7 +1574,7 @@ app.patch("/api/admin/studio/categories/:id", requireAdmin, async (req, res) => 
   }
 });
 
-app.delete("/api/admin/studio/categories/:id", requireAdmin, async (req, res) => {
+app.delete("/api/admin/studio/categories/:id", requireAdmin, requireStudioPermission("categories"), async (req, res) => {
   const ref=firestore.collection("categories").doc(req.params.id);
   const snap=await ref.get();
   if(!snap.exists)return res.status(404).json({error:"Catégorie introuvable."});
@@ -1361,7 +1585,85 @@ app.delete("/api/admin/studio/categories/:id", requireAdmin, async (req, res) =>
   res.json({ok:true});
 });
 
-app.get("/api/admin/studio/audit", requireAdmin, async (req, res) => {
+app.post("/api/admin/studio/audit/:id/restore", requireAdmin, requireStudioPermission("content"), async (req, res) => {
+  try {
+    const auditRef = firestore.collection("studio_audit_logs").doc(String(req.params.id));
+    const auditSnap = await auditRef.get();
+    if (!auditSnap.exists) return res.status(404).json({ error: "Version introuvable." });
+    const version = auditSnap.data() || {};
+    const before = version.before;
+    if (!before || !version.target_id || !["CONTENT","CATEGORY"].includes(String(version.target_type || "").toUpperCase())) {
+      return res.status(400).json({ error: "Cette entrée ne contient pas de version restaurable." });
+    }
+    const collection = String(version.target_type).toUpperCase() === "CONTENT" ? "studio_contents" : "categories";
+    const ref = firestore.collection(collection).doc(String(version.target_id));
+    const currentSnap = await ref.get();
+    if (!currentSnap.exists) return res.status(404).json({ error: "Élément à restaurer introuvable." });
+    const current = currentSnap.data() || {};
+    const restored = { ...before, updated_at: new Date(), updated_by: studioActor(req) };
+    await ref.set(restored, { merge: true });
+    await studioAudit(req, "RESTORE", version.target_type, version.target_id, current, restored);
+    res.json(docToData(await ref.get()));
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ error: e.message || "Impossible de restaurer cette version." });
+  }
+});
+
+app.get("/api/admin/studio/team", requireAdmin, requireStudioPermission("users"), async (_req, res) => {
+  try {
+    const snap = await firestore.collection("admins").get();
+    const rows = snap.docs.map(docToData).map(x => ({
+      id:x.id, email:x.email||"", name:x.name||x.email||"", role:STUDIO_ROLES.has(String(x.role||"").toUpperCase())?String(x.role).toUpperCase():"OWNER", active:x.active!==false
+    }));
+    rows.sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+    res.json(rows);
+  } catch(e) { res.status(500).json({error:"Impossible de charger l’équipe Studio."}); }
+});
+app.post("/api/admin/studio/team", requireAdmin, requireStudioPermission("users"), async (req, res) => {
+  try {
+    const email=String(req.body?.email||"").trim().toLowerCase();
+    const name=studioClean(req.body?.name||email,120);
+    const role=String(req.body?.role||"VIEWER").trim().toUpperCase();
+    const password=String(req.body?.password||"");
+    if(!email || !password || !STUDIO_ROLES.has(role)) return res.status(400).json({error:"Nom, email, rôle et mot de passe sont obligatoires."});
+    if(password.length<8) return res.status(400).json({error:"Le mot de passe doit contenir au moins 8 caractères."});
+    const existing=await firestore.collection("admins").where("email","==",email).limit(1).get();
+    if(!existing.empty) return res.status(409).json({error:"Un compte administrateur existe déjà avec cet email."});
+    const id=crypto.randomUUID(), now=new Date();
+    const row={id,email,name,role,password_hash:await bcrypt.hash(password,12),active:true,created_at:now,updated_at:now,created_by:studioActor(req)};
+    await firestore.collection("admins").doc(id).set(row);
+    await studioAudit(req,"CREATE","STUDIO_USER",id,null,{...row,password_hash:"[hidden]"});
+    res.status(201).json({id,email,name,role,active:true});
+  } catch(e) { res.status(400).json({error:e.message||"Impossible de créer le compte Studio."}); }
+});
+app.patch("/api/admin/studio/team/:id", requireAdmin, requireStudioPermission("users"), async (req,res)=>{
+  try {
+    const ref=firestore.collection("admins").doc(String(req.params.id)), snap=await ref.get();
+    if(!snap.exists)return res.status(404).json({error:"Compte Studio introuvable."});
+    const before=snap.data()||{}, patch={updated_at:new Date()};
+    if(req.body?.role!==undefined){const role=String(req.body.role).toUpperCase();if(!STUDIO_ROLES.has(role))return res.status(400).json({error:"Rôle Studio invalide."});patch.role=role;}
+    if(req.body?.active!==undefined)patch.active=Boolean(req.body.active);
+    if(req.body?.password){if(String(req.body.password).length<8)return res.status(400).json({error:"Le mot de passe doit contenir au moins 8 caractères."});patch.password_hash=await bcrypt.hash(String(req.body.password),12);}
+    await ref.update(patch);
+    const after={...before,...patch,password_hash:"[hidden]"};
+    await studioAudit(req,"UPDATE","STUDIO_USER",req.params.id,{...before,password_hash:"[hidden]"},after);
+    res.json({id:after.id,email:after.email,name:after.name||after.email,role:after.role||"OWNER",active:after.active!==false});
+  } catch(e){res.status(400).json({error:e.message||"Impossible de modifier le compte Studio."});}
+});
+app.get("/api/admin/studio/analytics", requireAdmin, requireStudioPermission("read"), async (_req,res)=>{
+  try{
+    const [contentsSnap,categoriesSnap,mediaSnap,auditSnap]=await Promise.all([
+      firestore.collection("studio_contents").get(),firestore.collection("categories").get(),firestore.collection("studio_assets").get(),firestore.collection("studio_audit_logs").get()
+    ]);
+    const contents=contentsSnap.docs.map(docToData), categories=categoriesSnap.docs.map(docToData);
+    const universes=["MARKET","SAVEURS","EVASION"];
+    const byUniverse=Object.fromEntries(universes.map(u=>[u,{contents:contents.filter(x=>x.universe===u).length,published:contents.filter(x=>x.universe===u&&x.status==="PUBLISHED").length,categories:categories.filter(x=>x.universe===u).length}]));
+    const scheduled=contents.filter(x=>x.status==="DRAFT"&&x.publish_at&&new Date(x.publish_at).getTime()>Date.now()).length;
+    res.json({totals:{contents:contents.length,published:contents.filter(x=>x.status==="PUBLISHED").length,drafts:contents.filter(x=>x.status==="DRAFT").length,scheduled,media:mediaSnap.size,audit:auditSnap.size,categories:categories.length},by_universe:byUniverse});
+  }catch(e){res.status(500).json({error:"Impossible de charger les statistiques Studio."});}
+});
+app.get("/api/admin/studio/audit", requireAdmin, requireStudioPermission("read"), async (req, res) => {
   try {
     const limit=Math.min(200,Math.max(1,Number(req.query.limit)||100));
     const snap=await firestore.collection("studio_audit_logs").get();
