@@ -343,7 +343,7 @@ async function ensureMediaPickerUploadUI(){
   if(subtitle)subtitle.textContent="Sélectionnez une image déjà importée ou téléchargez-en une nouvelle.";
 }
 
-function openMediaPicker(target){
+async function openMediaPicker(target){
   mediaPickerTarget=target;
   ensureMediaPickerUploadUI();
   $("media-modal").hidden=false;
