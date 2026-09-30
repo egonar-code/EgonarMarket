@@ -324,8 +324,28 @@ async function deleteMedia(id){
 async function copyMediaUrl(url){
   try{await navigator.clipboard.writeText(url);message("media-msg","Lien copié.",true);}catch{alert(url);}
 }
-async function openMediaPicker(target){
+async function ensureMediaPickerUploadUI(){
+  const modal=$("media-modal");
+  if(!modal)return;
+  const card=modal.querySelector(".media-modal-card");
+  const list=$("media-picker-list");
+  if(!card||!list)return;
+  let box=$("media-picker-upload-box");
+  if(!box){
+    box=document.createElement("div");
+    box.id="media-picker-upload-box";
+    box.className="studio-card";
+    box.style.marginBottom="18px";
+    box.innerHTML=`<label>Télécharger une nouvelle image <input id="media-picker-upload" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><button type="button" class="btn primary" style="margin-top:10px" onclick="uploadFromMediaPicker()">Télécharger et utiliser cette image</button><div id="media-picker-msg"></div>`;
+    card.insertBefore(box,list);
+  }
+  const subtitle=card.querySelector(".studio-toolbar .studio-help");
+  if(subtitle)subtitle.textContent="Sélectionnez une image déjà importée ou téléchargez-en une nouvelle.";
+}
+
+function openMediaPicker(target){
   mediaPickerTarget=target;
+  ensureMediaPickerUploadUI();
   $("media-modal").hidden=false;
   message("media-picker-msg","Chargement de la bibliothèque…",true);
   await loadMedia();
