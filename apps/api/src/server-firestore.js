@@ -7,6 +7,7 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const multer = require("multer");
 const { getDb, getBucket, getStorageBucketCandidates, getDownloadURL, FieldValue, docToData } = require("./firestore");
+const https = require("https");
 const { signAdmin, requireAdmin } = require("./auth");
 const { signCustomer, requireCustomer } = require("./customer-auth");
 const { requireAdminPage, requireSupplierPage } = require("./page-auth");
@@ -1249,6 +1250,57 @@ app.get("/api/content", async (req, res) => {
   }
 });
 
+async function uploadStudioImageToCloudinary(fileBuffer, mimeType, publicId) {
+  const cloudName = String(process.env.CLOUDINARY_CLOUD_NAME || "").trim();
+  const apiKey = String(process.env.CLOUDINARY_API_KEY || "").trim();
+  const apiSecret = String(process.env.CLOUDINARY_API_SECRET || "").trim();
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error("Cloudinary non configuré. Renseignez CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY et CLOUDINARY_API_SECRET dans Render.");
+  }
+
+  const boundary = "----EgonarMarketCloudinary" + crypto.randomBytes(12).toString("hex");
+  const fields = [["public_id", publicId], ["folder", "egonarmarket/studio"]];
+  const chunks = [];
+  for (const [name, value] of fields) {
+    chunks.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`));
+  }
+  chunks.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="studio-image"\r\nContent-Type: ${mimeType}\r\n\r\n`));
+  chunks.push(fileBuffer);
+  chunks.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+  const body = Buffer.concat(chunks);
+  const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString("base64");
+
+  return await new Promise((resolve, reject) => {
+    const request = https.request({
+      hostname: "api.cloudinary.com",
+      path: `/v1_1/${encodeURIComponent(cloudName)}/image/upload`,
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": `multipart/form-data; boundary=${boundary}`,
+        "Content-Length": body.length
+      },
+      timeout: 30_000
+    }, response => {
+      const responseChunks = [];
+      response.on("data", chunk => responseChunks.push(chunk));
+      response.on("end", () => {
+        const raw = Buffer.concat(responseChunks).toString("utf8");
+        let payload = null;
+        try { payload = JSON.parse(raw); } catch {}
+        if (response.statusCode >= 200 && response.statusCode < 300 && payload?.secure_url) {
+          resolve({ url: payload.secure_url, public_id: payload.public_id || publicId, asset_id: payload.asset_id || "" });
+          return;
+        }
+        reject(new Error(payload?.error?.message || `Cloudinary upload HTTP ${response.statusCode || 0}`));
+      });
+    });
+    request.on("timeout", () => request.destroy(new Error("Délai dépassé pendant l'envoi vers Cloudinary.")));
+    request.on("error", reject);
+    request.end(body);
+  });
+}
+
 const studioUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 7 * 1024 * 1024 },
@@ -1265,31 +1317,50 @@ app.post("/api/admin/studio/upload", requireAdmin, requireStudioPermission("medi
       if (!req.file) return res.status(400).json({ error: "Aucune image sélectionnée." });
       const extension = ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" })[req.file.mimetype];
       const now = new Date();
+      const mediaProvider = String(process.env.MEDIA_STORAGE_PROVIDER || "firebase").trim().toLowerCase();
       const objectName = `studio/${now.getUTCFullYear()}/${String(now.getUTCMonth()+1).padStart(2,"0")}/${crypto.randomUUID()}.${extension}`;
-      let file = null;
-      let bucketName = "";
-      let lastStorageError = null;
-      for (const candidate of getStorageBucketCandidates()) {
-        try {
-          const candidateFile = getBucket(candidate).file(objectName);
-          await candidateFile.save(req.file.buffer, {
-            resumable: false,
-            metadata: { contentType: req.file.mimetype, cacheControl: "public,max-age=31536000,immutable" }
-          });
-          file = candidateFile;
-          bucketName = candidate;
-          break;
-        } catch (storageError) {
-          lastStorageError = storageError;
-          console.warn("Studio storage bucket unavailable:", candidate, storageError?.message || storageError);
+      let url = "";
+      let storageBucket = mediaProvider;
+      let storageObject = objectName;
+
+      if (mediaProvider === "cloudinary") {
+        const cloudinary = await uploadStudioImageToCloudinary(
+          req.file.buffer,
+          req.file.mimetype,
+          `studio/${now.getUTCFullYear()}/${String(now.getUTCMonth()+1).padStart(2,"0")}/${crypto.randomUUID()}`
+        );
+        url = cloudinary.url;
+        storageObject = cloudinary.public_id;
+      } else if (mediaProvider === "firebase") {
+        let file = null;
+        let bucketName = "";
+        let lastStorageError = null;
+        for (const candidate of getStorageBucketCandidates()) {
+          try {
+            const candidateFile = getBucket(candidate).file(objectName);
+            await candidateFile.save(req.file.buffer, {
+              resumable: false,
+              metadata: { contentType: req.file.mimetype, cacheControl: "public,max-age=31536000,immutable" }
+            });
+            file = candidateFile;
+            bucketName = candidate;
+            break;
+          } catch (storageError) {
+            lastStorageError = storageError;
+            console.warn("Studio storage bucket unavailable:", candidate, storageError?.message || storageError);
+          }
         }
+        if (!file) {
+          const detail = lastStorageError?.message || "aucun bucket Firebase Storage disponible";
+          throw new Error("Stockage Firebase indisponible. Configurez MEDIA_STORAGE_PROVIDER=cloudinary pour travailler sans Firebase Storage. Détail: " + detail);
+        }
+        url = await getDownloadURL(file);
+        storageBucket = bucketName;
+      } else {
+        throw new Error("MEDIA_STORAGE_PROVIDER invalide. Utilisez cloudinary ou firebase.");
       }
-      if (!file) {
-        const detail = lastStorageError?.message || "aucun bucket Firebase Storage disponible";
-        throw new Error("Stockage Firebase indisponible. Vérifiez FIREBASE_STORAGE_BUCKET dans Render. Détail: " + detail);
-      }
-      const url = await getDownloadURL(file);
-      const asset = { id: crypto.randomUUID(), object_name: objectName, url, storage_bucket: bucketName, content_type: req.file.mimetype, size_bytes: req.file.size, original_name: req.file.originalname, universe: normalizeUniverse(req.body?.universe) || null, uploaded_by: studioActor(req), created_at: now };
+
+      const asset = { id: crypto.randomUUID(), object_name: storageObject, url, storage_bucket: storageBucket, storage_provider: mediaProvider, content_type: req.file.mimetype, size_bytes: req.file.size, original_name: req.file.originalname, universe: normalizeUniverse(req.body?.universe) || null, uploaded_by: studioActor(req), created_at: now };
       await Promise.all([
         firestore.collection("studio_assets").doc(asset.id).set(asset),
         firestore.collection("media_assets").doc(asset.id).set(asset)
