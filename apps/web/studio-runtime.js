@@ -14,11 +14,12 @@
         node.style.backgroundImage = (gradient ? gradient + ', ' : '') + 'url("' + String(value).replace(/"/g, '\\\"') + '")';
       } else {
         node.src = value;
-        if (item.image_position || item.image_zoom) {
+        if (item.image_position || item.image_zoom || item.image_rotation) {
           node.style.objectPosition = item.image_position || '50% 50%';
           const zoom = Math.min(3, Math.max(1, Number(item.image_zoom) || 1));
+          const rotation = Math.max(-180, Math.min(180, Number(item.image_rotation) || 0));
           const baseScale = node.classList.contains('universe-image') ? 1.03 : 1;
-          node.style.transform = 'scale(' + (baseScale * zoom) + ')';
+          node.style.transform = 'scale(' + (baseScale * zoom) + ') rotate(' + rotation + 'deg)';
           node.style.transformOrigin = 'center center';
         }
       }
