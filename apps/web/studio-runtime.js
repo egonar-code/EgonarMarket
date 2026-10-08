@@ -7,8 +7,22 @@
   function setValue(node, item, field) {
     const value = field === 'image' ? item.image_url : item[field];
     if (value === undefined || value === null || value === '') return;
-    if (node.tagName === 'IMG' && field === 'image') {
-      node.src = value;
+    if ((node.tagName === 'IMG' && field === 'image') || field === 'background_image') {
+      if (field === 'background_image') {
+        const current = node.style.backgroundImage || '';
+        const gradient = current.replace(/url\((?:'[^']*'|"[^"]*"|[^)]*)\)/gi, '').replace(/,\s*$/, '').trim();
+        node.style.backgroundImage = (gradient ? gradient + ', ' : '') + 'url("' + String(value).replace(/"/g, '\\\"') + '")';
+      } else {
+        node.src = value;
+        if (item.image_position || item.image_zoom || item.image_rotation) {
+          node.style.objectPosition = item.image_position || '50% 50%';
+          const zoom = Math.min(3, Math.max(1, Number(item.image_zoom) || 1));
+          const rotation = Math.max(-180, Math.min(180, Number(item.image_rotation) || 0));
+          const baseScale = node.classList.contains('universe-image') ? 1.03 : 1;
+          node.style.transform = 'scale(' + (baseScale * zoom) + ') rotate(' + rotation + 'deg)';
+          node.style.transformOrigin = 'center center';
+        }
+      }
       return;
     }
     if (node.tagName === 'A' && field === 'cta_url') {

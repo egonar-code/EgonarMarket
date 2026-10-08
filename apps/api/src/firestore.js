@@ -41,8 +41,19 @@ function getDb() {
   return getFirestore(getApp());
 }
 
-function getBucket() {
-  return getStorage(getApp()).bucket();
+function getBucket(bucketName = "") {
+  return getStorage(getApp()).bucket(String(bucketName || "").trim() || undefined);
+}
+
+function getStorageBucketCandidates() {
+  const app = getApp();
+  const configured = String(process.env.FIREBASE_STORAGE_BUCKET || "").replace(/^gs:\/\//, "").trim();
+  const projectId = String(app.options.projectId || "").trim();
+  return [...new Set([
+    configured,
+    projectId ? projectId + ".firebasestorage.app" : "",
+    projectId ? projectId + ".appspot.com" : ""
+  ].filter(Boolean))];
 }
 
 function now() {
@@ -67,6 +78,7 @@ function docToData(doc) {
 module.exports = {
   getDb,
   getBucket,
+  getStorageBucketCandidates,
   getDownloadURL,
   now,
   FieldValue,
