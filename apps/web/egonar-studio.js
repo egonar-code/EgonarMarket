@@ -189,16 +189,25 @@ function applyCropPreview(){
   if(!stage||!img||!form)return;
   const position=form.elements.image_position.value||"50% 50%";
   const zoom=Math.min(3,Math.max(1,Number(form.elements.image_zoom.value)||1));
+  const fullView=$("crop-view-full")?.classList.contains("active");
   img.style.objectPosition=position;
+  img.style.objectFit=fullView?"contain":"cover";
   img.style.transform="scale("+zoom+")";
   img.style.transformOrigin="center center";
+  stage.classList.toggle("full-image-view",fullView);
   const device=$("crop-device-mobile")?.classList.contains("active")?"mobile":"desktop";
   const universe=form.dataset.universe||"MARKET",key=form.elements.key.value||"";
   stage.style.aspectRatio=String(visualCropAspect(universe,key,device));
   $("crop-zoom").value=String(zoom);
+  $("crop-zoom-value").textContent=zoom.toFixed(2)+"×";
   const [x,y]=position.split(/\s+/).map(v=>parseFloat(v));
   $("crop-x").value=String(clampCropValue(x,0,100));
   $("crop-y").value=String(clampCropValue(y,0,100));
+}
+function setCropView(view){
+  $("crop-view-full").classList.toggle("active",view==="full");
+  $("crop-view-frame").classList.toggle("active",view==="frame");
+  applyCropPreview();
 }
 function openImageCropper(){
   const form=getVisualCropForm();
@@ -230,13 +239,15 @@ function initCropDrag(){
     const form=getVisualCropForm();
     [startPosX,startPosY]=form.elements.image_position.value.split(/\s+/).map(v=>parseFloat(v));
     startX=e.clientX;startY=e.clientY;e.preventDefault();
+    try{stage.setPointerCapture(e.pointerId);}catch{}
   };
   const move=e=>{
     if(!dragging)return;
     const rect=stage.getBoundingClientRect();
     const form=getVisualCropForm();
-    const x=clampCropValue(startPosX-((e.clientX-startX)/rect.width)*100);
-    const y=clampCropValue(startPosY-((e.clientY-startY)/rect.height)*100);
+    const sensitivity=$("crop-view-full")?.classList.contains("active")?55:100;
+    const x=clampCropValue(startPosX-((e.clientX-startX)/rect.width)*sensitivity);
+    const y=clampCropValue(startPosY-((e.clientY-startY)/rect.height)*sensitivity);
     form.elements.image_position.value=Math.round(x)+"% "+Math.round(y)+"%";
     applyCropPreview();updateVisualCropSummary();
   };
