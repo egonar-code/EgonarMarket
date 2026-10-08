@@ -252,6 +252,14 @@ function initCropDrag(){
     applyCropPreview();updateVisualCropSummary();
   };
   const end=()=>{dragging=false;stage.classList.remove("dragging");};
+  stage.addEventListener("wheel",e=>{
+    e.preventDefault();
+    const input=$("crop-zoom");
+    if(!input)return;
+    const next=clampCropValue(Number(input.value)+(e.deltaY<0?.08:-.08),1,3);
+    input.value=next.toFixed(2);
+    updateCropFromControls();
+  },{passive:false});
   stage.addEventListener("pointerdown",start);
   window.addEventListener("pointermove",move);
   window.addEventListener("pointerup",end);
@@ -417,6 +425,10 @@ $("refresh-dashboard").onclick=()=>{drawDashboard();loadStudioAnalytics();}; $("
 (async function boot(){const me=await call("/admin/me");if(!me.ok){location.href="/admin-login.html";return;}resetContent();resetCategory();await Promise.all([loadContents(),loadCategories(),loadMedia()]);drawDashboard();})();
 
 $("crop-zoom").oninput=updateCropFromControls;$("crop-x").oninput=updateCropFromControls;$("crop-y").oninput=updateCropFromControls;
+$("crop-zoom-out").onclick=()=>{const i=$("crop-zoom");i.value=clampCropValue(Number(i.value)-.1,1,3).toFixed(2);updateCropFromControls();};
+$("crop-zoom-in").onclick=()=>{const i=$("crop-zoom");i.value=clampCropValue(Number(i.value)+.1,1,3).toFixed(2);updateCropFromControls();};
+$("crop-zoom-reset").onclick=()=>{const i=$("crop-zoom");i.value="1";updateCropFromControls();};
+$("crop-fine-toggle").onclick=()=>{const box=$("crop-fine-controls");box.hidden=!box.hidden;$("crop-fine-toggle").textContent=box.hidden?"⚙️ Réglages fins":"⚙️ Masquer les réglages fins";};
 $("crop-device-desktop").onclick=()=>setCropDevice("desktop");$("crop-device-mobile").onclick=()=>setCropDevice("mobile");
 $("crop-reset").onclick=resetImageCrop;$("crop-apply").onclick=()=>{applyCropPreview();updateVisualCropSummary();closeImageCropper();};
 initCropDrag();
