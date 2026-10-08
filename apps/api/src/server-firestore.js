@@ -1462,6 +1462,14 @@ app.post("/api/admin/studio/content", requireAdmin, requireStudioPermission("con
     });
     if (duplicate) return res.status(409).json({ error: "Ce contenu existe déjà dans cet univers et cette langue." });
 
+    let publishAt = null;
+    if (req.body?.publish_at) {
+      publishAt = new Date(req.body.publish_at);
+      if (Number.isNaN(publishAt.getTime())) {
+        return res.status(400).json({ error: "Date de publication invalide." });
+      }
+    }
+
     const id = crypto.randomUUID();
     const now = new Date();
     const row = {
