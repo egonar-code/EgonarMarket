@@ -1483,6 +1483,7 @@ app.post("/api/admin/studio/content", requireAdmin, requireStudioPermission("con
       meta_description: studioClean(req.body?.meta_description, 500),
       image_position: studioClean(req.body?.image_position || "50% 50%", 30),
       image_zoom: Math.min(3, Math.max(1, Number(req.body?.image_zoom) || 1)),
+      image_rotation: Math.max(-180, Math.min(180, Number(req.body?.image_rotation) || 0)),
       publish_at: publishAt,
       sort_order: Number.isFinite(Number(req.body?.sort_order)) ? Number(req.body.sort_order) : 0,
       status: "DRAFT",
@@ -1507,7 +1508,7 @@ app.patch("/api/admin/studio/content/:id", requireAdmin, requireStudioContentWri
     if (!currentSnap.exists) return res.status(404).json({ error: "Contenu introuvable." });
     const current = currentSnap.data();
     const patch = {};
-    for (const key of ["content_type","universe","locale","key","title","subtitle","body","image_url","cta_label","cta_url","meta_title","meta_description","image_position","image_zoom","publish_at","sort_order","active","status"]) {
+    for (const key of ["content_type","universe","locale","key","title","subtitle","body","image_url","cta_label","cta_url","meta_title","meta_description","image_position","image_zoom","image_rotation","publish_at","sort_order","active","status"]) {
       if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) patch[key] = req.body[key];
     }
     if (patch.content_type !== undefined) {
@@ -1538,6 +1539,11 @@ app.patch("/api/admin/studio/content/:id", requireAdmin, requireStudioContentWri
       const zoom = Number(patch.image_zoom);
       if (!Number.isFinite(zoom)) return res.status(400).json({ error: "Zoom de recadrage invalide." });
       patch.image_zoom = Math.min(3, Math.max(1, zoom));
+    }
+    if (patch.image_rotation !== undefined) {
+      const rotation = Number(patch.image_rotation);
+      if (!Number.isFinite(rotation)) return res.status(400).json({ error: "Rotation de recadrage invalide." });
+      patch.image_rotation = Math.max(-180, Math.min(180, rotation));
     }
     if (patch.publish_at !== undefined) {
       if (patch.publish_at === "" || patch.publish_at === null) patch.publish_at = null;
