@@ -192,7 +192,8 @@ function applyCropPreview(){
   const fullView=$("crop-view-full")?.classList.contains("active");
   img.style.objectPosition=position;
   img.style.objectFit=fullView?"contain":"cover";
-  img.style.transform="scale("+zoom+")";
+  const rotation=Math.max(-180,Math.min(180,Number(form.elements.image_rotation?.value)||0));
+  img.style.transform="scale("+zoom+") rotate("+rotation+"deg)";
   img.style.transformOrigin="center center";
   stage.classList.toggle("full-image-view",fullView);
   const device=$("crop-device-mobile")?.classList.contains("active")?"mobile":"desktop";
@@ -200,6 +201,7 @@ function applyCropPreview(){
   stage.style.aspectRatio=String(visualCropAspect(universe,key,device));
   $("crop-zoom").value=String(zoom);
   $("crop-zoom-value").textContent=zoom.toFixed(2)+"×";
+  if($("crop-rotation")){ $("crop-rotation").value=String(rotation); $("crop-rotation-value").textContent=Math.round(rotation)+"°"; }
   const [x,y]=position.split(/\s+/).map(v=>parseFloat(v));
   $("crop-x").value=String(clampCropValue(x,0,100));
   $("crop-y").value=String(clampCropValue(y,0,100));
@@ -227,6 +229,7 @@ function updateCropFromControls(){
   const form=getVisualCropForm();
   form.elements.image_position.value=Math.round(clampCropValue($("crop-x").value))+"% "+Math.round(clampCropValue($("crop-y").value))+"%";
   form.elements.image_zoom.value=Number($("crop-zoom").value).toFixed(2);
+  if(form.elements.image_rotation) form.elements.image_rotation.value=String(Math.max(-180,Math.min(180,Number($("crop-rotation")?.value)||0)));
   applyCropPreview();
   updateVisualCropSummary();
 }
@@ -266,7 +269,7 @@ function initCropDrag(){
 }
 function resetImageCrop(){
   const form=getVisualCropForm();
-  form.elements.image_position.value="50% 50%";form.elements.image_zoom.value="1";
+  form.elements.image_position.value="50% 50%";form.elements.image_zoom.value="1";if(form.elements.image_rotation)form.elements.image_rotation.value="0";
   applyCropPreview();updateVisualCropSummary();
 }
 async function replaceVisualImage(key){
@@ -280,10 +283,10 @@ async function replaceVisualImage(key){
       for(const locale of ["fr","en"]){
         const row=visualRow(slot,locale);
         if(row){
-          const r=await call("/admin/studio/content/"+encodeURIComponent(row.id),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({image_url:asset.url,image_position:"50% 50%",image_zoom:1,status:"PUBLISHED",active:true,publish_at:null})});
+          const r=await call("/admin/studio/content/"+encodeURIComponent(row.id),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({image_url:asset.url,image_position:"50% 50%",image_zoom:1,image_rotation:0,status:"PUBLISHED",active:true,publish_at:null})});
           if(!r.ok)throw new Error(r.data?.error||"Impossible de publier l’image.");
         }else{
-          const created=await call("/admin/studio/content",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({content_type:"BANNER",universe:slot.universe,locale,key:slot.key,title:slot.label,image_url:asset.url,image_position:"50% 50%",image_zoom:1,subtitle:"",body:"",cta_label:"",cta_url:"",meta_title:"",meta_description:"",publish_at:null,sort_order:0})});
+          const created=await call("/admin/studio/content",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({content_type:"BANNER",universe:slot.universe,locale,key:slot.key,title:slot.label,image_url:asset.url,image_position:"50% 50%",image_zoom:1,image_rotation:0,subtitle:"",body:"",cta_label:"",cta_url:"",meta_title:"",meta_description:"",publish_at:null,sort_order:0})});
           if(!created.ok)throw new Error(created.data?.error||"Impossible de créer le visuel.");
           const id=created.data?.id;
           if(id){
@@ -425,6 +428,7 @@ $("refresh-dashboard").onclick=()=>{drawDashboard();loadStudioAnalytics();}; $("
 (async function boot(){const me=await call("/admin/me");if(!me.ok){location.href="/admin-login.html";return;}resetContent();resetCategory();await Promise.all([loadContents(),loadCategories(),loadMedia()]);drawDashboard();})();
 
 $("crop-zoom").oninput=updateCropFromControls;$("crop-x").oninput=updateCropFromControls;$("crop-y").oninput=updateCropFromControls;
+$("crop-rotation").oninput=updateCropFromControls;$("crop-rotate-left").onclick=()=>{const i=$("crop-rotation");i.value=String(Number(i.value)-90< -180?180:Number(i.value)-90);updateCropFromControls();};$("crop-rotate-right").onclick=()=>{const i=$("crop-rotation");i.value=String(Number(i.value)+90>180?-180:Number(i.value)+90);updateCropFromControls();};
 $("crop-zoom-out").onclick=()=>{const i=$("crop-zoom");i.value=clampCropValue(Number(i.value)-.1,1,3).toFixed(2);updateCropFromControls();};
 $("crop-zoom-in").onclick=()=>{const i=$("crop-zoom");i.value=clampCropValue(Number(i.value)+.1,1,3).toFixed(2);updateCropFromControls();};
 $("crop-zoom-reset").onclick=()=>{const i=$("crop-zoom");i.value="1";updateCropFromControls();};
