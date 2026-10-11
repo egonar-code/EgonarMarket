@@ -188,12 +188,14 @@
       ['Plats & Menus','🍲','Plats & Menus','Formules, menus familiaux et plats à partager.']
     ],
     EVASION:[
-      ['Hôtels','🏨','Hôtels au Sénégal','Hôtels et séjours sur la Petite Côte.'],
-      ['Excursions','🏜️','Excursions','Quads, balades à dos de chameau, sorties et visites guidées.'],
-      ['Activités & Expériences','🐪','Activités & Expériences','Dromadaire, quad, jet-ski, surf et expériences locales.'],
-      ['Voyages organisés','🗺️','Circuits','Accrobaobab, nature, culture et circuits organisés au Sénégal.'],
-      ['Destinations','🌿','Sous-région','Chutes de Dindéfelo et découvertes d’Afrique de l’Ouest.'],
-      ['International','🌍','International','Paris, Rome, Dubaï, New York et grandes destinations du monde.']
+      ['Hôtels','🏨','Hôtels au Sénégal','Séjours confortables et adresses sélectionnées au Sénégal et ailleurs.'],
+      ['Transport & Mobilité','🚘','Transferts','AIBD et déplacements pour simplifier votre voyage.'],
+      ['Excursions','🏜️','Activités & Excursions','Quads, balades en chameau, visites et expériences locales.'],
+      ['Plages & Resorts','🌴','Séjours & Plages','Détente, soleil et escapades au bord de l’eau.'],
+      ['Voyages organisés','🔭','Circuits','Agrobaobab, culture, nature et itinéraires organisés.'],
+      ['Au Sénégal','🇸🇳','Au Sénégal','Dakar, Saly, Petite Côte, Casamance, Saint-Louis et plus.'],
+      ['Sous-région','🌿','Sous-région','Chutes de Dindéfelo, Guinée-Bissau, Cap-Vert et découvertes.'],
+      ['International','🌍','International','Préparez vos prochaines destinations dans le monde entier.']
     ]
   };  const FEATURED_IMAGES = {
     'Mode & Vêtements':'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=85',
@@ -243,7 +245,20 @@
     'Business & Séminaires':'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=85',
     'Bien-être':'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=900&q=85',
     'Destinations':'https://www.directtriphub.com/static/images/places/1676/chutes-de-dindefelo/main.jpg',
-    'International':'https://images.unsplash.com/photo-1752886355870-17e8ebe79a05?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=85&w=1200'
+    'International':'https://images.unsplash.com/photo-1752886355870-17e8ebe79a05?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=85&w=1200',
+
+    'Hôtels au Sénégal':'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=85',
+    'Transferts':'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=900&q=85',
+    'Activités & Excursions':'https://images.unsplash.com/photo-1539650116574-75c0c6d73f6e?auto=format&fit=crop&w=900&q=85',
+    'Séjours & Plages':'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=85',
+    'Circuits':'https://accro-baobab.com/local/cache-gd2/df/028329cc0b22b877909cc27b322e68.jpg',
+    'Au Sénégal':'https://images.unsplash.com/photo-1539650116574-75c0c6d73f6e?auto=format&fit=crop&w=900&q=85',
+    'Sous-région':'https://www.directtriphub.com/static/images/places/1676/chutes-de-dindefelo/main.jpg',
+    'International':'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=900&q=85',
+    'Hôtels':'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=85',
+    'Excursions':'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=900&q=85',
+    'Voyages organisés':'https://accro-baobab.com/local/cache-gd2/df/028329cc0b22b877909cc27b322e68.jpg',
+    'Destinations':'https://www.directtriphub.com/static/images/places/1676/chutes-de-dindefelo/main.jpg'
   };
   const FEATURED_BADGES = {'Hôtels':'＋ 1 200 hôtels','Transferts':'＋ 200 transferts','Activités & Expériences':'＋ 350 activités','Excursions':'＋ 350 activités','Plages & Resorts':'＋ 500 séjours','Séjours & Plages':'＋ 500 séjours','Voyages organisés':'＋ 150 circuits','Circuits':'＋ 150 circuits','Au Sénégal':'＋ 300 offres','Sous-région':'＋ 250 destinations','Destinations':'＋ 250 destinations','International':'＋ 1 000 destinations','Mode & Vêtements':'Sélection mode','Téléphones & Accessoires':'High-tech','Maison & Décoration':'Maison','Thiéboudienne':'Cuisine sénégalaise','Restaurants':'Adresses gourmandes','Fast-Food':'Menus','Fruits & Légumes':'Produits frais','Se faire livrer':'Livraison rapide','Plats & Menus':'Menus à partager'};
   function makeFeaturedItem([key,icon,title,description]) {
