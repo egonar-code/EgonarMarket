@@ -36,8 +36,9 @@
   async function load(universe) {
     const u = String(universe || document.body.dataset.universe || '').trim().toUpperCase();
     if (!u) return [];
-    const response = await fetch('/api/content?universe=' + encodeURIComponent(u) + '&locale=' + encodeURIComponent(locale()), {
-      headers: { Accept: 'application/json' }
+    const response = await fetch('/api/content?universe=' + encodeURIComponent(u) + '&locale=' + encodeURIComponent(locale()) + '&_=' + Date.now(), {
+      cache: 'no-store',
+      headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' }
     });
     if (!response.ok) return [];
     return await response.json();
