@@ -1231,6 +1231,9 @@ async function studioAudit(req, action, targetType, targetId, before, after) {
 }
 
 app.get("/api/content", async (req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
   try {
     const universe = normalizeUniverse(req.query.universe);
     const locale = String(req.query.locale || "fr").trim().toLowerCase();
