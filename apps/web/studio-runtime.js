@@ -44,8 +44,22 @@
     return await response.json();
   }
 
+  async function preloadImages(rows) {
+    const urls = [...new Set(rows.map(row => String(row.image_url || '').trim()).filter(Boolean))];
+    await Promise.all(urls.map(url => new Promise(resolve => {
+      const image = new Image();
+      image.onload = resolve;
+      image.onerror = resolve;
+      image.src = url;
+      if (image.complete) resolve();
+    })));
+  }
+
   async function apply(universe) {
     const rows = await load(universe);
+    // Wait for published image assets before revealing the page, so HTML defaults
+    // cannot flash first while the replacement image is still downloading.
+    await preloadImages(rows);
     const byKey = new Map(rows.map(row => [normalize(row.key), row]));
     document.querySelectorAll('[data-content-key]').forEach(node => {
       const item = byKey.get(normalize(node.dataset.contentKey));
