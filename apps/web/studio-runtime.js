@@ -61,7 +61,10 @@
   }
 
   window.EgonarStudioRuntime = { load, apply };
-  const boot = () => apply(document.body.dataset.universe || '');
+  const boot = () => apply(document.body.dataset.universe || '').catch(() => {
+    // Never leave the page hidden if the content API is temporarily unavailable.
+    document.documentElement.dataset.studioContentLoaded = 'true';
+  });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
 })();
