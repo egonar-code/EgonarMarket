@@ -48,7 +48,11 @@ function previewPlatform(universe,device="desktop"){
   const w=window.open(url,"egonar-preview-"+device,"width="+width+",height="+height+",left="+left+",top="+top+",resizable=yes,scrollbars=yes");
   if(w)w.focus();
 }
-function visualRow(slot,locale="fr"){return contents.find(x=>x.universe===slot.universe&&x.key===slot.key&&x.locale===locale&&x.status!=="ARCHIVED")||null;}
+function visualRow(slot,locale="fr"){
+  const rows=contents.filter(x=>x.universe===slot.universe&&x.key===slot.key&&x.locale===locale&&x.status!=="ARCHIVED");
+  const time=x=>{const d=new Date(x?.updated_at||x?.created_at||0).getTime();return Number.isFinite(d)?d:0;};
+  return rows.sort((a,b)=>time(b)-time(a))[0]||null;
+ }
 function drawVisuals(){
   const box=$("visual-list"); if(!box)return;
   const catalog=Array.isArray(window.EgonarStudioVisualCatalog)?window.EgonarStudioVisualCatalog:[];
