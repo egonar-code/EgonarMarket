@@ -292,7 +292,8 @@
     const categories=SERVER_CATEGORIES[universe]||DATA[universe]||[];
     const featured=FEATURED_BY_UNIVERSE[universe]||[];
     const shell=document.createElement('div'); shell.className='egonar-category-shell';
-    shell.innerHTML='<div class="egonar-category-heading"><div><span class="egonar-category-kicker">'+meta[1]+'</span><h2>Toutes nos catégories</h2><p>'+meta[3]+'</p></div><button type="button" class="egonar-category-all-link">Voir toutes les offres →</button></div>';\n    shell.querySelector('.egonar-category-all-link').addEventListener('click',()=>{const target=document.getElementById(universe==='MARKET'?'produits':universe==='SAVEURS'?'explorer':'sejours')||document.getElementById('travel-smart-results');target?.scrollIntoView({behavior:'smooth',block:'start'});});
+    shell.innerHTML='<div class="egonar-category-heading"><div><span class="egonar-category-kicker">'+meta[1]+'</span><h2>Toutes nos catégories</h2><p>'+meta[3]+'</p></div><button type="button" class="egonar-category-all-link">Voir toutes les offres →</button></div>';
+    shell.querySelector('.egonar-category-all-link').addEventListener('click',()=>{const target=document.getElementById(universe==='MARKET'?'produits':universe==='SAVEURS'?'explorer':'sejours')||document.getElementById('travel-smart-results');target?.scrollIntoView({behavior:'smooth',block:'start'});});
     const featuredGrid=document.createElement('div'); featuredGrid.className='egonar-featured-grid';
     featured.forEach(x=>featuredGrid.appendChild(makeFeaturedItem(x)));
     const allWrap=document.createElement('div'); allWrap.className='egonar-all-categories-wrap';
