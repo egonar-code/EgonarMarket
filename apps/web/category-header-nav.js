@@ -59,6 +59,8 @@
     'Destinations':'https://www.directtriphub.com/static/images/places/1676/chutes-de-dindefelo/main.jpg',
     'Se faire livrer':'https://images.pexels.com/photos/8988463/pexels-photo-8988463.jpeg?auto=compress&cs=tinysrgb&w=900'
   };
+  const FALLBACKS = {MARKET:'/assets/egonar-market-fallback.svg',SAVEURS:'/assets/egonar-saveurs-fallback.svg',EVASION:'/assets/egonar-evasion-fallback.svg'};
+  const fallbackForUniverse = () => FALLBACKS[currentUniverse()] || FALLBACKS.MARKET;
   const FALLBACK = '/assets/egonar-evasion-fallback.svg';
 
   const USER_ASSETS = {
@@ -154,11 +156,11 @@
     item.className='egonar-category-item'+(label==='Se faire livrer'?' egonar-delivery-category':'');
     const photo=document.createElement('img');
     photo.className='egonar-category-photo';
-    photo.src=imageUrl||USER_ASSETS[label]||FEATURED_IMAGES[label]||IMAGES[label]||FALLBACK;
+    photo.src=imageUrl||USER_ASSETS[label]||FEATURED_IMAGES[label]||IMAGES[label]||fallbackForUniverse();
     photo.alt=label;
     photo.loading='lazy';
     photo.decoding='async';
-    photo.addEventListener('error',()=>{photo.onerror=null;photo.src=IMAGE_FALLBACKS[label]||FALLBACK;},{once:true});
+    photo.addEventListener('error',()=>{photo.onerror=null;photo.src=IMAGE_FALLBACKS[label]||fallbackForUniverse();},{once:true});
     const copy=document.createElement('span');
     copy.innerHTML='<span class="egonar-category-name">'+label+'</span><span class="egonar-category-desc">'+description+'</span>';
     const go=document.createElement('span');
@@ -272,7 +274,7 @@
     photo.alt=title;
     photo.loading='lazy';
     photo.decoding='async';
-    photo.addEventListener('error',()=>{photo.onerror=null;photo.src=FALLBACK;},{once:true});
+    photo.addEventListener('error',()=>{photo.onerror=null;photo.src=fallbackForUniverse();},{once:true});
     const shade=document.createElement('span');shade.className='egonar-featured-shade';shade.setAttribute('aria-hidden','true');
     const badge=document.createElement('span');badge.className='egonar-featured-badge';badge.textContent=FEATURED_BADGES[title]||'À découvrir';
     const brand=document.createElement('span');brand.className='egonar-featured-brand';brand.textContent=icon;
