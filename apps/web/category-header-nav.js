@@ -56,7 +56,7 @@
     'Famille':'https://images.unsplash.com/photo-1472162072942-cd5147eb3902?auto=format&fit=crop&w=900&q=85',
     'Business & Séminaires':'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=85',
     'Bien-être':'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=900&q=85',
-    'Destinations':'https://www.directtriphub.com/static/images/places/1676/chutes-de-dindefelo/main.jpg',
+    'Destinations':'https://commons.wikimedia.org/wiki/Special:FilePath/DindefeloFalls_01.jpg?width=1200',
     'Se faire livrer':'https://images.pexels.com/photos/8988463/pexels-photo-8988463.jpeg?auto=compress&cs=tinysrgb&w=900'
   };
   const FALLBACKS = {MARKET:'/assets/egonar-market-fallback.svg',SAVEURS:'/assets/egonar-saveurs-fallback.svg',EVASION:'/assets/egonar-evasion-fallback.svg'};
@@ -256,10 +256,10 @@
     'Séjours & Plages':'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=85',
     'Circuits':'https://accro-baobab.com/local/cache-gd2/df/028329cc0b22b877909cc27b322e68.jpg',
     'Au Sénégal':'https://images.unsplash.com/photo-1539650116574-75c0c6d73f6e?auto=format&fit=crop&w=900&q=85',
-    'Sous-région':'https://www.directtriphub.com/static/images/places/1676/chutes-de-dindefelo/main.jpg',
+    'Sous-région':'https://commons.wikimedia.org/wiki/Special:FilePath/DindefeloFalls_01.jpg?width=1200',
     'International':'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=900&q=85',
     'Hôtels':'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=85',
-    'Excursions':'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=900&q=85',
+    'Excursions':'https://location-quad-lacrose.com/wp-content/uploads/2019/07/3.jpg',
     'Voyages organisés':'https://accro-baobab.com/local/cache-gd2/df/028329cc0b22b877909cc27b322e68.jpg',
     'Destinations':'https://www.directtriphub.com/static/images/places/1676/chutes-de-dindefelo/main.jpg'
   };
@@ -292,7 +292,7 @@
     const categories=SERVER_CATEGORIES[universe]||DATA[universe]||[];
     const featured=FEATURED_BY_UNIVERSE[universe]||[];
     const shell=document.createElement('div'); shell.className='egonar-category-shell';
-    shell.innerHTML='<div class="egonar-category-heading"><div><span class="egonar-category-kicker">'+meta[1]+'</span><h2>Toutes nos catégories</h2><p>'+meta[3]+'</p></div><button type="button" class="egonar-category-all-link">Voir toutes les offres →</button></div>';
+    shell.innerHTML='<div class="egonar-category-heading"><div><span class="egonar-category-kicker">'+meta[1]+'</span><h2>Toutes nos catégories</h2><p>'+meta[3]+'</p></div><button type="button" class="egonar-category-all-link">Voir toutes les offres →</button></div>';\n    shell.querySelector('.egonar-category-all-link').addEventListener('click',()=>{const target=document.getElementById(universe==='MARKET'?'produits':universe==='SAVEURS'?'explorer':'sejours')||document.getElementById('travel-smart-results');target?.scrollIntoView({behavior:'smooth',block:'start'});});
     const featuredGrid=document.createElement('div'); featuredGrid.className='egonar-featured-grid';
     featured.forEach(x=>featuredGrid.appendChild(makeFeaturedItem(x)));
     const allWrap=document.createElement('div'); allWrap.className='egonar-all-categories-wrap';
