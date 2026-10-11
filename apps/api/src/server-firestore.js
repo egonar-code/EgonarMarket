@@ -1242,6 +1242,22 @@ app.get("/api/content", async (req, res) => {
     let rows = snap.docs.map(docToData).filter(row => row.status === "PUBLISHED" && row.locale === locale && row.active !== false && (!row.publish_at || new Date(row.publish_at).getTime() <= now));
     if (universe) rows = rows.filter(row => row.universe === universe);
     if (key) rows = rows.filter(row => row.key === key);
+
+    // If legacy duplicate records exist for one visual key, always serve the
+    // most recently modified published version so refreshes cannot revert images.
+    const latestByVisual = new Map();
+    for (const row of rows) {
+      const visualId = [row.universe, row.locale, row.key].join("::");
+      const current = latestByVisual.get(visualId);
+      const timestamp = value => {
+        const date = value ? new Date(value).getTime() : 0;
+        return Number.isFinite(date) ? date : 0;
+      };
+      const rowTime = Math.max(timestamp(row.updated_at), timestamp(row.created_at));
+      const currentTime = current ? Math.max(timestamp(current.updated_at), timestamp(current.created_at)) : -1;
+      if (!current || rowTime >= currentTime) latestByVisual.set(visualId, row);
+    }
+    rows = [...latestByVisual.values()];
     rows.sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0) || sortByDateDesc(a, b));
     res.json(rows);
   } catch (e) {
