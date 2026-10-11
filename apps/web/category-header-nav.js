@@ -81,12 +81,26 @@
 
   const currentUniverse = () => String(document.body?.dataset?.universe || 'MARKET').toUpperCase();
   const SERVER_CATEGORIES = {};
+  const CATEGORY_COUNTS = {};
   async function loadServerCategories(universe) {
     try {
       const response = await fetch('/api/categories?universe=' + encodeURIComponent(universe), { headers: { Accept: 'application/json' } });
       if (!response.ok) return;
       const rows = await response.json();
-      if (Array.isArray(rows) && rows.length) SERVER_CATEGORIES[universe] = rows.map(row => [row.name, row.icon || '•', row.description || '', row.image_url || '']);
+      if (Array.isArray(rows) && rows.length) SERVER_CATEGORIES[universe] = rows.map(row => [row.name, row.icon || '•', row.description || '', row.image_url || '', row.slug || '', row.parent_slug || '']);
+    } catch {}
+  }
+  async function loadCategoryCounts(universe) {
+    try {
+      const response = await fetch('/api/products?universe=' + encodeURIComponent(universe), { headers: { Accept: 'application/json' } });
+      if (!response.ok) return;
+      const rows = await response.json();
+      const counts = {};
+      (Array.isArray(rows) ? rows : []).forEach(row => {
+        const key = String(row.category || '').trim();
+        if (key) counts[key] = (counts[key] || 0) + 1;
+      });
+      CATEGORY_COUNTS[universe] = counts;
     } catch {}
   }
 
@@ -101,7 +115,19 @@
       .egonar-category-heading h2{margin:5px 0;font-size:clamp(32px,4vw,46px);letter-spacing:-.045em;color:#122c52}
       .egonar-category-heading p{margin:0;color:#41607c;font-size:16px;line-height:1.45}
       .egonar-category-all-link{border:1px solid #1680ff;background:#fff;color:#0875ed;border-radius:999px;padding:12px 18px;font-weight:850;white-space:nowrap;cursor:pointer}
+      .egonar-category-kicker{font-size:12px;font-weight:900;letter-spacing:.14em;color:#1680ff}
       .egonar-featured-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+      .egonar-featured-count{display:inline-flex;align-items:center;width:max-content;padding:2px 7px;border-radius:999px;background:#f2f7fa;color:#587184;font-size:9px;font-weight:800}
+      .egonar-category-explorer{margin-top:14px;border:1px solid #e3edf4;border-radius:18px;padding:12px;background:#fbfdff}
+      .egonar-category-search-row{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+      .egonar-category-search{flex:1;min-width:0;border:1px solid #dce7ef;border-radius:12px;padding:11px 13px;background:#fff;outline:none}
+      .egonar-category-search:focus{border-color:#1680ff;box-shadow:0 0 0 3px rgba(22,128,255,.08)}
+      .egonar-category-result-count{font-size:11px;color:#6d8190;white-space:nowrap}
+      .egonar-category-group{margin:12px 0}
+      .egonar-category-group-title{margin:0 0 7px;font-size:12px;color:#234d68;font-weight:900}
+      .egonar-category-group .egonar-category-grid{margin:0}
+      .egonar-category-empty{padding:18px;text-align:center;color:#71808c;font-size:13px}
+      .egonar-category-all-link:hover{background:#f5faff}
       .egonar-featured-category{position:relative;min-height:68px;border:1px solid #e6edf2;border-radius:16px;overflow:hidden;padding:11px 13px;background:#fff;color:#172f43;cursor:pointer;display:grid;grid-template-columns:34px 1fr 26px;gap:10px;align-items:center;text-align:left;box-shadow:0 7px 18px rgba(23,83,112,.05);transition:transform .16s,box-shadow .16s,border-color .16s}
       .egonar-featured-category:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(23,83,112,.1);border-color:#b9d7e8}
       .egonar-featured-brand{width:34px;height:34px;border-radius:10px;background:#f0f6fa;display:grid;place-items:center;font-size:17px}
@@ -248,7 +274,8 @@
     brand.textContent=icon;
     const copy=document.createElement('span');
     copy.className='egonar-featured-copy';
-    copy.innerHTML='<strong>'+title+'</strong><small>'+description+'</small>';
+    const count=CATEGORY_COUNTS[currentUniverse()]?.[key] ?? 0;
+    copy.innerHTML='<strong>'+title+'</strong><small>'+description+'</small><span class="egonar-featured-count">'+(count ? count+' produit'+(count>1?'s':'') : 'Explorer')+'</span>';
     const arrow=document.createElement('span');
     arrow.className='egonar-featured-arrow';
     arrow.textContent='›';
@@ -258,6 +285,42 @@
     item.addEventListener('click',()=>activate(key));
     return item;
   }
+  function makeCategoryExplorer(categories, universe) {
+    const explorer=document.createElement('div');
+    explorer.className='egonar-category-explorer';
+    const row=document.createElement('div');
+    row.className='egonar-category-search-row';
+    const search=document.createElement('input');
+    search.type='search';
+    search.className='egonar-category-search';
+    search.placeholder='🔎 Rechercher une catégorie…';
+    const count=document.createElement('span');
+    count.className='egonar-category-result-count';
+    row.append(search,count);
+    const body=document.createElement('div');
+    body.className='egonar-category-explorer-body';
+    explorer.append(row,body);
+
+    const render=(needle='')=>{
+      const q=String(needle||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const filtered=categories.filter(x=>String(x[0]||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(q));
+      count.textContent=filtered.length+' catégorie'+(filtered.length>1?'s':'');
+      body.innerHTML='';
+      if(!filtered.length){body.innerHTML='<div class="egonar-category-empty">Aucune catégorie ne correspond à votre recherche.</div>';return;}
+      const roots=filtered.filter(x=>!x[5]);
+      const groups=[['Principales',roots],...filtered.filter(x=>x[5]).reduce((acc,x)=>{const parent=categories.find(c=>String(c[4])===String(x[5]));const title=parent?.[0]||x[5];let g=acc.find(v=>v[0]===title);if(!g){g=[title,[]];acc.push(g);}g[1].push(x);return acc;},[])];
+      groups.filter(g=>g[1].length).forEach(([title,items])=>{
+        const group=document.createElement('section');group.className='egonar-category-group';
+        const h=document.createElement('h3');h.className='egonar-category-group-title';h.textContent=title;group.appendChild(h);
+        const grid=document.createElement('div');grid.className='egonar-category-grid';
+        items.forEach(category=>{const item=makeItem(category);item.setAttribute('role','listitem');grid.appendChild(item);});
+        group.appendChild(grid);body.appendChild(group);
+      });
+    };
+    search.addEventListener('input',()=>render(search.value));
+    render();
+    return explorer;
+  }
   function makeShell() {
     const universe=currentUniverse();
     const meta=META[universe]||META.MARKET;
@@ -265,14 +328,13 @@
     const featured=FEATURED_BY_UNIVERSE[universe]||[];
     const shell=document.createElement('div'); shell.className='egonar-category-shell';
     shell.innerHTML='<div class="egonar-category-heading"><div><span class="egonar-category-kicker">'+meta[1]+'</span><h2>Toutes nos catégories</h2><p>'+meta[3]+'</p></div><button type="button" class="egonar-category-all-link">Voir toutes les offres →</button></div>';
+    shell.querySelector('.egonar-category-all-link').addEventListener('click',()=>{location.href='categories.html?universe='+encodeURIComponent(universe);});
     const featuredGrid=document.createElement('div'); featuredGrid.className='egonar-featured-grid';
     featured.forEach(x=>featuredGrid.appendChild(makeFeaturedItem(x)));
     const allWrap=document.createElement('div'); allWrap.className='egonar-all-categories-wrap';
-    const allToggle=document.createElement('button'); allToggle.type='button'; allToggle.className='egonar-all-categories-toggle'; allToggle.setAttribute('aria-expanded','false'); allToggle.innerHTML='Voir la liste des '+categories.length+' catégories '+meta[1]+' <span>⌄</span>';
+    const allToggle=document.createElement('button'); allToggle.type='button'; allToggle.className='egonar-all-categories-toggle'; allToggle.setAttribute('aria-expanded','false'); allToggle.innerHTML='Explorer les '+categories.length+' catégories '+meta[1]+' <span>⌄</span>';
     const allPanel=document.createElement('div'); allPanel.className='egonar-all-categories-panel'; allPanel.hidden=true;
-    const grid=document.createElement('div'); grid.className='egonar-category-grid'; grid.setAttribute('role','list');
-    categories.forEach(category=>{const item=makeItem(category);item.setAttribute('role','listitem');grid.appendChild(item);});
-    allPanel.appendChild(grid);
+    allPanel.appendChild(makeCategoryExplorer(categories, universe));
     allToggle.addEventListener('click',()=>{const open=allPanel.hidden;allPanel.hidden=!open;allToggle.setAttribute('aria-expanded',String(open));});
     allWrap.append(allToggle,allPanel); shell.append(featuredGrid,allWrap); return shell;
   }
@@ -299,7 +361,7 @@
   async function start() {
     cleanupLegacy();
     const universe=currentUniverse();
-    await loadServerCategories(universe);
+    await Promise.all([loadServerCategories(universe),loadCategoryCounts(universe)]);
     const build=()=>{const section=ensureSection();if(!section)return false;injectStyles();section.classList.add('egonar-category-hub');section.querySelector('.egonar-category-shell')?.remove();section.appendChild(makeShell());return true;};
     if(build())return;
     const observer=new MutationObserver(()=>{if(build())observer.disconnect();});
