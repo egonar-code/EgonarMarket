@@ -95,35 +95,40 @@
     const style = document.createElement('style');
     style.id = 'egonar-category-premium-style';
     style.textContent = `
-      #categories.egonar-category-hub{width:min(1280px,calc(100% - 32px));padding-top:34px;padding-bottom:34px}
-      .egonar-category-shell{background:#fff;border-radius:28px}
+      #categories.egonar-category-hub{width:min(1480px,calc(100% - 48px));padding:30px 0 36px}
+      #categories.egonar-category-hub .egonar-category-shell{background:transparent}
       .egonar-category-heading{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:20px}
-      .egonar-category-heading h2{margin:5px 0;font-size:clamp(32px,4vw,46px);letter-spacing:-.045em;color:#122c52}
-      .egonar-category-heading p{margin:0;color:#41607c;font-size:16px;line-height:1.45}
-      .egonar-category-all-link{border:1px solid #1680ff;background:#fff;color:#0875ed;border-radius:999px;padding:12px 18px;font-weight:850;white-space:nowrap;cursor:pointer}
-      .egonar-featured-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-      .egonar-featured-category{position:relative;min-height:68px;border:1px solid #e6edf2;border-radius:16px;overflow:hidden;padding:11px 13px;background:#fff;color:#172f43;cursor:pointer;display:grid;grid-template-columns:34px 1fr 26px;gap:10px;align-items:center;text-align:left;box-shadow:0 7px 18px rgba(23,83,112,.05);transition:transform .16s,box-shadow .16s,border-color .16s}
-      .egonar-featured-category:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(23,83,112,.1);border-color:#b9d7e8}
-      .egonar-featured-brand{width:34px;height:34px;border-radius:10px;background:#f0f6fa;display:grid;place-items:center;font-size:17px}
-      .egonar-featured-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
-      .egonar-featured-copy strong{font-size:13px;line-height:1.15;color:#163a55}
-      .egonar-featured-copy small{font-size:10.5px;line-height:1.3;color:#6d8190}
-      .egonar-featured-arrow{width:26px;height:26px;border-radius:50%;background:#eef7fb;color:#14527d;display:grid;place-items:center;font-size:18px;font-weight:900}
+      .egonar-category-kicker{display:block;font-size:12px;font-weight:900;letter-spacing:.16em;color:#1675d1;margin-bottom:7px}
+      .egonar-category-heading h2{margin:0 0 7px;font-size:clamp(32px,4vw,46px);letter-spacing:-.045em;color:#102a52}
+      .egonar-category-heading p{margin:0;color:#365778;font-size:17px;line-height:1.45}
+      .egonar-category-all-link{border:1px solid #0875ed;background:#fff;color:#0875ed;border-radius:999px;padding:13px 19px;font-weight:850;white-space:nowrap;cursor:pointer}
+      .egonar-featured-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+      .egonar-featured-category{position:relative;min-height:280px;border:0;border-radius:19px;overflow:hidden;padding:0;background:#e8f2f9;color:#fff;cursor:pointer;display:flex;align-items:stretch;text-align:left;box-shadow:0 10px 26px rgba(15,43,71,.12);isolation:isolate;transition:transform .2s,box-shadow .2s}
+      .egonar-featured-category:hover{transform:translateY(-3px);box-shadow:0 18px 34px rgba(15,43,71,.2)}
+      .egonar-featured-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;transition:transform .5s}
+      .egonar-featured-category:hover .egonar-featured-photo{transform:scale(1.06)}
+      .egonar-featured-shade{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(3,20,37,.02) 10%,rgba(3,20,37,.12) 38%,rgba(2,10,18,.88) 100%)}
+      .egonar-featured-badge{position:absolute;top:13px;right:13px;padding:8px 11px;border-radius:999px;background:rgba(5,28,53,.82);font-size:12px;font-weight:850;backdrop-filter:blur(8px)}
+      .egonar-featured-brand{position:absolute;left:15px;bottom:83px;width:43px;height:43px;border-radius:14px;background:#fff;color:#0875ed;display:grid;place-items:center;font-size:23px;box-shadow:0 4px 14px #001c3430}
+      .egonar-featured-copy{position:absolute;left:16px;right:52px;bottom:15px;display:flex;flex-direction:column;gap:4px;min-width:0}
+      .egonar-featured-copy strong{font-size:19px;line-height:1.15;color:#fff;text-shadow:0 1px 6px #0008}
+      .egonar-featured-copy small{font-size:13px;line-height:1.35;color:#fff}
+      .egonar-featured-arrow{position:absolute;right:13px;bottom:18px;width:38px;height:38px;border-radius:50%;background:#fff;color:#092e5b;display:grid;place-items:center;font-size:25px;font-weight:800}
       .egonar-all-categories-wrap{margin-top:16px}
-      .egonar-all-categories-toggle{width:100%;padding:14px;border:1px solid #dce8f2;border-radius:15px;background:#f7fbff;color:#14527d;font-weight:850;cursor:pointer}
+      .egonar-all-categories-toggle{width:100%;padding:16px;border:1px solid #d8e7f5;border-radius:15px;background:#f4f9ff;color:#12538a;font-size:15px;font-weight:900;cursor:pointer}
       .egonar-all-categories-toggle span{margin-left:8px}
-      .egonar-all-categories-panel{padding-top:12px}
+      .egonar-all-categories-panel{padding-top:14px}
       .egonar-all-categories-panel[hidden]{display:none!important}
-      .egonar-category-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-      .egonar-category-item{appearance:none;border:1px solid #e8e8ea;background:#fff;color:#171717;border-radius:15px;min-height:78px;padding:10px 12px;text-align:left;cursor:pointer;display:grid;grid-template-columns:78px 1fr auto;gap:12px;align-items:center;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
-      .egonar-category-item:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,.06);border-color:#cfe0ea}
-      .egonar-category-photo{width:78px;height:64px;border-radius:11px;object-fit:cover;display:block;background:#eef3f6}.egonar-delivery-category .egonar-category-photo{object-fit:contain;padding:4px;background:linear-gradient(135deg,#fff7ed,#eef7ff)}
-      .egonar-category-name{display:block;font-size:14px;font-weight:900;line-height:1.2}
-      .egonar-category-desc{display:block;color:#777;font-size:11px;line-height:1.35;margin-top:4px}
-      .egonar-category-go{font-size:21px;color:#8a8a8a;padding:0 3px}
-      @media(max-width:900px){#categories.egonar-category-hub{width:min(100% - 24px,1280px)}.egonar-featured-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.egonar-category-grid{grid-template-columns:1fr}}
-      @media(max-width:560px){.egonar-category-heading{align-items:flex-start;flex-direction:column}.egonar-featured-grid{grid-template-columns:1fr}.egonar-category-heading h2{font-size:31px}.egonar-featured-category{min-height:62px}.egonar-category-item{grid-template-columns:64px 1fr auto}.egonar-category-photo{width:64px;height:58px}}
-        `;
+      .egonar-category-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+      .egonar-category-item{appearance:none;border:1px solid #e1eaf1;background:#fff;color:#172b40;border-radius:16px;min-height:100px;padding:11px 13px;text-align:left;cursor:pointer;display:grid;grid-template-columns:88px 1fr auto;gap:14px;align-items:center;transition:transform .16s,box-shadow .16s,border-color .16s}
+      .egonar-category-item:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.07);border-color:#b9d8f2}
+      .egonar-category-photo{width:88px;height:78px;border-radius:12px;object-fit:cover;display:block;background:#eef3f6}
+      .egonar-category-name{display:block;font-size:16px;font-weight:900;line-height:1.2;color:#142e4b}
+      .egonar-category-desc{display:block;color:#536b7f;font-size:13px;line-height:1.4;margin-top:5px}
+      .egonar-category-go{font-size:25px;color:#0875ed;padding:0 4px}
+      @media(max-width:1050px){.egonar-featured-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.egonar-featured-category{min-height:250px}}
+      @media(max-width:650px){#categories.egonar-category-hub{width:min(100% - 24px,1480px)}.egonar-category-heading{align-items:flex-start;flex-direction:column}.egonar-category-heading h2{font-size:31px}.egonar-category-heading p{font-size:15px}.egonar-featured-grid{grid-template-columns:1fr 1fr;gap:9px}.egonar-featured-category{min-height:225px}.egonar-featured-copy{right:43px;left:11px;bottom:12px}.egonar-featured-copy strong{font-size:15px}.egonar-featured-copy small{font-size:11px}.egonar-featured-brand{left:11px;bottom:77px;width:36px;height:36px;font-size:20px}.egonar-featured-badge{top:9px;right:9px;font-size:10px;padding:6px 8px}.egonar-featured-arrow{right:8px;bottom:10px;width:30px;height:30px;font-size:20px}.egonar-category-grid{grid-template-columns:1fr}.egonar-category-item{grid-template-columns:76px 1fr auto;min-height:90px;gap:11px}.egonar-category-photo{width:76px;height:68px}.egonar-category-name{font-size:15px}.egonar-category-desc{font-size:12px}}
+      @media(max-width:380px){.egonar-featured-grid{grid-template-columns:1fr}.egonar-featured-category{min-height:230px}};
     document.head.appendChild(style);
   }
 
@@ -239,21 +244,26 @@
     'Bien-être':'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=900&q=85',
     'Destinations':'https://www.directtriphub.com/static/images/places/1676/chutes-de-dindefelo/main.jpg',
     'International':'https://images.unsplash.com/photo-1752886355870-17e8ebe79a05?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=85&w=1200'
-  };  function makeFeaturedItem([key,icon,title,description]) {
+  };
+  const FEATURED_BADGES = {'Hôtels':'＋ 1 200 hôtels','Transferts':'＋ 200 transferts','Activités & Expériences':'＋ 350 activités','Excursions':'＋ 350 activités','Plages & Resorts':'＋ 500 séjours','Séjours & Plages':'＋ 500 séjours','Voyages organisés':'＋ 150 circuits','Circuits':'＋ 150 circuits','Au Sénégal':'＋ 300 offres','Sous-région':'＋ 250 destinations','Destinations':'＋ 250 destinations','International':'＋ 1 000 destinations','Mode & Vêtements':'Sélection mode','Téléphones & Accessoires':'High-tech','Maison & Décoration':'Maison','Thiéboudienne':'Cuisine sénégalaise','Restaurants':'Adresses gourmandes','Fast-Food':'Menus','Fruits & Légumes':'Produits frais','Se faire livrer':'Livraison rapide','Plats & Menus':'Menus à partager'};
+  function makeFeaturedItem([key,icon,title,description]) {
     const item=document.createElement('button');
     item.type='button';
     item.className='egonar-featured-category';
-    const brand=document.createElement('span');
-    brand.className='egonar-featured-brand';
-    brand.textContent=icon;
-    const copy=document.createElement('span');
-    copy.className='egonar-featured-copy';
+    const photo=document.createElement('img');
+    photo.className='egonar-featured-photo';
+    photo.src=FEATURED_IMAGES[title]||FEATURED_IMAGES[key]||FEATURED_IMAGES[title.replace(' au Sénégal','')]||FALLBACK;
+    photo.alt=title;
+    photo.loading='lazy';
+    photo.decoding='async';
+    photo.addEventListener('error',()=>{photo.onerror=null;photo.src=FALLBACK;},{once:true});
+    const shade=document.createElement('span');shade.className='egonar-featured-shade';shade.setAttribute('aria-hidden','true');
+    const badge=document.createElement('span');badge.className='egonar-featured-badge';badge.textContent=FEATURED_BADGES[title]||'À découvrir';
+    const brand=document.createElement('span');brand.className='egonar-featured-brand';brand.textContent=icon;
+    const copy=document.createElement('span');copy.className='egonar-featured-copy';
     copy.innerHTML='<strong>'+title+'</strong><small>'+description+'</small>';
-    const arrow=document.createElement('span');
-    arrow.className='egonar-featured-arrow';
-    arrow.textContent='›';
-    arrow.setAttribute('aria-hidden','true');
-    item.append(brand,copy,arrow);
+    const arrow=document.createElement('span');arrow.className='egonar-featured-arrow';arrow.textContent='→';arrow.setAttribute('aria-hidden','true');
+    item.append(photo,shade,badge,brand,copy,arrow);
     item.title='Explorer '+title;
     item.addEventListener('click',()=>activate(key));
     return item;
