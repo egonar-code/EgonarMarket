@@ -1,24 +1,28 @@
 const role = String(process.env.EXPO_PUBLIC_APP_ROLE || "supplier").toLowerCase();
 const isAdmin = role === "admin";
+const isCustomer = role === "customer";
+const appName = isAdmin ? "Egonar Admin" : isCustomer ? "EgonarMarket" : "Egonar Fournisseur";
+const appSlug = isAdmin ? "egonar-admin" : isCustomer ? "egonarmarket-client" : "egonar-fournisseur";
+const appScheme = isAdmin ? "egonar-admin" : isCustomer ? "egonarmarket" : "egonar-fournisseur";
 
 module.exports = {
   expo: {
-    name: isAdmin ? "Egonar Admin" : "Egonar Fournisseur",
-    slug: isAdmin ? "egonar-admin" : "egonar-fournisseur",
+    name: appName,
+    slug: appSlug,
     version: "1.0.0",
     orientation: "portrait",
     userInterfaceStyle: "light",
-    scheme: isAdmin ? "egonar-admin" : "egonar-fournisseur",
+    scheme: appScheme,
     ios: {
       supportsTablet: true,
-      bundleIdentifier: isAdmin ? "sn.egonarmarket.admin" : "sn.egonarmarket.supplier"
+      bundleIdentifier: isAdmin ? "sn.egonarmarket.admin" : isCustomer ? "sn.egonarmarket.client" : "sn.egonarmarket.supplier"
     },
     android: {
-      package: isAdmin ? "sn.egonarmarket.admin" : "sn.egonarmarket.supplier"
+      package: isAdmin ? "sn.egonarmarket.admin" : isCustomer ? "sn.egonarmarket.client" : "sn.egonarmarket.supplier"
     },
     extra: {
-      appRole: isAdmin ? "admin" : "supplier",
-      apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3000"
+      appRole: isAdmin ? "admin" : isCustomer ? "customer" : "supplier",
+      apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || ""
     }
   }
 };

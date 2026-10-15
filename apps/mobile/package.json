@@ -12,7 +12,11 @@
     "ios:supplier": "EXPO_PUBLIC_APP_ROLE=supplier expo run:ios",
     "ios:admin": "EXPO_PUBLIC_APP_ROLE=admin expo run:ios",
     "web:supplier": "EXPO_PUBLIC_APP_ROLE=supplier expo start --web",
-    "web:admin": "EXPO_PUBLIC_APP_ROLE=admin expo start --web"
+    "web:admin": "EXPO_PUBLIC_APP_ROLE=admin expo start --web",
+    "customer": "EXPO_PUBLIC_APP_ROLE=customer expo start --tunnel",
+    "android:customer": "EXPO_PUBLIC_APP_ROLE=customer expo run:android",
+    "ios:customer": "EXPO_PUBLIC_APP_ROLE=customer expo run:ios",
+    "web:customer": "EXPO_PUBLIC_APP_ROLE=customer expo start --web"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.1.0",
