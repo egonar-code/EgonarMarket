@@ -7,6 +7,8 @@
   function setValue(node, item, field) {
     const value = field === 'image' ? item.image_url : item[field];
     if (value === undefined || value === null || value === '') return;
+    // Do not let internal Studio carousel labels replace storefront titles.
+    if (field === 'title' && /^(?:egonar\s*)?(?:saveurs\s*[–—-]\s*)?(?:carrousel|carousel)(?:\s+hero)?\s*[–—-]\s*(?:photo|slide)\s*#?\d+$/i.test(String(value).trim())) return;
     if ((node.tagName === 'IMG' && field === 'image') || field === 'background_image') {
       if (field === 'background_image') {
         const current = node.style.backgroundImage || '';
