@@ -1,5 +1,6 @@
 const fs=require("fs");
 const path=require("path");
+const assert=require("node:assert/strict");
 const root=path.join(__dirname,"..");
 const read=p=>fs.readFileSync(path.join(root,p),"utf8");
 const server=read("apps/api/src/server-firestore.js");
@@ -13,7 +14,7 @@ for(const marker of ['signCustomer','requireCustomer']) if(!auth.includes(marker
 for(const marker of ['/customer/login','/customer/register','/customer/orders','/customer/favorites','/customer/recently-viewed']) if(!account.includes(marker)) throw new Error("Dashboard client incomplet: "+marker);
 if(!accountHtml.includes('account.js')) throw new Error("Page compte absente.");
 if(!checkout.includes("/customer/me") || !checkout.includes("customer_id")) throw new Error("Checkout non relié au compte client.");
-if(!product.includes("id=\"favorite\"") || !product.includes("/recommendations") || !product.includes("/customer/recently-viewed/")) throw new Error("Fiche produit non reliée aux favoris/historique/recommandations.");
+if(!product.includes('id="favorite"') || !product.includes("/recommendations") || !product.includes("/customer/recently-viewed/")) throw new Error("Fiche produit non reliée aux favoris/historique/recommandations.");
 console.log("customer-account-contract-test: OK");
 
 const index = read('apps/web/index.html');
@@ -33,9 +34,8 @@ new Function(publicApp);
 new Function(read('apps/web/assistant-voice.js'));
 new Function(read('apps/web/ai-launcher.js'));
 assert(server.includes('function isPublicProduct'), 'public catalog should support legacy active products');
-  assert(server.includes('function isProductInUniverse'), 'public catalog should support legacy products without a universe field');
-  assert(server.includes('return universe === "MARKET" && !row?.universe'), 'legacy products should remain visible in the MARKET catalog');
+assert(server.includes('function isProductInUniverse'), 'public catalog should support legacy products without a universe field');
+assert(server.includes('return universe === "MARKET" && !row?.universe'), 'legacy products should remain visible in the MARKET catalog');
 assert(server.includes('filter(isPublicProduct)'), 'public catalog should use the compatibility visibility filter');
 assert(server.includes('filter(p => !searchable.length || p.ai_score > 0)'), 'AI search should rank matching products without hard token filtering');
 new Function(server);
-
